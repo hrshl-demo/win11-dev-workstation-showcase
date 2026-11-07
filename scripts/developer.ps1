@@ -74,7 +74,7 @@ function Get-DeveloperSample {
     return @($Sample)
 }
 
-function Get-DeveloperOutputs {
+function Get-DeveloperOutput {
     [CmdletBinding()]
     [OutputType([string[]])]
     param([string]$Action, [string]$Sample)
@@ -541,7 +541,7 @@ if ($MyInvocation.InvocationName -ne '.') {
     $code = 1
     try {
         if (-not $WhatIfPreference -and $Action -in @('Test', 'Coverage', 'Lint', 'Restore', 'RunLocal', 'RunContainer')) {
-            $outputs = if ($RestoreTarget -eq 'ContainerImages') { @() } else { @(Get-DeveloperOutputs $Action $Sample) }
+            $outputs = if ($RestoreTarget -eq 'ContainerImages') { @() } else { @(Get-DeveloperOutput $Action $Sample) }
             $ownership = Enter-ShowcaseOperation -OutputPaths $outputs
         }
         $code = Invoke-Developer @PSBoundParameters

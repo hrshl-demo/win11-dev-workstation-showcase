@@ -54,6 +54,13 @@ Describe 'Developer script and VS Code contracts' {
         @(Get-DeveloperSample All) | Should -Not -Contain 'Legacy'
         @(Get-DeveloperSample Legacy) | Should -Contain 'Legacy'
     }
+    It 'attests only the selected task reports, never environment or module restoration trees' {
+        @(Get-DeveloperOutput Test Python) | Should -Be @('samples\python-emi-api\test-results.xml')
+        @(Get-DeveloperOutput Lint All).Count | Should -Be 0
+        @(Get-DeveloperOutput Restore Python).Count | Should -Be 0
+        @(Get-DeveloperOutput Restore PowerShell).Count | Should -Be 0
+        @(Get-DeveloperOutput RunLocal All).Count | Should -Be 0
+    }
 
     It 'uses process arguments without automatic tasks or F5 restore' {
         foreach ($task in $script:Tasks.tasks) {

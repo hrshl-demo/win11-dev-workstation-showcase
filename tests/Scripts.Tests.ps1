@@ -299,6 +299,7 @@ Describe 'Actual sample launch planning and mocked container execution' {
         Mock Wait-SampleHealth { "http://127.0.0.1:$Port/health" }
         Mock Get-ShowcaseWorkspace { 'a' * 32 }
         Mock Register-ShowcaseContainer {}
+        Mock Unregister-ShowcaseContainer {}
         Mock Test-OwnedContainer { $true }
         Mock Invoke-NativeCommand { [pscustomobject]@{ ExitCode = 0; Output = ''; StdOut = ('b' * 64); StdErr = ''; TimedOut = $false } }
     }

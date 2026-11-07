@@ -32,6 +32,7 @@ function Invoke-ShowcaseCleanup {
     param([switch]$Apply, [switch]$IncludeContainers)
     $context = $null
     $handles = @()
+    $changed = $false
     try {
         $context = Enter-ShowcaseOperation -ReadOnly
         Write-ShowcaseMessage '[WARN] Stop local app/test/restore tasks first. Shared tools, GHCP, source, environments, caches and cloud resources are never cleanup targets.'
@@ -73,6 +74,8 @@ function Invoke-ShowcaseCleanup {
             if ($Apply -and $PSCmdlet.ShouldProcess($file.RelativePath, 'Delete this exact fingerprinted checkout output')) {
                 $null = Assert-OwnedPath $context.Location.Root $file.RelativePath
                 Remove-OwnedOutput $file.Handle $file.Path -Confirm:$false
+                $context.Receipt.Files = @($context.Receipt.Files | Where-Object Path -cne $file.RelativePath)
+                $changed = $true
             }
         }
         foreach ($entry in $containers) {
@@ -85,8 +88,12 @@ function Invoke-ShowcaseCleanup {
                 Assert-NativeSuccess $result 'Stop exact owned container'
                 $result = Invoke-NativeCommand $entry.Runtime.Path @('rm', $container.Id) -TimeoutSeconds 60
                 Assert-NativeSuccess $result 'Remove exact owned container (no images/volumes/prune)'
+                $context.Receipt.Containers = @($context.Receipt.Containers | Where-Object Id -cne $container.Id)
+                $changed = $true
             }
         }
+        foreach ($handle in $handles) { $handle.Dispose() }
+        if ($changed) { Save-OwnershipReceipt $context }
         Write-ShowcaseMessage '[PASS] Cleanup review complete; only explicitly approved proven targets were eligible.'
         return 0
     } catch {
