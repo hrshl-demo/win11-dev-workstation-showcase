@@ -9,6 +9,16 @@
   "python.testing.unittestEnabled": false,
   "python.testing.cwd": "${workspaceFolder}\\samples\\python-emi-api",
   "python.testing.pytestArgs": ["tests"],
+  "python.envFile": "${workspaceFolder}\\.vscode\\python.env",
+  "java.configuration.updateBuildConfiguration": "disabled",
+  "java.autobuild.enabled": false,
+  "java.import.maven.offline.enabled": true,
+  "java.import.gradle.enabled": false,
+  "java.debug.settings.forceBuildBeforeLaunch": false,
+  "go.toolsManagement.autoUpdate": false,
+  "go.toolsManagement.checkForUpdates": "off",
+  "go.toolsEnvVars": { "GOTOOLCHAIN": "local", "GOPROXY": "off", "GOSUMDB": "off" },
+  "files.exclude": { "**/htmlcov": true, "**/target": true },
   // Remove this override where licensed Docker Desktop is the approved standard.
   "dev.containers.dockerPath": "wslc"
 }

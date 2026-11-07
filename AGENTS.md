@@ -7,11 +7,13 @@
 - Read-only `preflight.ps1` and `verify.ps1` are allowed. `verify.ps1 -RunConfigTest` requires an explicit request because it invokes WinGet configuration tests.
 - Verification switches are `-IncludeJavaModernization`, `-RunConfigTest` and `-Json`. The default extension profile requires 12; modernization requires the optional 13th. `-RunConfigTest` tests the required configuration and also the modernization configuration when both switches are selected. `-Json` emits the results array; no switch installs tools or selects Java 11 for legacy tests.
 - Do not start apps or containers, authenticate to Azure, deploy, publish, reset samples, create tags/branches or commit unless the task explicitly authorises that action. Approval to edit files is not approval to execute generated infrastructure.
-- Azure preparation must keep the application image as a required environment-backed parameter, without a placeholder or unrelated demo-service default. Report unset inputs; do not build/publish an image or launch Azure merely to complete preparation.
+- Azure preparation targets an existing AKS cluster and ACR only. Keep application images as required inputs, with no placeholder or unrelated demo-service default; deployment uses same-run immutable image digests. Report unset inputs. Never authenticate, provision, build/publish images or dispatch deployment merely to complete preparation.
 - Do not work around IT policy or install missing tools. Do not download or restore dependencies, toolchains, modules or portable tools, including implicit downloads by test/build commands or configuration tests. A project-local location such as `.tools\` does not make installation or restoration permissible. Use only already available tools and dependencies; mark an absent prerequisite and its affected command **NOT RUN**.
 - Do not override execution policy in a child shell or the current process without explicit prior approval. Leaving machine/user policy unchanged is not authorization for a process-only override. If policy prevents execution, report the check **NOT RUN** and use permitted static inspection instead.
 
 ## Build and test
+
+VS Code tasks and `scripts\developer.ps1` separate **human-operated Setup/Restore** from daily Test/Lint/Coverage/Run. Agents must never run Setup, SetupPreview, FinishSetup or Restore. Local container builds belong only to explicitly confirmed Restore with `-RestoreTarget ContainerImages`; RunContainer requires an existing image and uses `--pull=never`, never build/pull/restoration. Daily checks require installed runtimes and restored dependencies and must prevent downloads/restoration; record missing prerequisites as **NOT RUN**. `All` excludes legacy Java. See [the VS Code quickstart](docs/SETUP.md) for tooling and report paths.
 
 Run commands inside the named sample directory, not the repository root:
 
@@ -39,4 +41,8 @@ The commands above and in setup documentation are user-run instructions, not per
 
 `samples\java-legacy-upgrade` is intentionally Java 11 + Spring Boot 2.7. General guidance for the current Java service does **not** apply to that baseline: do not upgrade it by hand or include it in the normal CI matrix. Change it only for an explicitly requested modernization exercise.
 
-The **exact two Go baseline exceptions listed in step 5 of [the demo script](docs/DEMO-SCRIPT.md)** apply only to the documented baseline code in `samples\go-fx-rates`. Preserve them during unrelated work; fix them with regression tests when that review exercise or an explicit remediation is requested. Do not introduce, duplicate or extend those exceptions to other code, inputs or environments. All other standards continue to apply. These are scoped, documented demo exceptions, not general unsafe permission.
+There are **no Go serving-code exceptions on revised `main`**. The review exercise is non-serving text in `tests\fixtures\go-review-example.txt`; review it without copying defects into a service. The historical `demo-baseline` tag contains deliberately unsafe query logging/internal-error disclosure and must not be launched or deployed. Use revised `main` as the safe baseline and inspect the schedule fallback on `demo-complete`. See [the demo script](docs/DEMO-SCRIPT.md).
+
+## GitHub and deployment boundaries
+
+GitHub sign-in, branch/commit/publish/PR operations and package restore are separate user decisions. Existing AKS deployment is manual `workflow_dispatch` only from trusted `main`, with exact current `source_sha`, successful modern-service tests, immutable ACR digests and independent `aks-demo` approval. The live approval check must fail closed if protections or their availability cannot be verified. Agents may prepare/review files but never dispatch, authenticate, grant RBAC, create a namespace/cluster/registry, request admin credentials or bypass policy. See [the existing-AKS plan](docs/GITHUB-AKS.md).

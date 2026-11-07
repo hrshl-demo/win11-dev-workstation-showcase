@@ -1,0 +1,89 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "items": [
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {"name": "emi", "namespace": "${AKS_NAMESPACE}"},
+      "spec": {
+        "replicas": 2,
+        "selector": {"matchLabels": {"app": "emi"}},
+        "template": {
+          "metadata": {"labels": {"app": "emi"}},
+          "spec": {
+            "automountServiceAccountToken": false,
+            "securityContext": {"runAsNonRoot": true, "runAsUser": 10001, "runAsGroup": 10001, "seccompProfile": {"type": "RuntimeDefault"}},
+            "containers": [{
+              "name": "emi", "image": "${EMI_IMAGE}", "imagePullPolicy": "IfNotPresent",
+              "ports": [{"name": "http", "containerPort": 8080}],
+              "env": [{"name": "PORT", "value": "8080"}, {"name": "PYTHONDONTWRITEBYTECODE", "value": "1"}],
+              "resources": {"requests": {"cpu": "100m", "memory": "128Mi"}, "limits": {"cpu": "500m", "memory": "256Mi"}},
+              "securityContext": {"runAsNonRoot": true, "allowPrivilegeEscalation": false, "readOnlyRootFilesystem": true, "capabilities": {"drop": ["ALL"]}},
+              "startupProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 5, "failureThreshold": 24},
+              "readinessProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 5, "timeoutSeconds": 2},
+              "livenessProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 10, "timeoutSeconds": 2}
+            }]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {"name": "ifsc", "namespace": "${AKS_NAMESPACE}"},
+      "spec": {
+        "replicas": 2,
+        "selector": {"matchLabels": {"app": "ifsc"}},
+        "template": {
+          "metadata": {"labels": {"app": "ifsc"}},
+          "spec": {
+            "automountServiceAccountToken": false,
+            "securityContext": {"runAsNonRoot": true, "runAsUser": 10001, "runAsGroup": 10001, "fsGroup": 10001, "seccompProfile": {"type": "RuntimeDefault"}},
+            "containers": [{
+              "name": "ifsc", "image": "${IFSC_IMAGE}", "imagePullPolicy": "IfNotPresent",
+              "ports": [{"name": "http", "containerPort": 8080}],
+              "env": [{"name": "PORT", "value": "8080"}, {"name": "JAVA_TOOL_OPTIONS", "value": "-XX:MaxRAMPercentage=65 -Djava.io.tmpdir=/tmp"}],
+              "resources": {"requests": {"cpu": "250m", "memory": "384Mi"}, "limits": {"cpu": "1000m", "memory": "768Mi"}},
+              "securityContext": {"runAsNonRoot": true, "allowPrivilegeEscalation": false, "readOnlyRootFilesystem": true, "capabilities": {"drop": ["ALL"]}},
+              "volumeMounts": [{"name": "java-tmp", "mountPath": "/tmp"}],
+              "startupProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 5, "failureThreshold": 60},
+              "readinessProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 5, "timeoutSeconds": 2},
+              "livenessProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 10, "timeoutSeconds": 2}
+            }],
+            "volumes": [{"name": "java-tmp", "emptyDir": {"sizeLimit": "64Mi"}}]
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {"name": "fx", "namespace": "${AKS_NAMESPACE}"},
+      "spec": {
+        "replicas": 2,
+        "selector": {"matchLabels": {"app": "fx"}},
+        "template": {
+          "metadata": {"labels": {"app": "fx"}},
+          "spec": {
+            "automountServiceAccountToken": false,
+            "securityContext": {"runAsNonRoot": true, "runAsUser": 65532, "runAsGroup": 65532, "seccompProfile": {"type": "RuntimeDefault"}},
+            "containers": [{
+              "name": "fx", "image": "${FX_IMAGE}", "imagePullPolicy": "IfNotPresent",
+              "ports": [{"name": "http", "containerPort": 8080}],
+              "env": [{"name": "PORT", "value": "8080"}],
+              "resources": {"requests": {"cpu": "50m", "memory": "32Mi"}, "limits": {"cpu": "250m", "memory": "64Mi"}},
+              "securityContext": {"runAsNonRoot": true, "allowPrivilegeEscalation": false, "readOnlyRootFilesystem": true, "capabilities": {"drop": ["ALL"]}},
+              "startupProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 5, "failureThreshold": 12},
+              "readinessProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 5, "timeoutSeconds": 2},
+              "livenessProbe": {"httpGet": {"path": "/health", "port": "http"}, "periodSeconds": 10, "timeoutSeconds": 2}
+            }]
+          }
+        }
+      }
+    },
+    {"apiVersion": "v1", "kind": "Service", "metadata": {"name": "emi", "namespace": "${AKS_NAMESPACE}"}, "spec": {"type": "ClusterIP", "selector": {"app": "emi"}, "ports": [{"name": "http", "port": 8080, "targetPort": "http"}]}},
+    {"apiVersion": "v1", "kind": "Service", "metadata": {"name": "ifsc", "namespace": "${AKS_NAMESPACE}"}, "spec": {"type": "ClusterIP", "selector": {"app": "ifsc"}, "ports": [{"name": "http", "port": 8080, "targetPort": "http"}]}},
+    {"apiVersion": "v1", "kind": "Service", "metadata": {"name": "fx", "namespace": "${AKS_NAMESPACE}"}, "spec": {"type": "ClusterIP", "selector": {"app": "fx"}, "ports": [{"name": "http", "port": 8080, "targetPort": "http"}]}}
+  ]
+}

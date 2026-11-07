@@ -1,135 +1,149 @@
-# 15-minute demo script
+# 15-minute VS Code demo
 
-Setup is completed **before** the presentation. Use synthetic data, an approved device and a disposable demo checkout. Each prompt below is the exact text to paste; generated work still requires review. Do not approve setup, installation, elevation, Azure authentication or deployment from agent tool requests.
+Setup and package restoration happen **before** the presentation. Use synthetic data and a disposable reviewed checkout of safe revised `main`. All work uses VS Code menus, tasks and integrated terminals. Do not approve agent requests to install, authenticate, launch, dispatch, provision or bypass policy.
 
 ## Pre-demo checklist
 
-- Sign in to the organisation-approved GitHub account and confirm its assigned Copilot Business/Enterprise seat, Agent mode and applicable policies.
-- Confirm network/proxy access, toolchains, required extensions and discovery of instructions, the onboarding agent and four skills in the Agent Customizations editor.
-- Rehearse test commands, runtime/image availability, port 8080 and the integrated browser. Use an already approved Docker runtime if WSL containers are unavailable.
-- Confirm `demo-baseline` and `demo-complete` exist locally and inspect their contents. They are release/demo preparation assets, not created by setup.
-- Preserve all unrelated work. In the disposable checkout, inspect `git status --short`, preview `.\scripts\demo-reset.ps1 -WhatIf`, then run `.\scripts\demo-reset.ps1` only after reviewing and explicitly confirming its sample/container scope. Do not disable its guards.
-- Prepare Java 11 and the modernization extension only if step 6 is planned. Check `.\scripts\verify.ps1 -IncludeJavaModernization` separately; this adds the optional extension check, not Java 11 selection or installation. Confirm the legacy JDK independently. Optional tooling must not fail the core-demo readiness gate.
-- Keep an inspected `demo-complete` checkout and captured test output ready. Label recorded evidence; never present it as a live result.
+- Follow [Setup](SETUP.md): fresh approved laptop or already configured laptop, then explicit **user** Restore. Confirm manifest-defined runtimes, test packages, 12 required extensions and approved GitHub/Copilot access.
+- Rehearse daily Test/Lint/Coverage tasks and inspect reports. Before the presentation, explicitly build approved local images through confirmed Restore ContainerImages. RunContainer requires those existing images and uses `--pull=never`, with no build/pull/restoration. Missing prerequisites mean NOT RUN; do not restore packages/images or repair the machine during the demo.
+- Confirm instructions, onboarding agent and skills in the Agent Customizations editor. Tool access does not grant permission.
+- Inspect current `main` and the retained `demo-complete` schedule fallback. The original `demo-baseline` tag is historical unsafe code: **do not launch it, restore running samples from it or deploy it**.
+- Confirm port 8080 and the already approved runtime. `-Runtime Auto` chooses `wslc` first and Docker only if WSL CLI is absent; explicit `-Runtime wslc|docker` probes only that approved choice without fallback. Never select another runtime to bypass a policy denial.
+- Inspect GitHub CI and [existing-AKS prerequisites](GITHUB-AKS.md). The live demo prepares/reviews files; deployment is a separate dispatch and independent approval, not a surprise end-of-demo action.
+- Optional modernization requires Java 11 and its extension arranged in advance. Core checks exclude legacy; `verify.ps1 -IncludeJavaModernization` checks the extension but does not select Java 11.
+- Keep recorded output clearly labelled with its revision/runtime/date. Never present recorded checks as live results.
 
-## 1. Prove readiness — 00:00–01:30
+## 1. Readiness and developer workflow — 00:00–02:00
 
-**Say:** “We review the workstation against the declared configuration; installed tools alone are not proof of enterprise compliance.”
+**Say:** “There are two routes: set up an approved fresh device once, or verify an existing device. Package restore is a separate user action; daily checks never install.”
 
-**Do:** Run at the repository root:
+In **Terminal → New Terminal → PowerShell**, repository root:
 
 ```powershell
 .\scripts\verify.ps1
-winget configure test -f .config\configuration.winget
+.\scripts\developer.ps1 -Action Test -Sample All
 ```
 
-Paste into the **Workstation onboarding** agent:
+Show **Terminal → Run Task**, the Testing Activity Bar, Source Control and the GitHub Pull Requests view.
+
+Paste to **Workstation onboarding**:
 
 ```text
-Read docs/SETUP.md and docs/IT-PREREQUISITES.md. Explain the verification output in plain language and distinguish required items from optional Java modernization. You may run only scripts/preflight.ps1 and scripts/verify.ps1 without RunConfigTest. Do not run setup, repair, package installation, configuration apply, WSL updates, elevation, restart, Azure sign-in or any application launch. If a check fails, explain the human-operated next step without executing it.
+Read docs\SETUP.md and docs\IT-PREREQUISITES.md. Explain the verification results and the fresh-approved versus already-configured VS Code routes. Separate setup once, explicit human package Restore, daily no-restore tests/lint/coverage, GitHub PR review and existing AKS deployment. You may run only scripts\preflight.ps1 and scripts\verify.ps1 without RunConfigTest. Do not install, repair, change policy, authenticate, launch or deploy. Explain human-operated next steps and checks NOT RUN.
 ```
 
-**Expected result:** A readable tool/extension table and configuration test result. Report any WARN/FAIL accurately; the default extension requirement is 12, not all 13 recommendations.
+**Expected:** Accurate readiness/test output, with optional modernization distinguished. **Fallback:** Label recorded output and explain current failures; no laptop repair.
 
-**Fallback:** Show previously captured, labelled readiness output and the configuration file; explain the current failure and continue from the already verified fallback checkout. Do not repair the laptop during the demo.
+## 2. Extend EMI with focused tests — 02:00–06:00
 
-## 2. Extend the EMI API with tests — 01:30–05:30
+**Say:** “Financial invariants stay explicit: preserve rounded EMI, shorten tenure, settle the last payment exactly.”
 
-**Say:** “The agent follows financial invariants and proves them with tests rather than changing payment behaviour by accident.”
-
-**Do:** Select Agent mode, focus `samples\python-emi-api`, and paste:
+Focus `samples\python-emi-api`, use Agent mode:
 
 ```text
-Use the extend-emi-api skill and repository instructions to add POST /emi/schedule in samples/python-emi-api only. Accept the existing principal, annual_rate_percent and tenure_months plus an optional one-time prepayment_amount and prepayment_month pair. Use Decimal throughout and ROUND_HALF_UP to two decimals. Return monetary JSON as fixed two-decimal strings and display INR with Indian lakh grouping. Keep the existing rounded EMI unchanged. Each month round interest, apply the regular installment, then apply prepayment to remaining principal after the specified month's installment; prepayment shortens tenure, never recalculates EMI. Reject invalid or unpaired prepayment inputs and amounts above the remaining balance. Set the final installment exactly to remaining principal plus rounded interest, with zero final balance and no negative principal. Preserve POST /emi results and total_payment as rounded EMI times tenure. Add tests for no prepayment, valid prepayment, invalid inputs, shortened tenure, final settlement and rounding; run uv run pytest in the sample and fix failures. Do not install tools, launch services or change other samples.
+Use the extend-emi-api skill and repository instructions to add POST /emi/schedule only in samples\python-emi-api. Use Decimal and ROUND_HALF_UP; fixed two-decimal monetary strings and Indian INR grouping. Preserve existing rounded EMI and POST /emi total_payment. Accept optional paired prepayment_amount/prepayment_month. Each month round interest, apply regular installment, then one-time prepayment to remaining principal after that month's payment. Shorten tenure without lowering EMI. Reject invalid/unpaired inputs and prepayment above remaining principal. Final installment is exactly remaining principal plus rounded interest; never create a negative balance. Add no-prepayment, valid/invalid prepayment, shortened-tenure, settlement and rounding tests. Run only no-download/no-restore checks with the existing pinned environment. If unavailable, report NOT RUN; do not install, launch or change another sample.
 ```
 
-Review the diff and test output. Use a synthetic request with `"principal":"2500000.00"`, `"annual_rate_percent":"8.5"`, `tenure_months: 240`; expected existing EMI is `"21695.58"`.
-
-**Expected result:** Focused implementation and passing observed tests. Schedule monetary values are strings, the recurring EMI remains unchanged, and the last installment clears the exact balance. Prepayment reduces duration, not the EMI.
-
-**Fallback:** Stop generation if it exceeds the slot. Inspect the prepared schedule implementation and labelled test evidence on `demo-complete`; do not accept an unfinished diff merely to keep time.
-
-## 3. Containerise and inspect — 05:30–08:00
-
-**Say:** “The same sample runs as a non-root Linux container, with the selected runtime visible.”
-
-**Do:** Paste:
-
-```text
-Use the containerise-and-run skill for python-emi-api. Review its Dockerfile and run only scripts/run-sample.ps1 -Name python-emi-api -Mode container -Port 8080 after operator approval. Prefer wslc and fall back only to an already installed, approved docker runtime; report which is used. Do not install or update a runtime. Check http://localhost:8080/health, then POST /emi with {"principal":"2500000.00","annual_rate_percent":"8.5","tenure_months":240}. Open the service in VS Code's integrated browser. Verify emi "21695.58", total_payment "5206939.20", total_interest "2706939.20" and formatted INR values. Do not launch Azure resources, change enterprise policies or touch unrelated containers.
-```
-
-The operator-approved launch command is:
+Review the diff; the developer runs the focused Test/Coverage tasks:
 
 ```powershell
-.\scripts\run-sample.ps1 -Name python-emi-api -Mode container -Port 8080
+.\scripts\developer.ps1 -Action Test -Sample Python
+.\scripts\developer.ps1 -Action Coverage -Sample Python
+```
+
+Synthetic existing EMI example: principal `"2500000.00"`, annual rate `"8.5"`, tenure `240`; EMI `"21695.58"`.
+
+**Expected:** Focused behavior/tests and truthful check results. **Fallback:** Open inspected `demo-complete` schedule files and recorded evidence; do not accept an unfinished diff to meet the clock.
+
+## 3. Operator container launch — 06:00–08:00
+
+**Say:** “The operator, not the agent, starts the approved runtime and verifies a real synthetic request.”
+
+Ask the agent to **review only** the sample Dockerfile, non-root execution, health check and runtime selection. Do not ask it to run containerisation or setup.
+
+The **human** uses the container task or integrated terminal with the image
+already prepared in the explicit Restore ContainerImages stage:
+
+```powershell
+.\scripts\developer.ps1 -Action RunContainer -Sample Python
+```
+
+In a second VS Code integrated terminal:
+
+```powershell
 Invoke-RestMethod -Uri 'http://localhost:8080/health'
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/emi' -ContentType 'application/json' -Body '{"principal":"2500000.00","annual_rate_percent":"8.5","tenure_months":240}'
 ```
 
-**Expected result:** Runtime name, a healthy endpoint and the expected synthetic calculation, including `₹21,695.58`, `₹52,06,939.20`, `₹27,06,939.20`. The launcher waits for health; browser display alone is not verification.
+Open the service using VS Code's browser UI. Expected monetary strings: `"21695.58"`, `"5206939.20"`, `"2706939.20"`; INR displays `₹21,695.58`, `₹52,06,939.20`, `₹27,06,939.20`.
 
-**Fallback:** Use the already rehearsed, approved Docker alternative. If neither runtime works, show the Dockerfile and recorded response, clearly marked as recorded; do not install a runtime or bypass registry policy.
+**Fallback:** If `wslc` is absent, use only the already approved Docker alternative. If present but failing, stop and show recorded evidence; do not switch to circumvent WSL policy. Neither runtime available means no launch. Docker Desktop is optional and licence-reviewed, never installed live.
 
-## 4. Prepare Azure files, do not deploy — 08:00–10:00
+## 4. Existing AKS preparation, not provisioning — 08:00–10:30
 
-**Say:** “Cloud preparation is a reviewable change, separate from permission to provision or deploy.”
-
-**Do:** Paste:
-
-```text
-Use the prepare-for-azure skill and GitHub Copilot for Azure to explain the preparation-only Container Apps design for python-emi-api. Review repository-root azure.yaml, infra/main.bicep and infra/main.parameters.json; application changes belong inside samples/python-emi-api. Require AZURE_ENV_NAME, AZURE_LOCATION and EMI_CONTAINER_IMAGE from the azd environment. The image must be an actual already-published EMI application image, preferably digest-qualified, with no placeholder default. A newly declared registry is empty: explain the separately approved registry provisioning and image-seeding order before first app deployment; do not imply the image is already there. Explain HTTPS ingress to port 8080, zero-to-one replicas, managed identity and AcrPull. The app needs no secrets; Key Vault is intentionally empty, RBAC-enabled, purge-protected and public-network-disabled. Key Vault Secrets User does not establish secret retrieval without IT-approved private networking. Summarise declared outputs, trust boundaries and cost drivers. Do only permitted static inspection using existing tools; do not install tools, restore AVM modules, compile with missing tooling, authenticate, create resources, publish images, deploy or run live Azure launch tests. Report absent prerequisites and unperformed checks as NOT RUN.
-```
-
-Review generated files and the plan. Deny tools that would authenticate, mutate Azure or execute deployment. The Azure extension includes Azure MCP and skills, but their presence does not authorise their execution.
-
-**Expected result:** A preparation-only design and reviewable files—not deployed resources. Explain that JSON/YAML/reference checks were performed, but Bicep compilation and deployment are **NOT RUN** because no compiler was available. Declared `API_URL` and other outputs are not observed endpoints.
-
-**Fallback:** Inspect root `azure.yaml` and `infra\` on `demo-complete`; show the `AZURE_ENV_NAME` → `environmentName`, `AZURE_LOCATION` → `location`, `EMI_CONTAINER_IMAGE` → `containerImage` mappings. Flag image seeding as a prerequisite, not completed work. No secrets are needed; the vault stays sealed until IT approves private networking. See [the architecture notes](ARCHITECTURE.md#prepared-azure-fallback) for the later user-only Bicep build command, which may restore AVM modules. Do not run it, publish an image or launch Azure during this slot.
-
-## 5. Find and fix the two Go baseline gaps — 10:00–13:00
-
-**Say:** “Our reviewer must identify concrete findings, fix them and prevent regressions.”
-
-**Do:** The two intentional Go baseline exceptions are **logging the full request query string** and **returning an internal error message to the client**. This document is their only disclosure location. They are restricted to synthetic-data demo code and must not be copied into other services.
+**Say:** “We reuse existing AKS and ACR. Tests gate image build; independent approval gates namespace deployment. A PR never deploys.”
 
 Paste:
 
 ```text
-Use the bank-standards-review skill to review samples/go-fx-rates against .github/copilot-instructions.md. Report actionable findings with file and line, then fix the documented baseline exceptions within this sample only. Ensure logs cannot disclose raw request inputs, and client errors are stable and safe without internal details. Retain useful safe diagnostics, input validation, synthetic fixed rates and exact monetary arithmetic with fixed two-decimal JSON strings and INR lakh grouping. Add regression tests for the findings and run go vet ./... and go test ./... from samples/go-fx-rates. Do not launch the app, install tools, edit the legacy Java exercise or change unrelated files.
+Use prepare-for-azure to review application-only Kubernetes manifests and docs\GITHUB-AKS.md for existing AKS/ACR. Require real namespace/image inputs; do not invent values, placeholders or latest tags. Keep non-root Deployments, health probes, limits and ClusterIP Services. Explain main-only workflow_dispatch with required current source_sha, modern-service test gates, separate OIDC build/deploy identities, same-run image digests and independent aks-demo approval. Explain precreated namespace, kubelet pulls, ABAC/non-ABAC permissions and private API runner connectivity. Verify official documentation only; validate static files using existing dependencies. Do not authenticate, fetch tools, provision, create namespace/RBAC/registry/ingress, build/push images, get kubeconfig, dispatch Actions or deploy. Report missing inputs and distinguish static from unobserved live checks.
 ```
 
-**Expected result:** Two concrete findings, a focused remediation and passing observed regression tests. Currency validation, negative-amount rejection and synthetic-rate behaviour remain intact.
+Show `.github\workflows\deploy-aks.yml`, Kubernetes templates and `docs\GITHUB-AKS.md`. Explain required reviewers, prevent self-review, no admin bypass and main-only environment rule. Private repository reviewer protection needs a compatible plan and live verification; unavailable/unverifiable controls **fail closed**.
 
-**Fallback:** Inspect the reviewed remediation and regression tests on `demo-complete`. State whether tests were observed live or are recorded evidence.
+The developer can use the Kubernetes static-check task. Do **not** dispatch a deployment as part of this preparation segment.
 
-## 6. Optional Java modernization — 13:00–15:00
+**Fallback:** Inspect existing-AKS files on reviewed `main`/`demo-complete`. No old Container Apps `azure.yaml`/infra and no historical unsafe baseline. Missing Azure values remain missing; do not provision to finish preparation.
 
-**Say:** “The legacy application stays old for this specific migration exercise; modernization is an opt-in workflow.”
+## 5. Review an isolated unsafe fixture — 10:30–13:00
 
-**Do:** Only if prerequisites were installed and rehearsed before the demo, open the modernization extension for `samples\java-legacy-upgrade` and paste:
+**Say:** “Serving Go code is safe. We teach review using non-executable text, not defects in an image that could reach AKS.”
+
+The fixture `tests\fixtures\go-review-example.txt` contains the historical examples of **raw query-string logging** and **internal error-message disclosure**. It is not Go source, a live handler or deployment input.
+
+Paste:
 
 ```text
-Use GitHub Copilot modernization to assess samples/java-legacy-upgrade, intentionally kept on Java 11 and Spring Boot 2.7. Plan and perform a focused migration to Java 25 and a supported Spring Boot release compatible with that target. Preserve endpoint behaviour, constructor-injected services and synthetic data. Update only this sample's manifests, source, tests and migration documentation. Run its Maven wrapper verification with the selected target JDK and fix migration failures. Do not install a JDK, upgrade the baseline by hand outside this workflow, add the legacy sample to the normal CI matrix, launch the app or deploy to Azure. Summarise changes and the exact checks observed.
+Read .github\copilot-instructions.md and .github\instructions\go.instructions.md. Review tests\fixtures\go-review-example.txt as non-serving training text. Identify the two actionable findings with fixture line references and impact, and describe safe logging/stable client-error alternatives and regression assertions. Do not apply either defect to live samples, modify the fixture into executable code, launch services or install tools. Contrast with the safe samples\go-fx-rates regression tests; do not claim checks ran unless observed.
 ```
 
-**Expected result:** A migration assessment and, only if completed and verified within the slot, a working migrated sample. Do not promise a full migration in two minutes; the assessment is the bounded live segment.
+The developer runs:
 
-**Fallback:** Show the rehearsed migration assessment/results. `demo-complete` is required for steps 2, 4 and 5, not assumed to contain modernization. If the extension is unavailable, omit this optional step and use the time for questions.
+```powershell
+.\scripts\developer.ps1 -Action Lint -Sample Go
+.\scripts\developer.ps1 -Action Test -Sample Go
+.\scripts\developer.ps1 -Action Coverage -Sample Go
+```
+
+**Expected:** Two concrete fixture findings, no serving-code exceptions and accurate observed checks. **Fallback:** Show safe regression tests plus recorded output; never restore old defects to make the exercise work.
+
+## 6. GitHub PR and optional modernization — 13:00–15:00
+
+In VS Code select **Source Control**, inspect/stage intended files, commit with a conventional message, **Publish Branch**, then **GitHub Pull Requests: Create Pull Request**. Preserve the PR template; record exact observed commands/results/skips. Show CI checks/artifacts. Main merge and deployment approvals remain separate decisions.
+
+If rehearsed beforehand, use GitHub Copilot modernization to **assess** the intentional Java 11 / Boot 2.7 sample, preserving synthetic contracts and recording the migration plan/checks. A two-minute assessment is not a promise of a completed migration. Do not upgrade by hand, add legacy to main CI, install a JDK or deploy it.
 
 ## Recovery without losing unrelated work
 
-1. Stop agent edits and inspect `git status --short`. Preserve unrelated staged, unstaged, untracked and unsaved editor work in a separate checkout/backup; do not stash or delete it blindly.
-2. Preview `.\scripts\demo-reset.ps1 -WhatIf`. Reset restores **only `samples\`**, including its staged changes, from `demo-baseline` and stops/removes only owned containers with the showcase label and these exact names: `win11-demo-python-emi-api`, `win11-demo-java-ifsc-service`, `win11-demo-go-fx-rates`. Review the confirmation; leave all other containers and files untouched. New untracked sample files require a separate, explicit deletion confirmation; preserve unrelated files and decline deletion rather than treating them as demo output. If unrelated work blocks reset, use the prepared disposable checkout instead of bypassing the guard.
-3. For the full prepared fallback, confirm a clean disposable checkout and inspect the ref before switching:
+1. Stop agent edits and inspect **Source Control** or `git status --short` in the integrated terminal. Preserve unrelated staged, unstaged, untracked and unsaved editor work. Do not blindly stash/delete it.
+2. Prefer a separately prepared, reviewed clean checkout of safe revised `main`, or inspected `demo-complete` for the schedule fallback. Use **File → Open Folder** to change checkout; do not switch a dirty/shared checkout.
+3. Confirm the fallback's actual contents/ref before tests or user launches. It retains the schedule and the same manual/main-only AKS pipeline, not old Container Apps preparation. Deployment from a fallback branch is forbidden.
+4. For a user-approved sample reset, first **Ctrl+Shift+P → Git: Fetch** from the
+   approved remote. Inspect `origin/main` and ensure sample subtrees contain no
+   unrelated work. Preview `.\scripts\demo-reset.ps1 -WhatIf` in the integrated
+   terminal, then select **Terminal → Run Task → Reset demo** (confirmed) or run
+   `.\scripts\demo-reset.ps1` only after reviewing and
+   explicitly confirming its sample/container scope. It restores only samples
+   from fetched safe `origin/main`, freezes/rechecks the commit during
+   confirmation and rejects old unsafe Go code. It does not fetch for you.
+   Preserve unrelated untracked files; never approve deletion merely because
+   they sit under samples. The original `demo-baseline` remains historical and
+   unchanged, not a reset source or deployment ref.
+5. Stop only the specific operator-owned sample process/container using its
+   known terminal/process ID/name. The reset helper handles only its known
+   labelled demo containers, not unrelated containers. No repository-wide
+   `reset --hard`, `clean`, container prune or mass stop/remove. Any targeted
+   restore is a separate explicit user action after confirming no unrelated
+   work in that subtree.
 
-   ```powershell
-   git show-ref --verify refs/heads/demo-complete
-   git status --short
-   git switch demo-complete
-   ```
-
-   **Do not switch a dirty/shared checkout.** Use the separately prepared fallback checkout instead. Review fallback content before running any tests or launch. Root `azure.yaml` and `infra\` are preparation-only fallback assets outside `demo-reset.ps1`'s sample scope; preserve them and unrelated root work separately. A sample-only restore does not recover those files. Leave the immutable baseline tag unchanged.
-4. When a targeted restore is preferable, use `git restore --source=demo-complete --worktree -- samples/python-emi-api` or the corresponding `samples/go-fx-rates` path **only after confirming that subtree contains no unrelated changes**. This discards tracked edits in the named subtree; it neither removes new files nor restores the index. Inspect residual/untracked files manually, and never use repository-wide `reset --hard`, `clean`, container prune or mass stop/remove.
-
-No recovery step runs setup, repair, uninstall, Azure authentication or deployment.
+Recovery never runs setup, repair, package restore, uninstall, authentication or deployment.

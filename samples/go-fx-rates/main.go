@@ -64,7 +64,6 @@ func convert(w http.ResponseWriter, r *http.Request) {
 	}
 	rate, err := syntheticRate(from)
 	if err != nil {
-		slog.Warn("unsupported source currency", "route", "/convert")
 		safeError(w, http.StatusBadRequest, "Unsupported source currency.")
 		return
 	}

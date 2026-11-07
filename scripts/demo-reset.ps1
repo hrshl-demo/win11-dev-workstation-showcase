@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Reset only the known demo containers and samples subtree to demo-baseline.
+Reset only the known demo containers and samples subtree to the fetched safe origin/main.
 .DESCRIPTION
 Requires explicit confirmation. Refuses unrelated working-tree changes,
 merge conflicts, or reparse points under samples. New untracked sample files
@@ -20,11 +20,18 @@ function Get-SampleResetState {
     [CmdletBinding()]
     [OutputType([pscustomobject])]
     param([string]$Git, [string]$Root)
-    $baseline = Invoke-NativeCommand $Git @('rev-parse', '--verify', 'refs/tags/demo-baseline^{commit}') -WorkingDirectory $Root
-    Assert-NativeSuccess $baseline 'Locate demo-baseline tag (create it only after final validation)'
-    $tree = Invoke-NativeCommand $Git @('ls-tree', '-r', '--name-only', 'refs/tags/demo-baseline', '--', 'samples') -WorkingDirectory $Root
+    $baseline = Invoke-NativeCommand $Git @('rev-parse', '--verify', 'refs/remotes/origin/main^{commit}') -WorkingDirectory $Root
+    Assert-NativeSuccess $baseline 'Locate origin/main (fetch the published safe baseline first)'
+    $commit = $baseline.StdOut.Trim()
+    if ($commit -notmatch '^[a-f0-9]{40}$') { throw 'origin/main did not resolve to a commit; refusing reset.' }
+    $go = Invoke-NativeCommand $Git @('show', "${commit}:samples/go-fx-rates/main.go") -WorkingDirectory $Root
+    Assert-NativeSuccess $go 'Read safe baseline Go handler'
+    if ($go.StdOut -match 'slog.Info\("conversion request", "query"|safeError\(w, http.StatusBadRequest, err.Error\(\)\)') {
+        throw 'Fetched origin/main still has historical Go gaps; fetch the revised safe baseline before resetting.'
+    }
+    $tree = Invoke-NativeCommand $Git @('ls-tree', '-r', '--name-only', $commit, '--', 'samples') -WorkingDirectory $Root
     Assert-NativeSuccess $tree 'Read baseline samples'
-    if (-not $tree.StdOut.Trim()) { throw 'demo-baseline has no tracked samples; refusing reset.' }
+    if (-not $tree.StdOut.Trim()) { throw 'origin/main has no tracked samples; refusing reset.' }
     $status = Invoke-NativeCommand $Git @('status', '--porcelain=v1', '-z', '--untracked-files=all') -WorkingDirectory $Root
     Assert-NativeSuccess $status 'Read working-tree status'
     $records = @($status.StdOut -split "`0" | Where-Object { $_ })
@@ -49,7 +56,7 @@ function Get-SampleResetState {
     }
     $samples = Join-Path $Root 'samples'
     Assert-SafeSampleTree $samples
-    [pscustomobject]@{ Untracked = $untracked }
+    [pscustomobject]@{ Untracked = $untracked; Baseline = $commit }
 }
 
 function Invoke-DemoReset {
@@ -63,15 +70,15 @@ function Invoke-DemoReset {
         $git = Get-NativeCommandPath git
         if (-not $git) { throw 'Git is missing from PATH.' }
         $state = Get-SampleResetState -Git $git -Root $root
-        Write-ShowcaseMessage '[WARN] Reset replaces tracked samples (including their staged changes) with demo-baseline; no other tracked paths are touched.'
-        if (-not $PSCmdlet.ShouldProcess('Known demo containers and samples subtree', 'Stop/remove owned containers; restore samples to demo-baseline')) { return 0 }
+        Write-ShowcaseMessage "[WARN] Reset replaces tracked samples (including staged changes) with fetched origin/main $($state.Baseline); no other tracked paths are touched."
+        if (-not $PSCmdlet.ShouldProcess('Known demo containers and samples subtree', 'Stop/remove owned containers; restore samples to safe origin/main')) { return 0 }
         if (-not $PSCmdlet.ShouldContinue('Discard sample demo changes and stop the owned demo containers?', 'Confirm demo reset')) {
             Write-ShowcaseMessage '[WARN] Reset cancelled.'
             return 0
         }
         if ($state.Untracked.Count -gt 0) {
             Write-ShowcaseMessage ('[WARN] New untracked sample files to delete: ' + ($state.Untracked -join ', '))
-            if (-not $PSCmdlet.ShouldContinue('Delete the listed new untracked sample files? They are not recoverable from demo-baseline.', 'Confirm new file deletion')) {
+            if (-not $PSCmdlet.ShouldContinue('Delete the listed new untracked sample files? They are not recoverable from origin/main.', 'Confirm new file deletion')) {
                 Write-ShowcaseMessage '[WARN] Reset cancelled; new files preserved.'
                 return 0
             }
@@ -96,13 +103,14 @@ function Invoke-DemoReset {
         # Recheck immediately before Git mutations so newly appearing unrelated
         # work or unconfirmed new files cannot be swept into a broad reset.
         $current = Get-SampleResetState -Git $git -Root $root
+        if ($state.Baseline -cne $current.Baseline) { throw 'Fetched baseline changed during confirmation; review and re-run reset.' }
         $previousPaths = @($state.Untracked) -join "`0"
         $currentPaths = @($current.Untracked) -join "`0"
         if ($previousPaths -cne $currentPaths) {
             throw 'Untracked sample files changed during confirmation; re-run and review the new list.'
         }
-        if ($PSCmdlet.ShouldProcess((Join-Path $root 'samples'), 'Restore tracked sample files from demo-baseline')) {
-            $restore = Invoke-NativeCommand $git @('restore', '--source=refs/tags/demo-baseline', '--staged', '--worktree', '--', 'samples') -WorkingDirectory $root
+        if ($PSCmdlet.ShouldProcess((Join-Path $root 'samples'), 'Restore tracked sample files from confirmed safe origin/main commit')) {
+            $restore = Invoke-NativeCommand $git @('restore', "--source=$($state.Baseline)", '--staged', '--worktree', '--', 'samples') -WorkingDirectory $root
             Assert-NativeSuccess $restore 'Restore samples'
         }
         if ($state.Untracked.Count -gt 0 -and $PSCmdlet.ShouldProcess('Confirmed untracked sample files', 'Delete only previously confirmed paths')) {

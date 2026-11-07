@@ -1,0 +1,47 @@
+{
+  "description": "Reviewed pins and human restore guidance, not an installation hook. Agents must not execute restoration.",
+  "powershell": {
+    "path": ".tools\\powershell",
+    "modules": { "Pester": "5.7.1", "PSScriptAnalyzer": "1.24.0" },
+    "restore": "scripts\\developer.ps1 -Action Restore -Sample PowerShell -Confirm",
+    "prerequisites": "Existing PowerShellGet Save-Module, official PSGallery registration and NuGet provider >=2.8.5.201. IT supplies missing prerequisites; never bootstrap NuGet or change policy.",
+    "sources": [
+      "https://www.powershellgallery.com/packages/Pester/5.7.1",
+      "https://www.powershellgallery.com/packages/PSScriptAnalyzer/1.24.0"
+    ]
+  },
+  "python": {
+    "runtime": "3.14",
+    "environment": "samples\\python-emi-api\\.venv",
+    "packages": { "pytest": "8.3.4", "pytest-cov": "7.0.0", "coverage": "7.10.6", "ruff": "0.14.3" },
+    "restore": "scripts\\developer.ps1 -Action Restore -Sample Python -Confirm",
+    "debug": "Select the existing .venv interpreter and install the approved Python Debugger VS Code extension yourself. No pip/debugpy installation or uv sync on F5.",
+    "sources": [
+      "https://pypi.org/pypi/pytest-cov/7.0.0/json",
+      "https://pypi.org/pypi/coverage/7.10.6/json",
+      "https://pypi.org/pypi/ruff/0.14.3/json"
+    ]
+  },
+  "java": {
+    "runtime": "25",
+    "wrapperMaven": "3.9.16",
+    "plugins": { "jacoco-maven-plugin": "0.8.14", "maven-checkstyle-plugin": "3.6.0", "maven-dependency-plugin": "3.9.0" },
+    "restore": "scripts\\developer.ps1 -Action Restore -Sample Java -Confirm",
+    "debug": "Set JAVA_HOME to the approved JDK 25, explicitly restore/test, then use the Java Test Runner/Debugger supplied by the recommended Java extension pack. Auto-build/update is disabled; no restoration on F5.",
+    "sources": [
+      "https://www.jacoco.org/jacoco/trunk/doc/changes.html",
+      "https://repo.maven.apache.org/maven2/org/jacoco/jacoco-maven-plugin/0.8.14/",
+      "https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-checkstyle-plugin/3.6.0/maven-checkstyle-plugin-3.6.0.pom",
+      "https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-dependency-plugin/3.9.0/maven-dependency-plugin-3.9.0.pom"
+    ]
+  },
+  "containers": {
+    "restore": "scripts\\developer.ps1 -Action Restore -RestoreTarget ContainerImages -Sample All -Runtime auto -Confirm",
+    "guidance": "Use Restore project dependencies, select ContainerImages then the sample and already-approved runtime. All builds only the three modern images; Legacy is explicit opt-in. RunContainer requires the existing local image and uses --pull=never; no build or pull during Run."
+  },
+  "go": {
+    "runtime": "1.27.3",
+    "restore": "scripts\\developer.ps1 -Action Restore -Sample Go -Confirm",
+    "debug": "IT/user must explicitly arrange the Go extension's approved Delve (dlv) tool before F5. Auto-update is disabled; GOTOOLCHAIN=local and GOPROXY=off prevent hidden downloads."
+  }
+}

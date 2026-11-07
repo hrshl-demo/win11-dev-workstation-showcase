@@ -6,11 +6,29 @@ Go **1.27.3**, standard library only. Fixed rates to INR are **USD 88.00**,
 
 ## Test and run
 
+Open the repository root in **VS Code** and choose **Terminal → Run Task** or
+run in its integrated PowerShell terminal:
+
+```powershell
+.\scripts\developer.ps1 -Action Test -Sample Go
+.\scripts\developer.ps1 -Action Lint -Sample Go
+.\scripts\developer.ps1 -Action Coverage -Sample Go
+```
+
+Go built-in tests/coverage and vet need no external module; require the installed
+manifest-defined Go version, with no automatic toolchain download.
+Reports: `test-results.json`, `coverage.out`, `coverage.html` in this sample.
+Use the Go extension's test/debug support or reproducible tasks. Missing Go
+means **NOT RUN**, not install. See [Setup](../../docs/SETUP.md).
+
 From this directory, with your already-approved Go installation:
 
 ```powershell
+$env:GOTOOLCHAIN = 'local'
+$env:GOPROXY = 'off'
 go vet ./...
 go test ./...
+# Separate human-operated launch, not part of daily verification:
 go run .
 ```
 
@@ -23,7 +41,7 @@ go run .
 Remove-Item Env:PORT
 ```
 
-In another terminal (change the port when overridden):
+In another **VS Code integrated PowerShell terminal** (change the port when overridden):
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/health
@@ -60,28 +78,43 @@ route `/convert`, never query strings, supplied amounts or currency values.
 Unknown source currencies receive the stable public message
 `"Unsupported source currency."`, with no internal lookup details.
 
+Revised main uses safe client errors and does not log raw query strings.
+The review exercise is isolated non-serving text in
+`tests\fixtures\go-review-example.txt` at repository root; never copy its
+defects into handlers. The original `demo-baseline` tag is historical unsafe
+code, not a runnable/deployable fallback.
+
 ## Container
 
-Use an already-approved runtime, preferring `wslc`:
+Only the developer builds/runs with an approved runtime: automatic `wslc` first, `docker`
+only if `wslc` is absent, never after a failing or policy-blocked WSL operation.
+Docker Desktop is a commented optional, licence-reviewed choice:
+
+The shared repository launcher accepts `-Runtime Auto|wslc|docker` (choose one
+value) with `-Name go-fx-rates -Mode container`; explicit selection probes only
+the approved runtime and never falls back. See [Setup](../../docs/SETUP.md).
 
 ```powershell
-$runtime = if (Get-Command wslc -ErrorAction SilentlyContinue) { 'wslc' } elseif (Get-Command docker -ErrorAction SilentlyContinue) { 'docker' } else { throw 'No approved container runtime is available.' }
-Write-Host "Runtime: $runtime"
-& $runtime build -t showcase-fx .
-& $runtime run -d --name showcase-fx -p 8080:8080 showcase-fx
+# From the repository root, explicit user-approved image restoration:
+.\scripts\developer.ps1 -Action Restore -RestoreTarget ContainerImages -Sample Go -Runtime Auto -Confirm
+# Separate launch uses the existing image, with --pull=never:
+.\scripts\developer.ps1 -Action RunContainer -Sample Go -Runtime Auto
 Invoke-RestMethod http://localhost:8080/health
 Invoke-RestMethod 'http://localhost:8080/convert?from=USD&to=INR&amount=100'
-& $runtime stop showcase-fx
-& $runtime rm showcase-fx
 ```
 
-Wait for startup before calling `/health`. Use `-e PORT=8081 -p 8081:8081`
-for a container port override. The build stage runs vet/tests and builds with
+Wait for startup before calling `/health`. Use the launcher's `-Port` parameter
+and reported endpoint for an override; Run never builds/pulls a missing image.
+The explicit Restore image-build stage runs vet/tests and builds with
 CGO disabled. The final distroless image runs as non-root UID/GID **65532**.
 Its executable health check calls `/health` with a two-second HTTP timeout.
 There are no external modules, so **no `go.sum` is needed**.
 
 ## Verification and provenance
+
+This is **historical original-revision evidence**. In particular the original
+Go tests were not executed; do not imply they passed or prove current
+regressions/coverage/CI. This documentation revision ran no Go checks or deployment.
 
 Primary metadata checked **7 November 2026** without downloading software:
 
@@ -104,5 +137,7 @@ Container builds/runs and live-server checks were also **NOT RUN**: execution
 was prohibited and no approved container runtime was available. Registry
 verification establishes image existence/digests, not a successful build.
 
-For a future Azure integration, use environment configuration, Azure Key Vault
-and managed identity; do not add credentials to this sample.
+For [existing AKS + ACR](../../docs/GITHUB-AKS.md), use shared application-only
+manifests, current-main-SHA manual dispatch, same-run image digests and independent
+approval. No sample provisions resources or uses customer credentials. Key Vault/
+managed identity requires separate review if actual secrets become necessary.

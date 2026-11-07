@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with `.\scripts\preflight.ps1` and `winget --info` from the signed-in developer's terminal. Record exact output and redact paths, identities and secrets before sharing. State-changing fixes below are **human-operated, IT-approved actions**; agents must not execute them.
+Start with `.\scripts\preflight.ps1` and `winget --info` from **VS Code → Terminal → New Terminal → PowerShell**, as the signed-in developer. Record exact output and redact paths, identities and secrets before sharing. State-changing fixes below are **human-operated, IT-approved actions**; agents must not execute them. Already configured devices skip bootstrap; a test failure is not a reason to reinstall the workstation.
 
 ## WinGet
 
@@ -49,7 +49,24 @@ Repair-WinGetPackageManager -Force -Latest
 | Container image pull denied | Check WSL container/registry policies and approved registry availability. Never bypass the allowlist |
 | Dev Containers expects `wslc` on a Docker-standard device | Remove the workspace `dev.containers.dockerPath` override with approval; use the approved runtime |
 | Modernization extension missing | Expected unless opted in; use `-IncludeJavaModernization` only for the optional exercise |
-| Port conflict / demo drift | Use only approved sample launch parameters; follow [sample-scoped recovery](DEMO-SCRIPT.md#recovery-without-losing-unrelated-work), not mass process/container cleanup |
+| Port conflict / demo drift | Use only approved sample launch parameters; follow [sample-scoped recovery](DEMO-SCRIPT.md#recovery-without-losing-unrelated-work). User fetches safe `origin/main` first in VS Code; reset previews/confirms only samples and owned containers, never the historical unsafe tag or mass cleanup |
+
+## Daily checks, GitHub and existing AKS
+
+| Symptom | Safe next step |
+| --- | --- |
+| Test/lint/coverage says a package or runtime is missing | Mark NOT RUN. The developer reviews the explicit Restore task for project packages; IT supplies missing tools. Daily commands/agents do not install or restore. |
+| RunContainer reports no existing local image | Mark NOT RUN. The developer may separately approve Restore with RestoreTarget ContainerImages and -Confirm; Run itself never builds or pulls and uses --pull=never. |
+| Python/Java tests missing from Testing view | Select the locked `.venv` interpreter/correct Java 25 JDK; check extension discovery. Do not accept automatic helper/tool downloads without approval. |
+| GitHub sign-in works but Publish Branch fails | Sign-in does not grant repository write access. Review remote/organisation access or use an approved fork in the GitHub Pull Requests flow. |
+| Deployment refuses source SHA | Use the reviewed current remote main 40-character SHA. If main moved, request a new run; do not loosen the check or deploy from a PR/fallback tag. |
+| Environment reviewer/API protection unavailable | Stop. Check plan and `aks-demo` rules with the administrator. Private environment creation alone does not establish reviewer protection; no manual-dispatch bypass. |
+| OIDC subject mismatch | IT verifies this repository's actual immutable/legacy subject format and exact federation. No wildcard trust or client-secret workaround. |
+| ACR push/pull denied | IT reviews registry permission mode, repository conditions and kubelet pull identity; ABAC Reader/Writer do not grant catalog listing. No broad Contributor/admin workaround. |
+| Private AKS API unreachable | Check approved network-connected runner labels, DNS/TLS/network path with IT. Do not make the API public, disable TLS verification or fetch admin kubeconfig. |
+| Namespace absent or rollout fails | Namespace is an IT prerequisite. Stop, inspect safe rollout evidence; do not create namespace/RBAC or disable admission policy. |
+
+See [Setup](SETUP.md) for VS Code tasks/reports and [GitHub/AKS](GITHUB-AKS.md) for the approval plan. Agents do not dispatch or launch to troubleshoot.
 
 ## Logs and primary references
 

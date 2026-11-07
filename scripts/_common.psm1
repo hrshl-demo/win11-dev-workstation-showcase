@@ -244,15 +244,16 @@ function Get-ContainerRuntime {
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
-    param()
-    foreach ($name in @('wslc', 'docker')) {
+    param([ValidateSet('Auto', 'wslc', 'docker')][string]$Preferred = 'Auto')
+    $candidates = if ($Preferred -eq 'Auto') { @('wslc', 'docker') } else { @($Preferred.ToLowerInvariant()) }
+    foreach ($name in $candidates) {
         $path = Get-NativeCommandPath $name
         if ($path) {
             # Availability is not permission: never fall back after a denied wslc command.
             return [pscustomobject]@{ Name = $name; Path = $path }
         }
     }
-    throw 'No container runtime found. Use approved WSL containers, or Docker only where already licensed.'
+    throw "No container runtime found for $Preferred. Use approved WSL containers, or Docker only where already licensed."
 }
 
 function Test-HttpsEndpoint {

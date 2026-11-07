@@ -1,0 +1,14 @@
+NON-SERVING REVIEW EXERCISE -- synthetic inputs only.
+This text is never compiled, copied into an image or deployed.
+Identify the two standards violations and propose regression tests:
+
+func convert(w http.ResponseWriter, r *http.Request) {
+    slog.Info("conversion request", "query", r.URL.RawQuery)
+    rate, err := syntheticRate(from)
+    if err != nil {
+        safeError(w, http.StatusBadRequest, err.Error())
+        return
+    }
+}
+
+The live service logs only a fixed route and sends a fixed safe client error.
