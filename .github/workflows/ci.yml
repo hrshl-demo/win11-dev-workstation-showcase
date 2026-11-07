@@ -71,6 +71,7 @@ jobs:
       - name: Format, vet and race-tested coverage
         working-directory: samples/go-fx-rates
         run: |
+          set -euo pipefail
           test -z "$(gofmt -l *.go)"
           go vet ./...
           go test -race -coverprofile=coverage.out -json ./... | tee test-results.json
@@ -99,6 +100,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path .tools/powershell -Force | Out-Null
           Save-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Path .tools/powershell -Repository PSGallery
           Save-Module Pester -RequiredVersion 5.7.1 -Path .tools/powershell -Repository PSGallery
       - name: Analyze and run safe script tests with NUnit report
