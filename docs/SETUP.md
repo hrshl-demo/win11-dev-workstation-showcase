@@ -67,6 +67,8 @@ Choose **Terminal → Run Task → Preflight**, or:
 
 **Gate:** no Preflight FAIL and exit 0, plus Phase 0 approvals. WARN is advisory: missing WSL/wslc is expected before setup and does not block the Microsoft base. A policy, disk, virtualization, WinGet or endpoint FAIL must be resolved before bootstrap; a PASS does not certify every enterprise control or payload source.
 
+HTTPS results include URI/status/attempts and safe failure categories. Classified transient timeout/DNS/connect failures get at most three five-second attempts with 250 ms backoff; HTTP denial and certificate failures do not retry. Root 404/405 means reachability only, not artifact access; redirects are not followed. If exhausted, bootstrap stops before setup and reports the failed checks—do not keep retrying full setup blindly or Restore dependencies to unblock the network. Use read-only Preflight diagnostics and [the network guidance](TROUBLESHOOTING.md#intermittent-https-preflight-failures).
+
 Optionally choose **Verify** (`.\scripts\verify.ps1`) to inventory existing tools. Before setup, missing/wrong Python, Java, Go, runtime or extensions deliberately produce **exit 1**. This is an expected inventory failure, **not installation failure** and not the Preflight gate. Do not require all Verify checks to pass before installing their outputs.
 
 | Laptop state | Automated route |

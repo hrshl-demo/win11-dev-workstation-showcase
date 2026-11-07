@@ -70,6 +70,9 @@ function Write-CheckReport {
     } else {
         foreach ($check in $Checks) {
             if (-not $Quiet -or $check.Status -eq 'FAIL') {
+                if ($check.Status -eq 'PASS' -and $check.PSObject.Properties['Probe'] -and $check.Probe.Attempts -gt 1) {
+                    Write-Information -MessageData "[WARN] $($check.Name): transient transport failure recovered after $($check.Probe.Attempts) attempts." -InformationAction Continue
+                }
                 Write-Information -MessageData "[$($check.Status)] $($check.Name): $($check.Message)" -InformationAction Continue
             }
         }
@@ -256,28 +259,98 @@ function Get-ContainerRuntime {
     throw "No container runtime found for $Preferred. Use approved WSL containers, or Docker only where already licensed."
 }
 
+function Get-HttpsProbe {
+    <#
+    .SYNOPSIS
+    Return bounded HTTPS reachability diagnostics without following redirects.
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param([Parameter(Mandatory)][uri]$Uri, [ValidateRange(1, 60)][int]$TimeoutSeconds = 5)
+    if ($Uri.Scheme -ne 'https' -or $Uri.UserInfo -or $Uri.Query -or $Uri.Fragment) {
+        throw 'Readiness probes must use HTTPS without credentials, query strings or fragments.'
+    }
+    $originalTls = [Net.ServicePointManager]::SecurityProtocol
+    $failures = @()
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = $originalTls -bor [Net.SecurityProtocolType]::Tls12
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            $statusCode = $null
+            $errorType = ''
+            $reason = ''
+            $transient = $false
+            try {
+                $response = Invoke-WebRequest -Uri $Uri -Method Head -UseBasicParsing `
+                    -MaximumRedirection 0 -TimeoutSec $TimeoutSeconds -ErrorAction Stop
+                $statusCode = [int]$response.StatusCode
+            } catch {
+                $exception = $_.Exception
+                $errorType = $exception.GetType().Name
+                # Only expose known categories, never raw proxy responses or credential-bearing messages.
+                $reason = 'Unclassified request failure; review approved network diagnostics.'
+                while ($null -ne $exception) {
+                    $property = $exception.PSObject.Properties['Response']
+                    if ($property -and $null -ne $property.Value) {
+                        $codeProperty = $property.Value.PSObject.Properties['StatusCode']
+                        if ($codeProperty) { $statusCode = [int]$codeProperty.Value }
+                    }
+                    if ($exception -is [Net.WebException]) {
+                        $reason = [string]$exception.Status
+                        $transient = $exception.Status -in @(
+                            [Net.WebExceptionStatus]::Timeout,
+                            [Net.WebExceptionStatus]::NameResolutionFailure,
+                            [Net.WebExceptionStatus]::ProxyNameResolutionFailure,
+                            [Net.WebExceptionStatus]::ConnectFailure)
+                    } elseif ($exception -is [TimeoutException] -or
+                        $exception -is [Threading.Tasks.TaskCanceledException]) {
+                        $reason = 'Timeout'
+                        $transient = $true
+                    } elseif ($exception -is [Security.Authentication.AuthenticationException]) {
+                        $reason = 'Certificate/TLS authentication failure'
+                        $transient = $false
+                        break
+                    }
+                    $exception = $exception.InnerException
+                }
+            }
+            $reachable = $false
+            if ($null -ne $statusCode) {
+                $transient = $false
+                $reachable = ($statusCode -ge 200 -and $statusCode -lt 300) -or
+                    ($Uri.AbsolutePath -eq '/' -and $statusCode -in @(404, 405))
+                $reason = if ($statusCode -in @(401, 403, 407)) {
+                    'HTTP access denied; review approved source/proxy permissions.'
+                } elseif ($statusCode -ge 300 -and $statusCode -lt 400) {
+                    'HTTP redirect not followed; intended endpoint access is not established.'
+                } elseif ($reachable) {
+                    'HTTPS host reachable; this does not verify artifact download access.'
+                } else { 'HTTP endpoint check failed.' }
+            }
+            if (-not $reachable -and $transient -and $attempt -lt 3) {
+                $failures += "$errorType`: $reason"
+                Start-Sleep -Milliseconds 250
+                continue
+            }
+            return [pscustomobject]@{
+                Uri = $Uri.AbsoluteUri; Reachable = $reachable; StatusCode = $statusCode
+                Attempts = $attempt; ErrorType = $errorType; Reason = $reason
+                RetryReasons = @($failures)
+            }
+        }
+    } finally {
+        [Net.ServicePointManager]::SecurityProtocol = $originalTls
+    }
+}
+
 function Test-HttpsEndpoint {
     <#
     .SYNOPSIS
-    Probe HTTPS with TLS 1.2 and a bounded timeout.
+    Return HTTPS reachability using the shared bounded diagnostic probe.
     #>
     [CmdletBinding()]
     [OutputType([bool])]
     param([Parameter(Mandatory)][uri]$Uri, [ValidateRange(1, 60)][int]$TimeoutSeconds = 5)
-    if ($Uri.Scheme -ne 'https') { throw 'Readiness probes must use HTTPS.' }
-    $originalTls = [Net.ServicePointManager]::SecurityProtocol
-    try {
-        [Net.ServicePointManager]::SecurityProtocol = $originalTls -bor [Net.SecurityProtocolType]::Tls12
-        $response = Invoke-WebRequest -Uri $Uri -Method Head -UseBasicParsing -TimeoutSec $TimeoutSeconds -ErrorAction Stop
-        return ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400)
-    } catch {
-        # A server denying HEAD still proves the HTTPS connection reached that server.
-        $responseProperty = $_.Exception.PSObject.Properties['Response']
-        if ($null -ne $responseProperty -and $null -ne $responseProperty.Value) { return $true }
-        return $false
-    } finally {
-        [Net.ServicePointManager]::SecurityProtocol = $originalTls
-    }
+    return (Get-HttpsProbe -Uri $Uri -TimeoutSeconds $TimeoutSeconds).Reachable
 }
 
 function Wait-SampleHealth {
@@ -428,6 +501,6 @@ function Read-MicrosoftSignedScript {
 Export-ModuleMember -Function Get-ShowcaseRoot, Get-CheckResult, Write-CheckReport, Write-ShowcaseMessage,
     Get-CheckExitCode, Get-WinGetPolicy, Assert-WinGetPolicy, Assert-WorkstationPolicy, Get-NativeCommandPath,
     ConvertTo-NativeArgument, Invoke-NativeCommand, Assert-NativeSuccess,
-    Get-ContainerRuntime, Test-HttpsEndpoint, Wait-SampleHealth, Test-IsAdministrator,
+    Get-ContainerRuntime, Get-HttpsProbe, Test-HttpsEndpoint, Wait-SampleHealth, Test-IsAdministrator,
     Test-BaseResumePending, Assert-SafeDirectory, Get-RequiredExtension,
     Read-MicrosoftSignedScript, Assert-SafeSampleTree
