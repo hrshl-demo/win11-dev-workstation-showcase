@@ -74,6 +74,16 @@ Describe 'PowerShell script structural contracts' {
         $text | Should -Match 'if \(\$downloadOwned -and'
         $text | Should -Not -Match 'Remove-Item[^\r\n]*-Recurse'
     }
+    It 'bootstrap stops on failed structured preflight before any setup mutation without dumping JSON' {
+        $text = $script:Ast['bootstrap.ps1'].Text
+        $guard = $text.IndexOf("Preflight failed before setup; no setup actions started.")
+        $guard | Should -BeGreaterThan 0
+        $guard | Should -BeLessThan $text.IndexOf('Start-Transcript')
+        $guard | Should -BeLessThan $text.IndexOf('Invoke-WebRequest')
+        $text | Should -Match "Where-Object Status -eq 'FAIL'"
+        $text | Should -Match 'Preflight exceeded its 180-second budget'
+        $text | Should -Not -Match "Assert-NativeSuccess\s+\`$preflight"
+    }
     It 'bootstrap checks reboot markers only when not skipping the base' {
         $tree = $script:Ast['bootstrap.ps1'].Tree
         $resume = $tree.Find({ param($node)
@@ -134,7 +144,10 @@ Describe 'Actual preflight readiness functions with safe mocks' {
         Mock Get-AppxPackage { [pscustomobject]@{ Version = '1.11.11451' } }
         Mock Get-NativeCommandPath { "C:\$Name.exe" }
         Mock Get-WinGetPolicy { Get-CheckResult 'EnableAppInstaller' PASS 'Not configured.' }
-        Mock Test-HttpsEndpoint { $true }
+        Mock Get-HttpsProbe {
+            [pscustomobject]@{ Uri = [string]$Uri; Reachable = $true; StatusCode = 200
+                Attempts = 1; ErrorType = ''; Reason = 'HTTPS host reachable.' }
+        }
         Mock Get-ExecutionPolicy { [pscustomobject]@{ Scope = 'LocalMachine'; ExecutionPolicy = 'RemoteSigned' } }
         Mock Invoke-NativeCommand {
             $text = switch ($FilePath) {
@@ -147,7 +160,7 @@ Describe 'Actual preflight readiness functions with safe mocks' {
     }
     It 'all required mocked readiness checks pass' {
         Get-CheckExitCode @(Get-PreflightCheck) | Should -Be 0
-        Should -Invoke Test-HttpsEndpoint -Times 6 -Exactly -ParameterFilter { $TimeoutSeconds -eq 5 }
+        Should -Invoke Get-HttpsProbe -Times 6 -Exactly -ParameterFilter { $TimeoutSeconds -eq 5 }
     }
     It 'outputs clean JSON and returns a separate integer status' {
         $output = @(Invoke-Preflight -Json)
@@ -156,6 +169,7 @@ Describe 'Actual preflight readiness functions with safe mocks' {
         $parsed = $output[0] | ConvertFrom-Json
         @($parsed).Count | Should -Be 20
         $output[0] | Should -Not -Match 'configure help'
+        ($parsed | Where-Object Name -eq 'HTTPS release-assets.githubusercontent.com').Probe.Attempts | Should -Be 1
     }
     It 'fails the documented below-minimum WinGet version' {
         Mock Invoke-NativeCommand {

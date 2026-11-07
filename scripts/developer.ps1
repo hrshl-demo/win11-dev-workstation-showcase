@@ -97,7 +97,9 @@ function Invoke-DeveloperNative {
     $result = Invoke-NativeCommand -FilePath $Path -ArgumentList $Arguments `
         -WorkingDirectory $Directory -TimeoutSeconds 1800
     if ($result.Output) { Write-ShowcaseMessage $result.Output }
-    Assert-NativeSuccess $result 'Developer task (missing cached dependencies require an explicit Restore task)'
+    if ($result.ExitCode -ne 0 -or $result.TimedOut) {
+        throw "Developer task failed (exit $($result.ExitCode), timeout $($result.TimedOut)); see the diagnostics above."
+    }
     return $result
 }
 

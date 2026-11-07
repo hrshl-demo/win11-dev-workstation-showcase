@@ -46,10 +46,13 @@ function Invoke-Bootstrap {
         Assert-WorkstationPolicy
         $shell = (Get-Process -Id $PID).Path
         $preflight = Invoke-NativeCommand $shell @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'preflight.ps1'), '-Json') -TimeoutSeconds 180
-        Assert-NativeSuccess $preflight 'Preflight (readiness failures must be resolved first)'
+        if ($preflight.TimedOut) { throw 'Preflight exceeded its 180-second budget; no setup actions started. Review read-only readiness/network diagnostics.' }
         $parsedChecks = $preflight.StdOut | ConvertFrom-Json
         $checks = @($parsedChecks)
-        if ((Get-CheckExitCode $checks) -ne 0) { throw 'Preflight reported FAIL. Resolve the readiness checks before setup.' }
+        if ($preflight.ExitCode -ne 0 -or (Get-CheckExitCode $checks) -ne 0) {
+            $failures = @($checks | Where-Object Status -eq 'FAIL' | ForEach-Object { "$($_.Name): $($_.Message)" })
+            throw "Preflight failed before setup; no setup actions started. $($failures -join '; ')"
+        }
         if (-not $PSCmdlet.ShouldProcess('Developer workstation', 'Run approved bootstrap and write its log')) {
             Write-ShowcaseMessage '[WARN] Bootstrap cancelled; no configuration applied.'
             return 0

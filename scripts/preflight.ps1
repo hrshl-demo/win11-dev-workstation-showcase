@@ -3,7 +3,8 @@
 Read-only Windows developer workstation readiness checks.
 .DESCRIPTION
 No elevation or changes are made. FAIL returns exit 1; WARN is advisory.
-HTTPS checks have five-second timeouts. Native output is captured, including
+HTTPS checks use at most three five-second attempts with bounded backoff for
+transient transport failures only. Native output is captured, including
 stderr, so -Json emits only one JSON array.
 .PARAMETER Json
 Emit machine-readable checks instead of human-readable messages.
@@ -87,9 +88,16 @@ function Get-PreflightCheck {
     }
     foreach ($hostName in @('github.com', 'raw.githubusercontent.com', 'codeload.github.com',
         'release-assets.githubusercontent.com', 'www.powershellgallery.com', 'cdn.winget.microsoft.com')) {
-        $reachable = Test-HttpsEndpoint -Uri "https://$hostName" -TimeoutSeconds 5
-        $status = if ($reachable) { 'PASS' } else { 'FAIL' }
-        Get-CheckResult "HTTPS $hostName" $status "HTTPS reachable: $reachable. Check the approved proxy, TLS 1.2 and endpoint allow list."
+        $uri = if ($hostName -eq 'raw.githubusercontent.com') {
+            'https://raw.githubusercontent.com/microsoft/WindowsDeveloperConfig/refs/heads/main/README.md'
+        } else { "https://$hostName/" }
+        $probe = Get-HttpsProbe -Uri $uri -TimeoutSeconds 5
+        $status = if ($probe.Reachable) { 'PASS' } else { 'FAIL' }
+        $message = "URI: $($probe.Uri); HTTP: $($probe.StatusCode); attempts: $($probe.Attempts)/3; type: $($probe.ErrorType); $($probe.Reason)"
+        if ($probe.Reachable -and $probe.Attempts -gt 1) { $message = "Recovered after transient transport retries. $message" }
+        $check = Get-CheckResult "HTTPS $hostName" $status $message
+        $check | Add-Member -NotePropertyName Probe -NotePropertyValue $probe
+        $check
     }
     try {
         $netsh = Get-NativeCommandPath netsh

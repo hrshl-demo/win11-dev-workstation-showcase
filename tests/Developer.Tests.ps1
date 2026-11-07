@@ -97,6 +97,15 @@ Describe 'Developer safe execution and failure paths' {
         Mock New-Item { throw 'Unexpected filesystem mutation in safe test.' }
     }
 
+    It 'reports native readiness failure once without a dependency Restore hint' {
+        Mock Invoke-NativeCommand {
+            [pscustomobject]@{ ExitCode = 1; TimedOut = $false; Output = '[FAIL] HTTPS: Timeout; attempts: 3/3' }
+        }
+        { Invoke-DeveloperNative -Path 'synthetic' -Arguments @('Preflight') } | Should -Throw '*Developer task failed*'
+        Should -Invoke Write-ShowcaseMessage -Times 1 -Exactly -ParameterFilter { $Message -match 'HTTPS: Timeout' }
+        $script:DeveloperAst.Extent.Text | Should -Not -Match 'Developer task \(missing cached dependencies'
+    }
+
     It 'shows source/config only without invoking bootstrap, even with WhatIf' {
         Mock Get-Content { 'synthetic source preview' }
         Invoke-Developer -Action SetupPreview -WhatIf | Should -Be 0

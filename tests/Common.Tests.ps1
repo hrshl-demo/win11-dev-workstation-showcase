@@ -163,6 +163,90 @@ Describe 'Container runtime choice' {
 }
 
 Describe 'HTTPS and health waiting' {
+    BeforeEach {
+        Mock Start-Sleep -ModuleName _common {}
+    }
+    It 'accepts root 404/405 as reachability only' -TestCases @(@{ Code = 404 }, @{ Code = 405 }) {
+        param($Code)
+        Mock Invoke-WebRequest -ModuleName _common { [pscustomobject]@{ StatusCode = $Code } }
+        $probe = Get-HttpsProbe 'https://release-assets.githubusercontent.com/'
+        $probe.Reachable | Should -BeTrue
+        $probe.StatusCode | Should -Be $Code
+        $probe.Reason | Should -Match 'does not verify artifact'
+        $probe.Attempts | Should -Be 1
+    }
+    It 'reads an exception HTTP response rather than classifying root 404 as transport failure' {
+        Mock Invoke-WebRequest -ModuleName _common {
+            $failure = [Exception]::new('synthetic HTTP response')
+            $failure | Add-Member -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = 404 })
+            throw $failure
+        }
+        $probe = Get-HttpsProbe 'https://release-assets.githubusercontent.com/'
+        $probe.Reachable | Should -BeTrue
+        $probe.StatusCode | Should -Be 404
+        $probe.Attempts | Should -Be 1
+    }
+    It 'does not accept a missing artifact path or access denial or a redirect' -TestCases @(
+        @{ Code = 404; Path = '/artifact' }, @{ Code = 401; Path = '/' },
+        @{ Code = 403; Path = '/' }, @{ Code = 407; Path = '/' }, @{ Code = 302; Path = '/' }
+    ) {
+        param($Code, $Path)
+        Mock Invoke-WebRequest -ModuleName _common { [pscustomobject]@{ StatusCode = $Code } }
+        $probe = Get-HttpsProbe "https://github.com$Path"
+        $probe.Reachable | Should -BeFalse
+        $probe.Attempts | Should -Be 1
+        Should -Invoke Start-Sleep -ModuleName _common -Times 0 -Exactly
+    }
+    It 'retries timeout and DNS failures and reports recovery' -TestCases @(
+        @{ Failure = [Net.WebExceptionStatus]::Timeout },
+        @{ Failure = [Net.WebExceptionStatus]::NameResolutionFailure },
+        @{ Failure = [Net.WebExceptionStatus]::ConnectFailure }
+    ) {
+        param($Failure)
+        $script:ProbeCalls = 0
+        Mock Invoke-WebRequest -ModuleName _common {
+            $script:ProbeCalls++
+            if ($script:ProbeCalls -lt 3) { throw [Net.WebException]::new('synthetic transport failure', $Failure) }
+            [pscustomobject]@{ StatusCode = 200 }
+        }
+        $probe = Get-HttpsProbe 'https://github.com/'
+        $probe.Reachable | Should -BeTrue
+        $probe.Attempts | Should -Be 3
+        @($probe.RetryReasons).Count | Should -Be 2
+        Should -Invoke Start-Sleep -ModuleName _common -Times 2 -Exactly -ParameterFilter { $Milliseconds -eq 250 }
+    }
+    It 'exhausts only three transport attempts and restores TLS without leaking exception text' {
+        $tls = [Net.ServicePointManager]::SecurityProtocol
+        Mock Invoke-WebRequest -ModuleName _common { throw [Net.WebException]::new('secret proxy credential', [Net.WebExceptionStatus]::Timeout) }
+        $probe = Get-HttpsProbe 'https://github.com/'
+        $probe.Reachable | Should -BeFalse
+        $probe.Attempts | Should -Be 3
+        $probe.Reason | Should -Be 'Timeout'
+        ($probe | ConvertTo-Json) | Should -Not -Match 'secret proxy'
+        [Net.ServicePointManager]::SecurityProtocol | Should -Be $tls
+        Should -Invoke Invoke-WebRequest -ModuleName _common -Times 3 -Exactly -ParameterFilter { $TimeoutSec -eq 5 -and $MaximumRedirection -eq 0 }
+    }
+    It 'never retries certificate failures and restores TLS' {
+        $tls = [Net.ServicePointManager]::SecurityProtocol
+        Mock Invoke-WebRequest -ModuleName _common { throw [Net.WebException]::new('synthetic certificate failure', [Net.WebExceptionStatus]::TrustFailure) }
+        $probe = Get-HttpsProbe 'https://github.com/'
+        $probe.Reachable | Should -BeFalse
+        $probe.Attempts | Should -Be 1
+        $probe.Reason | Should -Be 'TrustFailure'
+        [Net.ServicePointManager]::SecurityProtocol | Should -Be $tls
+        Should -Invoke Start-Sleep -ModuleName _common -Times 0 -Exactly
+    }
+    It 'keeps recovery warnings out of JSON while showing them in plain reports' {
+        $check = Get-CheckResult 'HTTPS synthetic' PASS 'Recovered after transient transport retries.'
+        $check | Add-Member -NotePropertyName Probe -NotePropertyValue ([pscustomobject]@{ Attempts = 3 })
+        $json = @(Write-CheckReport -Checks @($check) -Json 6>&1)
+        $json.Count | Should -Be 1
+        (($json[0] | ConvertFrom-Json)[0]).Probe.Attempts | Should -Be 3
+        $plain = @(Write-CheckReport -Checks @($check) 6>&1)
+        $plain.Count | Should -Be 2
+        [string]$plain[0] | Should -Match '\[WARN\]'
+        [string]$plain[1] | Should -Match '\[PASS\]'
+    }
     It 'uses HTTPS HEAD with a five-second timeout and restores TLS state' {
         $tls = [Net.ServicePointManager]::SecurityProtocol
         Mock Invoke-WebRequest -ModuleName _common { [pscustomobject]@{ StatusCode = 200 } }

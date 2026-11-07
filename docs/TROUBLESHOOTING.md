@@ -39,6 +39,14 @@ Repair-WinGetPackageManager -Force -Latest
 
 ## Workstation and demo
 
+### Intermittent HTTPS preflight failures
+
+Preflight keeps all six required hosts. It probes HTTPS HEAD with a five-second timeout per attempt, at most three attempts and 250 ms backoff only for classified transport timeout/DNS/connect failures. Final output and clean `-Json` include the URI, HTTP status (when available), attempt count, safe error type/category and reason. A recovered check reports PASS with recovery/attempt details; exhausted transport checks remain FAIL. Bootstrap still stops before setup actions and summarizes failed checks. Do not blindly retry full setup or run Restore to fix a network check.
+
+A root HTTP **404/405** can establish host reachability, **not artifact download permission**. The raw host uses the official WindowsDeveloperConfig README path; no fictitious release asset is tested. **401/403/407** are access failures; redirects are not followed (including login/proxy pages), certificate failures are not retried, and HTTP failures are never made green with curl or another proxy. An earlier generic FAIL without transport details does not prove its cause was 404: the old helper already accepted any HTTP response, including 404, but hid no-response failures.
+
+After a failure, use the recorded diagnostics and the read-only **Preflight** task / `.\scripts\preflight.ps1 -Json` in the same approved context; IT can inspect proxy/DNS/TLS/source access. No mandatory curl prerequisite, TLS/certificate disabling, policy/proxy changes or dependency restoration is a remedy supplied by this check. Payload/CDN/enterprise acceptance is still separate from reachability.
+
 | Symptom | Action |
 | --- | --- |
 | Verify exit 1 before setup; languages/runtime/extensions absent | Expected optional inventory result, not failed installation or a bootstrap gate. If Preflight has no FAIL and approvals are complete, use **Setup preview → User-run setup** for missing/incomplete base; **Finish setup** only for confirmed complete base/add-on gaps |
