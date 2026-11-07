@@ -532,7 +532,7 @@ function Get-BaseSetupOutcome {
     param([Parameter(Mandatory)][object]$Result,
         [ValidateRange(7200, 28800)][int]$BaseSetupTimeoutSeconds = 14400)
     if ($Result.TimedOut) {
-        throw "Microsoft base launcher wait exceeded $BaseSetupTimeoutSeconds seconds ($($BaseSetupTimeoutSeconds / 3600) hours). Elevated Microsoft base state is unknown and may still be in progress; this is not evidence of UAC denial or a Microsoft installer exit. No add-on or Verify started. Keep any existing base running; do not rerun setup or use SkipBase automatically. Confirm base completion plus any reboot/resume before choosing Finish setup."
+        throw "Microsoft base launcher wait exceeded $BaseSetupTimeoutSeconds seconds ($($BaseSetupTimeoutSeconds / 3600) hours). Elevated Microsoft base state is unknown: it may be installing or awaiting final keypress dismissal after completion/failure; PID presence alone proves neither. This is not evidence of UAC denial or a Microsoft installer exit. No add-on or Verify started. Keep any existing base running; do not rerun setup or use SkipBase automatically. Review the final summary/flagged steps, respond to the existing final keypress prompt, and confirm successful base completion plus any reboot/resume before choosing Finish setup."
     }
     if ($Result.ExitCode -in @(3010, 1641)) { return 'ResumePending' }
     Assert-NativeSuccess $Result 'Microsoft base setup'

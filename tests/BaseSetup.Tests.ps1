@@ -19,7 +19,7 @@ Describe 'Bounded Microsoft base-only wait and recovery' {
         $result = [pscustomobject]@{ TimedOut = $true; ExitCode = 124
             Output = 'Setup needs Administrator rights (a UAC prompt will appear)...' }
         { Get-BaseSetupOutcome $result -BaseSetupTimeoutSeconds $Budget } |
-            Should -Throw "*exceeded $Budget seconds*Elevated Microsoft base state is unknown*No add-on or Verify started*"
+            Should -Throw "*exceeded $Budget seconds*Elevated Microsoft base state is unknown*final keypress*No add-on or Verify started*"
         Should -Invoke Test-BaseResumePending -ModuleName _common -Times 0 -Exactly
     }
     It 'retains the four-hour default and rejects budgets outside two to eight hours' {
