@@ -301,6 +301,18 @@ function Get-HttpsProbe {
                             [Net.WebExceptionStatus]::NameResolutionFailure,
                             [Net.WebExceptionStatus]::ProxyNameResolutionFailure,
                             [Net.WebExceptionStatus]::ConnectFailure)
+                        if ($exception.Status -in @([Net.WebExceptionStatus]::TrustFailure,
+                            [Net.WebExceptionStatus]::SecureChannelFailure)) { break }
+                    } elseif ($exception -is [Net.Sockets.SocketException]) {
+                        $reason = [string]$exception.SocketErrorCode
+                        $transient = $exception.SocketErrorCode -in @(
+                            [Net.Sockets.SocketError]::HostNotFound,
+                            [Net.Sockets.SocketError]::TryAgain,
+                            [Net.Sockets.SocketError]::NoData,
+                            [Net.Sockets.SocketError]::TimedOut,
+                            [Net.Sockets.SocketError]::ConnectionRefused,
+                            [Net.Sockets.SocketError]::NetworkUnreachable,
+                            [Net.Sockets.SocketError]::HostUnreachable)
                     } elseif ($exception -is [TimeoutException] -or
                         $exception -is [Threading.Tasks.TaskCanceledException]) {
                         $reason = 'Timeout'

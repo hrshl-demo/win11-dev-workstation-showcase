@@ -226,6 +226,16 @@ Describe 'HTTPS and health waiting' {
         [Net.ServicePointManager]::SecurityProtocol | Should -Be $tls
         Should -Invoke Invoke-WebRequest -ModuleName _common -Times 3 -Exactly -ParameterFilter { $TimeoutSec -eq 5 -and $MaximumRedirection -eq 0 }
     }
+    It 'classifies wrapped socket DNS failures used by newer HTTP clients' {
+        Mock Invoke-WebRequest -ModuleName _common {
+            $socket = [Net.Sockets.SocketException]::new([int][Net.Sockets.SocketError]::HostNotFound)
+            throw [Exception]::new('synthetic HTTP client failure', $socket)
+        }
+        $probe = Get-HttpsProbe 'https://github.com/'
+        $probe.Reachable | Should -BeFalse
+        $probe.Attempts | Should -Be 3
+        $probe.Reason | Should -Be 'HostNotFound'
+    }
     It 'never retries certificate failures and restores TLS' {
         $tls = [Net.ServicePointManager]::SecurityProtocol
         Mock Invoke-WebRequest -ModuleName _common { throw [Net.WebException]::new('synthetic certificate failure', [Net.WebExceptionStatus]::TrustFailure) }
