@@ -65,12 +65,41 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '_ownership.psm1')
 
 function Get-DeveloperSample {
     [CmdletBinding()]
     param([ValidateSet('Python', 'Java', 'Go', 'PowerShell', 'All', 'Legacy')][string]$Sample)
     if ($Sample -eq 'All') { return @('Python', 'Java', 'Go', 'PowerShell') }
     return @($Sample)
+}
+
+function Get-DeveloperOutputs {
+    [CmdletBinding()]
+    [OutputType([string[]])]
+    param([string]$Action, [string]$Sample)
+    foreach ($item in Get-DeveloperSample $Sample) {
+        if ($Action -in @('Test', 'Coverage')) {
+            switch ($item) {
+                'Python' {
+                    'samples\python-emi-api\test-results.xml'
+                    if ($Action -eq 'Coverage') { 'samples\python-emi-api\coverage.xml'; 'samples\python-emi-api\.coverage' }
+                }
+                'Go' {
+                    'samples\go-fx-rates\test-results.json'
+                    if ($Action -eq 'Coverage') { 'samples\go-fx-rates\coverage.out'; 'samples\go-fx-rates\coverage.html' }
+                }
+                'PowerShell' {
+                    'artifacts\pester.xml'
+                    if ($Action -eq 'Coverage') { 'artifacts\powershell-coverage.xml' }
+                }
+            }
+        }
+        if ($item -eq 'Java' -and $Action -in @('Test', 'Coverage', 'Restore')) {
+            'samples\java-ifsc-service\target\jacoco.exec'
+            'samples\java-ifsc-service\target\site\jacoco\jacoco.xml'
+        }
+    }
 }
 
 function Get-DeveloperDirectory {
@@ -356,8 +385,11 @@ function Start-DeveloperSample {
         if ($inspection.ExitCode -ne 0) {
             throw 'NOT RUN: local container image is unavailable. Use Restore -RestoreTarget ContainerImages explicitly; Run never builds or pulls.'
         }
-        $null = Invoke-DeveloperNative $runtimeInfo.Path @('run', '--pull=never', '-d', '--name', $name,
-            '--label', 'io.win11-dev-workstation.showcase=true', '-p', "127.0.0.1:${Port}:8080", $image) $directory
+        $workspace = Get-ShowcaseWorkspace
+        $run = Invoke-DeveloperNative $runtimeInfo.Path @('run', '--pull=never', '-d', '--name', $name,
+            '--label', 'io.win11-dev-workstation.showcase=true',
+            '--label', "io.win11-dev-workstation.workspace=$workspace", '-p', "127.0.0.1:${Port}:8080", $image) $directory
+        Register-ShowcaseContainer -Id $run.StdOut.Trim() -Name $name -Runtime $runtimeInfo.Name
         $null = Wait-SampleHealth -Port $Port -TimeoutSeconds 90
         Write-ShowcaseMessage "[PASS] http://127.0.0.1:$Port; stop/remove $name yourself using $($runtimeInfo.Name)."
         return
@@ -504,4 +536,21 @@ function Invoke-Developer {
     }
 }
 
-if ($MyInvocation.InvocationName -ne '.') { exit (Invoke-Developer @PSBoundParameters) }
+if ($MyInvocation.InvocationName -ne '.') {
+    $ownership = $null
+    $code = 1
+    try {
+        if (-not $WhatIfPreference -and $Action -in @('Test', 'Coverage', 'Lint', 'Restore', 'RunLocal', 'RunContainer')) {
+            $outputs = if ($RestoreTarget -eq 'ContainerImages') { @() } else { @(Get-DeveloperOutputs $Action $Sample) }
+            $ownership = Enter-ShowcaseOperation -OutputPaths $outputs
+        }
+        $code = Invoke-Developer @PSBoundParameters
+    } catch { Write-ShowcaseMessage "[FAIL] Checkout operation: $($_.Exception.Message)" }
+    finally {
+        if ($null -ne $ownership) {
+            try { Exit-ShowcaseOperation $ownership -Record:($code -eq 0) }
+            catch { Write-ShowcaseMessage "[FAIL] Ownership recording: $($_.Exception.Message)"; $code = 1 }
+        }
+    }
+    exit $code
+}

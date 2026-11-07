@@ -84,7 +84,13 @@ After a failure, use the recorded diagnostics and the read-only **Preflight** ta
 
 See [Setup](SETUP.md) for VS Code tasks/reports and [GitHub/AKS](GITHUB-AKS.md) for the approval plan. Agents do not dispatch or launch to troubleshoot.
 
-## Logs and primary references
+## Cleanup is not uninstall or reset
+
+Wait for installation/resume and local application/test/restore tasks to finish before updating the clone or selecting **Cleanup preview**. [Scoped cleanup](SETUP.md#cleanup-after-work-is-finished) leaves GHCP/Copilot and every shared tool, extension, runtime, policy, cache, credential, source file and cloud resource alone. Missing receipts or changed reports are expected retention WARNs: historical files, `.venv`, `.tools`, directories and unknown contents are not retrospectively adopted.
+
+An active operation, locked file, tracked target, altered/cross-checkout receipt, nested repository or link fails closed; stop the owning task normally and inspect the evidence. Never remove locks, edit metadata or bypass permissions to force deletion. Container runtime errors require diagnosis of that recorded runtime; a generic label or matching name does not authorize removal. No global prune/uninstaller is part of this flow.
+
+## Retained logs and primary references
 
 - Base: `%ProgramData%\CalmOS\devconfig-log.txt`; task: `WindowsDevConfigResume`.
 - Add-on: `%LOCALAPPDATA%\win11-dev-workstation\bootstrap-*.log` (generated timestamp and unique suffix).
