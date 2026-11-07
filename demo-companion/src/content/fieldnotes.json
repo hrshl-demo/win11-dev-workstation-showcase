@@ -1,0 +1,9 @@
+{
+  "label": "Source-bound operating boundary; not a laptop observation.",
+  "notes": {
+    "human-only": {"title": "Human action is separate", "short": "Copy only. Agents never execute setup, Restore, launch or deployment.", "text": "A command shown here is instructional text, not authorization for an agent. Setup/module preview, repair, Restore, app/container launches, sign-in and deployment are human-operated decisions.", "repo": ["AGENTS.md", ".github\\copilot-instructions.md"]},
+    "partial": {"title": "Stopped partial is not success", "short": "A force-closed Microsoft base is stopped partial, not completed setup or rollback.", "text": "Do not use Finish/SkipBase after a stopped partial legacy base. Preserve tools, settings, accounts and distro data; establish vendor/reboot state and use reviewed installed-first inventory.", "repo": ["docs\\TROUBLESHOOTING.md", "docs\\SETUP.md"]},
+    "no-restore": {"title": "Daily checks do not restore", "short": "Installed runtime plus already restored dependencies are required. Missing means NOT RUN.", "text": "Offline mode alone can restore cached dependencies. Use the repository dispatcher guards for daily Test/Lint/Coverage/Run; do not install or restore to turn an absent prerequisite into a green check.", "repo": ["scripts\\developer.ps1", "docs\\SETUP.md"]},
+    "cloud": {"title": "Existing infrastructure only", "short": "Files-only preparation is not dispatch, authentication, provisioning or deployment.", "text": "Existing AKS/ACR, real inputs, trusted current main, same-run immutable digests and independently verified environment approval are required. Unavailable or unverifiable protections fail closed.", "repo": ["docs\\GITHUB-AKS.md", ".github\\workflows\\deploy-aks.yml"]}
+  }
+}

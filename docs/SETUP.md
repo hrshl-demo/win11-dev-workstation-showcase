@@ -2,6 +2,8 @@
 
 Follow **Phase 0 prerequisites → Phase 1 preflight → Phase 2 automated laptop setup → Phase 3 verification → Phase 4 project restore and checks → Phase 5 run/debug → Phase 6 GitHub CI → Phase 7 existing AKS**. Humans approve/run setup; agents explain and inspect, never install or change policy. Missing languages/extensions on a fresh or partially configured device belong to automated setup, not individual manual installation.
 
+For quick steps, detailed activities and one-screen slides, keep the complete [offline demo companion](../demo-companion/README.md) folder and double-click its `index.html`. Instructions and local assets work offline; source links need network/repository access. Checkmarks record only manual progress, not machine verification. Its README lists standard-library-only content/source checks; no viewer build or server is needed.
+
 ## Phase 0: prerequisites before repository scripts
 
 Complete this checklist **before running any repository script**, including Preflight:

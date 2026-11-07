@@ -1,0 +1,66 @@
+{
+  "title": "Windows 11 workstation journey",
+  "short": "Workstation companion",
+  "project": "Safe setup · Develop · Review · Deliver",
+  "version": "1.0",
+  "as_of": "2026-11-08",
+  "summary": "A guided, offline companion for installed-first setup and a synthetic developer demo. Read the quick path, open its detailed activity, and keep human approval separate from machine evidence.",
+  "sources_note": "Written from the underlying source pin below. Source links open only when clicked and require private-repository access. Dated CI evidence does not verify your laptop.",
+  "repos": {
+    "poc": {
+      "label": "Workstation showcase",
+      "url": "https://github.com/hrshl-demo/win11-dev-workstation-showcase",
+      "branch": "main",
+      "commit": "73cd348c198da748c77d8a22c4d8314abdc66d36",
+      "color": "#2563EB",
+      "step_box": false
+    }
+  },
+  "legend": {
+    "actors": {
+      "manual": {"label": "You / IT", "glyph": "Y", "color": "#F59E0B"},
+      "copilot": {"label": "Agent: scoped files", "glyph": "A", "color": "#A78BFA"},
+      "terminal": {"label": "Human terminal", "glyph": ">", "color": "#38BDF8"},
+      "pipeline": {"label": "GitHub Actions", "glyph": "G", "color": "#34D399"},
+      "generated": {"label": "Expected / recorded", "glyph": "O", "color": "#FB7185"}
+    },
+    "status": {
+      "proven": {"label": "Proven live", "desc": "A dated observed result, only for its named revision/runtime/scope. It is not laptop or deployment acceptance."},
+      "documented": {"label": "Documented", "desc": "Grounded in repository code/tasks/docs; the corresponding live operator journey is not claimed as rehearsed."},
+      "not-rehearsed": {"label": "Not rehearsed", "desc": "No successful live rehearsal is recorded here. Inspect prerequisites, stop conditions and expected evidence first."},
+      "proposed": {"label": "Proposed", "desc": "A future design or optional assessment, not an installed or deployed capability."}
+    }
+  },
+  "journeys": [
+    {"id": "start", "title": "Start safely", "short": "Start", "color": "#2563EB", "summary": "Offline controls, corporate approvals and safe clone review."},
+    {"id": "quick", "title": "Quick paths", "short": "Quick", "color": "#65A30D", "summary": "Short setup, development, presentation and existing-AKS steps."},
+    {"id": "setup", "title": "Setup and modules", "short": "Setup", "color": "#D97706", "summary": "Preflight, installed-first named modules and genuine acceptance."},
+    {"id": "develop", "title": "Developer workflow", "short": "Develop", "color": "#0891B2", "summary": "Explicit Restore, daily checks, human launches, GitHub and optional delivery."},
+    {"id": "present", "title": "Present the demo", "short": "Present", "color": "#DB2777", "summary": "A rehearsed coding presentation, never a live provisioning sprint."},
+    {"id": "architecture", "title": "Architecture and lifecycle", "short": "Architecture", "color": "#7C3AED", "summary": "Ownership, exact money, runtime boundaries and protected delivery."},
+    {"id": "operate", "title": "Recover and retain", "short": "Recover", "color": "#DC2626", "summary": "Stopped-partial setup, safe fallback and narrow owned-output cleanup."},
+    {"id": "library", "title": "Source library", "short": "Library", "color": "#0D9488", "summary": "Source-bound commands and prompts, references and dated evidence gaps."}
+  ],
+  "pages": [
+    {"id": "index", "journey": "start", "order": 1, "kind": "home", "title": "Start the workstation journey", "short": "Welcome"},
+    {"id": "start-ready", "journey": "start", "order": 2, "kind": "activity", "title": "Phase 0: approvals and safe clone", "short": "Prerequisites and clone"},
+    {"id": "quick-setup", "journey": "quick", "order": 1, "kind": "quick", "title": "Quick path: setup and acceptance", "short": "Setup quick steps"},
+    {"id": "quick-develop", "journey": "quick", "order": 2, "kind": "quick", "title": "Quick path: restore, check and run", "short": "Development quick steps"},
+    {"id": "quick-present", "journey": "quick", "order": 3, "kind": "quick", "title": "Quick path: the 15-minute demo", "short": "Presentation quick steps"},
+    {"id": "quick-delivery", "journey": "quick", "order": 4, "kind": "quick", "title": "Quick path: optional existing-AKS delivery", "short": "AKS quick steps"},
+    {"id": "setup-preflight", "journey": "setup", "order": 1, "kind": "activity", "title": "Phase 1: read-only Preflight", "short": "Preflight and timeouts"},
+    {"id": "setup-modules", "journey": "setup", "order": 2, "kind": "activity", "title": "Phase 2: installed-first named modules", "short": "Core, SDKs, extensions, WSL"},
+    {"id": "setup-verify", "journey": "setup", "order": 3, "kind": "activity", "title": "Phase 3: Verify and enterprise acceptance", "short": "Verify and refresh"},
+    {"id": "develop-checks", "journey": "develop", "order": 1, "kind": "activity", "title": "Phase 4: Restore once, check daily", "short": "Restore, Test, Lint, Coverage"},
+    {"id": "develop-run", "journey": "develop", "order": 2, "kind": "activity", "title": "Phase 5: human-run synthetic samples", "short": "Requests, F5 and containers"},
+    {"id": "develop-github", "journey": "develop", "order": 3, "kind": "activity", "title": "Phase 6: GitHub review and exact-SHA CI", "short": "GitHub and CI"},
+    {"id": "delivery-aks", "journey": "develop", "order": 4, "kind": "activity", "title": "Phase 7: optional existing AKS and ACR", "short": "Manual existing-AKS delivery"},
+    {"id": "present-script", "journey": "present", "order": 1, "kind": "activity", "title": "Present a rehearsed 15-minute coding demo", "short": "Demo script and fallback"},
+    {"id": "arch-lifecycle", "journey": "architecture", "order": 1, "kind": "reference", "title": "Ownership, architecture and financial invariants", "short": "Architecture and invariants"},
+    {"id": "operate-recovery", "journey": "operate", "order": 1, "kind": "activity", "title": "Stopped-partial recovery and owned-output cleanup", "short": "Recover without rollback"},
+    {"id": "lib-commands", "journey": "library", "order": 1, "kind": "reference", "title": "Copy-only source-bound command library", "short": "Commands and task bindings"},
+    {"id": "lib-prompts", "journey": "library", "order": 2, "kind": "prompts", "title": "Exact runbook prompts for scoped agents", "short": "Agent prompt library"},
+    {"id": "lib-reference", "journey": "library", "order": 3, "kind": "reference", "title": "Sources, glossary and acceptance checklist", "short": "References and checklist"},
+    {"id": "lib-evidence", "journey": "library", "order": 4, "kind": "evidence", "title": "Dated evidence and live-state gaps", "short": "Evidence register"}
+  ]
+}

@@ -1,0 +1,220 @@
+/* Demo Companion · deck.css · single-screen slides.
+   Every rule needs html.deck, which deck.js sets, so without JavaScript the page stays a normal long page. */
+
+html.deck-pending .wrap { visibility: hidden; }
+
+/* ---------- frame: nothing on the page scrolls, except the sidebar ---------- */
+html.deck { font-size: clamp(15px, calc(.35vw + .7vh + 3px), 20px); scroll-behavior: auto; }
+html.deck, html.deck body { height: 100%; overflow: hidden; }
+html.deck body { min-height: 0; font-size: 1rem; background-attachment: scroll; }
+html.deck .toc, html.deck .pager, html.deck .foot { display: none; }
+html.deck main { min-height: 0; height: 100%; overflow: hidden; }
+html.deck .wrap { height: 100%; max-width: 84rem; margin: 0 auto; padding: .45rem 1.5rem .5rem; display: flex; flex-direction: column; animation: none; }
+@media (min-width: 921px) {
+  html.deck .app { height: calc(100vh - var(--top-h)); height: calc(100dvh - var(--top-h)); grid-template-columns: var(--side-w) minmax(0, 1fr); align-items: stretch; }
+  html.deck .sidebar { position: static; height: 100%; }
+}
+@media (max-width: 920px) {
+  html.deck .app { height: calc(100vh - var(--top-h)); height: calc(100dvh - var(--top-h)); }
+  html.deck .wrap { padding: .4rem .8rem .5rem; }
+}
+
+/* ---------- top: where you are, and the sections and steps of this page ---------- */
+.deck-top { flex: none; margin: 0 0 .5rem; }
+.deck-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .2rem 1rem; margin: 0 0 .4rem; }
+.deck-top .crumbs { margin: 0; }
+.deck-top .journey-bar { margin: 0; padding: .15rem .7rem; border-radius: 999px; gap: .3rem .8rem; flex-wrap: nowrap; }
+.deck-top .jb-dots { margin-left: 0; flex-wrap: nowrap; }
+.deck-strip { display: flex; flex-wrap: nowrap; align-items: center; gap: .35rem; min-height: 1.95rem; overflow: hidden; }
+.deck-tab { flex: 0 1 auto; min-width: 0; max-width: 18rem; display: inline-flex; align-items: center; gap: .4rem; height: 1.95rem; padding: 0 .75rem 0 .35rem; border-radius: 999px; border: 1px solid var(--line2); background: var(--surface); color: var(--muted); font: inherit; font-size: .8rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.deck-tab b { flex: none; display: grid; place-items: center; min-width: 1.35rem; height: 1.35rem; padding: 0 .2rem; border-radius: 999px; background: color-mix(in srgb, var(--jc) 22%, var(--surface2)); color: var(--text); font-size: .72rem; font-weight: 800; }
+.deck-tab span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.deck-tab:hover { color: var(--text); border-color: var(--jc); background: var(--surface2); }
+.deck-tab.on { color: var(--text); border-color: var(--jc); background: color-mix(in srgb, var(--jc) 16%, var(--surface)); flex-shrink: 0; }
+.deck-tab.on b { background: var(--jc); color: #fff; }
+.deck-strip.compact .deck-tab:not(.on) { padding-right: .35rem; }
+.deck-strip.compact .deck-tab:not(.on) span { display: none; }
+.deck-pills { display: inline-flex; gap: .25rem; flex: none; margin: 0 .35rem 0 -.1rem; }
+.deck-pill { min-width: 1.7rem; width: auto; height: 1.7rem; padding: 0 .3rem; display: grid; place-items: center; border-radius: .85rem; border: 2px solid var(--ac); background: transparent; color: var(--text); font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; transition: background .15s, transform .15s; }
+.deck-pill:hover { background: color-mix(in srgb, var(--ac) 28%, transparent); transform: scale(1.1); }
+.deck-pill.on { background: var(--ac); color: #0a0f1e; box-shadow: 0 0 0 3px color-mix(in srgb, var(--ac) 35%, transparent); }
+.deck-pill.done { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 30%, transparent); }
+.deck-pill.done.on { background: var(--ok); color: #06150b; }
+@media (max-width: 700px) { .deck-strip { display: none; } .deck-top .jb-label { display: none; } .deck-top .crumbs { font-size: .78rem; } .deck-row { margin: 0; } }
+
+/* ---------- stage and slides ---------- */
+.deck-stage { flex: 1; min-height: 0; position: relative; overflow: hidden; touch-action: pan-y; }
+.slide { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; padding: .15rem .2rem 0;
+  opacity: 0; visibility: hidden; transform: translateX(2.5rem); transition: opacity .26s ease, transform .26s ease, visibility 0s linear .26s; }
+.slide.is-before { transform: translateX(-2.5rem); }
+.slide.is-active { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+@media (prefers-reduced-motion: reduce) { .slide, .slide.is-before { transform: none; transition: none; } }
+.slide.step { border-left: .3rem solid var(--ac); padding-left: 1rem; border-radius: .2rem; }
+.slide.step.done { border-left-color: var(--ok); }
+.slide.done .num { background: var(--ok); border-color: var(--ok); color: #06150b; }
+
+.slide-head { flex: none; margin: 0 0 .5rem; }
+.slide-label { display: flex; flex-wrap: wrap; align-items: baseline; gap: .1rem .8rem; margin: 0 0 .3rem; font-size: .72rem; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; color: var(--jc-ink, var(--jc)); }
+@media (min-width: 701px) { .slide-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; margin: 0; } }   /* the strip above already says which step this is */
+.slide-part { font-weight: 600; letter-spacing: .04em; text-transform: none; font-size: .8rem; color: var(--muted); margin-left: auto; flex: none; white-space: nowrap; }
+.slide-part:empty { display: none; }
+.slide-head h2, .col > h2 { display: flex; align-items: center; gap: .7rem; margin: 0; font-size: 1.3rem; line-height: 1.2; letter-spacing: -.01em; padding: 0 0 .4rem; border-bottom: 1px solid var(--line); }
+.col > h2 { font-size: 1.2rem; margin: .7rem 0 .5rem; padding-bottom: .35rem; }
+.slide-head .step-head { gap: .4rem .7rem; }
+.slide-head .step-head h3 { font-size: 1.25rem; flex: 1 1 14rem; min-width: 0; }
+.slide-head .where { margin: .4rem 0 0; }
+.slide-head .cont .step-check { pointer-events: none; }
+
+.slide-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0 1.7rem; }
+.slide-body.two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.slide-body.one .col.b { display: none; }
+.col { min-height: 0; overflow: hidden; line-height: 1.45; }
+.slide.oversize .col { overflow: auto; }
+/* a block that cannot be cut and is a little too tall for a short window: the slide's text is set a size smaller */
+.slide.squeeze .col { font-size: .92em; line-height: 1.32; }
+.slide.squeeze .col table { font-size: .8rem; }
+.slide.squeeze .col th, .slide.squeeze .col td { padding: 6px 11px; }
+.slide.squeeze .hero { padding: 0; }
+.slide.squeeze .hero h1 { font-size: 2rem; margin: 0 0 .3rem; }
+.slide.squeeze .hero .lede { font-size: .95rem; margin: 0 0 .5rem; }
+.slide.squeeze .stats > div { padding: 6px 12px; }
+.slide.squeeze .stats dt { font-size: 1.4rem; }
+.col > :first-child { margin-top: 0; }
+.col p, .col li { max-width: 92ch; }
+.slide .col p { margin: 0 0 .65em; }
+.slide .col ul, .slide .col ol { margin: .2em 0 .65em; }
+.col > h3.sub { margin: .2rem 0 .5rem; }
+.col > .sec-letter { display: none; }
+/* plain text that overflows one column flows into two, so a wide screen is not left half empty */
+.slide-body.cols2 .col.a { column-count: 2; column-gap: 2.6rem; column-fill: balance; }
+.slide-body.cols2 .col.a li, .slide-body.cols2 .col.a .callout, .slide-body.cols2 .col.a .expect, .slide-body.cols2 .col.a .step-repo, .slide-body.cols2 .col.a .say li { break-inside: avoid-column; }
+.slide-body.cols2 .col.a h2, .slide-body.cols2 .col.a h3, .slide-body.cols2 .col.a p:has(+ ol), .slide-body.cols2 .col.a p:has(+ ul), .slide-body.cols2 .col.a p:has(+ dl) { break-after: avoid-column; }
+.slide-body.cols2 .col.a p { orphans: 2; widows: 2; }
+
+/* page cover */
+.slide .page-head { margin: 0 0 .9rem; }
+.slide .page-head .done-btn { display: none; }
+.slide .billing-banner { margin: 0 0 .9rem; }
+.slide .hero { padding: .4rem 0 0; margin: 0; }
+
+/* blocks inside slides */
+.slide .expect, .slide .step-repo { margin-left: 0; }
+.slide .step-repo { margin-top: .8rem; }
+.slide .skill-what { color: var(--faint); }
+.slide .table-wrap { margin: .5rem 0; }
+.slide .callout { margin: .5rem 0; }
+.slide .callout[data-kind="gap"] { padding: .35rem .8rem; margin: .3rem 0; }
+.slide figure.code, .slide figure.real-output { margin: .5rem 0; display: flex; flex-direction: column; max-height: calc(var(--bh, 24rem) - 1.1rem); }
+.slide figure.code > *, .slide figure.real-output > * { flex: none; }
+.slide figure.code pre, .slide figure.real-output pre { flex: 1 1 auto; min-height: 3.2rem; max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+.slide figure.code pre code, .slide figure.real-output pre code { white-space: inherit; overflow-wrap: anywhere; }
+.slide .code-note, .slide .ro-src { max-width: none; }
+.slide .expand { display: none; }
+/* key/value lists: two columns of stacked cells, so a long list needs half the height */
+.slide .col dl.kv, .slide .col dl.glance { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; background: none; border: 0; border-radius: 0; overflow: visible; margin: .3rem 0; padding: 0 1px 1px 0; }
+.slide .col dl.kv > div, .slide .col dl.glance > div { display: block; padding: .45rem .8rem .55rem; background: var(--surface); border: 1px solid var(--line); margin: 0 -1px -1px 0; }
+.slide .col dl.kv dt, .slide .col dl.glance dt { margin-bottom: .15rem; }
+.slide .col dl.glance > div.wide { grid-column: 1 / -1; }
+.slide .col dl.glance > div.wide ul { display: block; column-count: 2; column-gap: 2rem; }
+.slide .col dl.glance > div.wide li { break-inside: avoid-column; margin: 0 0 .5rem; }
+.deck-stage.narrow .slide .col dl.kv, .deck-stage.narrow .slide .col dl.glance { grid-template-columns: minmax(0, 1fr); }
+.deck-stage.narrow .slide .col dl.glance > div.wide ul { column-count: 1; }
+.slide .shot { margin: .4rem 0; }
+.slide .shot-img img { width: auto; height: auto; max-width: 100%; max-height: max(8rem, calc(var(--bh, 24rem) - 1rem - var(--shrink, 0px))); }
+/* a real screenshot: the picture on the left, its caption and numbered pins on the right, so both fit one slide */
+.slide .col figure.shot:not(.placeholder) { display: grid; grid-template-columns: fit-content(62%) minmax(11rem, 1fr); grid-template-rows: auto 1fr; gap: .4rem 1.3rem; align-items: start; margin: 0; }
+.slide .col figure.shot:not(.placeholder) .shot-img { grid-column: 1; grid-row: 1 / span 2; justify-self: start; max-width: 100%; }
+.slide .col figure.shot:not(.placeholder) figcaption { grid-column: 2; grid-row: 1; margin: 0; max-width: none; }
+.slide .col figure.shot:not(.placeholder) .pin-list { grid-column: 2; grid-row: 2; margin: 0; }
+.deck-stage.narrow .slide .col figure.shot:not(.placeholder) { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
+.deck-stage.narrow .slide .col figure.shot:not(.placeholder) .shot-img, .deck-stage.narrow .slide .col figure.shot:not(.placeholder) figcaption, .deck-stage.narrow .slide .col figure.shot:not(.placeholder) .pin-list { grid-column: 1; grid-row: auto; }
+.deck-stage.narrow .slide .shot-img img { max-height: max(8rem, calc(var(--bh, 24rem) - 8rem - var(--shrink, 0px))); }
+.slide .values { margin: 0; }
+.slide .values.v-inline { margin: .5rem 0 .3rem; }
+.slide .say li { padding: .7rem 1rem; }
+
+/* diagram slides: the picture scales to the slide, its narration (one step at a time) sits beside it */
+.slide.has-diagram > .slide-head { display: none; }
+.slide .col > figure.diagram { height: 100%; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(15rem, 21rem); grid-template-rows: auto minmax(0, 1fr) auto; }
+.slide .diagram .dg-title { grid-column: 1 / -1; padding-top: .5rem; }
+.slide .diagram .dg-stage { grid-column: 1; grid-row: 2; min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: .3rem .5rem; }
+.slide .diagram .dg-stage svg { width: auto !important; height: auto !important; max-width: 100%; max-height: 100%; margin: 0; }
+.slide .diagram .dg-steps { display: none; }
+.slide .diagram .dg-now { grid-column: 2; grid-row: 2; align-self: center; margin: 0 1rem 0 .4rem; padding: .8rem 1rem; border-left: 4px solid var(--accent); background: color-mix(in srgb, var(--accent) 9%, transparent); border-radius: 0 .6rem .6rem 0; font-size: 1.02rem; line-height: 1.5; }
+.slide .diagram .dg-now strong { display: block; margin-bottom: .25rem; font-size: 1.08rem; }
+.slide .diagram .dg-controls { grid-column: 1 / -1; grid-row: 3; padding: .5rem .9rem; }
+.slide .diagram .dg-hint { display: none; }
+.deck-stage.narrow .slide .col > figure.diagram { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto; }
+.deck-stage.narrow .slide .diagram .dg-now { grid-column: 1; grid-row: 3; margin: .3rem .8rem; font-size: .92rem; }
+.deck-stage.narrow .slide .diagram .dg-controls { grid-row: 4; }
+
+/* explorer slides ("tool" slides): the tool fills the slide and scrolls inside its own panes. The class must not be called app: that is the page shell's own class */
+.slide.tool .col.a { overflow: hidden; display: flex; flex-direction: column; }
+.slide.tool.scroll .col.a { overflow: auto; display: block; }
+.slide.tool .col.a > p { margin: 0 0 .4rem; font-size: .9rem; max-width: none; }
+.slide.tool .explorer { flex: 1; min-height: 0; display: flex; flex-direction: column; margin: .3rem 0 0; }
+.slide.tool .ex-toolbar { flex: none; margin-bottom: .6rem; }
+.slide.tool .ex-split { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); align-items: stretch; }
+.slide.tool .ex-list, .slide.tool .ex-detail { max-height: none; height: 100%; min-height: 0; overflow: auto; position: static; }
+.slide.tool.scroll .explorer { display: block; }
+.slide.tool.scroll .ex-toolbar { position: sticky; top: 0; z-index: 3; }
+.slide.tool .state-legend { display: flex; flex-wrap: wrap; gap: .2rem 1.2rem; margin: 0 0 .4rem; padding: 0; font-size: .82rem; list-style: none; }
+.slide.tool .state-legend li { margin: 0; max-width: none; }
+.slide:not(.tool) .state-legend { display: flex; flex-direction: column; gap: .35rem; margin: .5rem 0; padding: 0; list-style: none; }
+.slide:not(.tool) .state-legend li { margin: 0; max-width: none; }
+
+/* relationships: the chord chart fits the slide, and the list is the other view of the same explorer */
+.slide.tool.fit > .slide-head { display: none; }
+.slide.tool.fit .col.a { display: flex; flex-direction: column; overflow: hidden; }
+.slide.tool.fit .explorer[data-explorer="relationships"] { display: flex; flex-direction: column; flex: 1; min-height: 0; margin: 0; }
+.slide.tool.fit .ex-toolbar { margin-bottom: .4rem; padding: .45rem .6rem; }
+.slide.tool.fit .chord-wrap { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; }
+.slide.tool.fit .chord-wrap svg { width: auto; height: auto; max-width: 100%; max-height: calc(var(--bh, 24rem) - 4.6rem); }
+.slide.tool.fit .chord-node text { font-size: 13px; }
+.slide.tool.fit .chord-card { width: min(15rem, 26%); max-height: 62%; font-size: .8rem; }
+.slide.tool.fit .explorer[data-view="chord"] > h3.sub, .slide.tool.fit .explorer[data-view="chord"] > .table-wrap { display: none; }
+.slide.tool.fit .explorer[data-view="list"] > .chord-wrap { display: none; }
+.slide.tool.fit .explorer[data-view="list"] > h3.sub { display: none; }
+.slide.tool.fit .explorer[data-view="list"] > .table-wrap { flex: 1; min-height: 0; overflow: auto; margin: 0; }
+.slide.tool .ex-view { height: 2.3rem; }
+.slide.tool .ex-view button { height: 2.3rem; }
+
+/* ---------- bottom bar ---------- */
+.deck-nav { flex: none; position: relative; display: flex; align-items: center; gap: .6rem; margin-top: .45rem; padding-top: .45rem; border-top: 1px solid var(--line); }
+.deck-btn { display: inline-flex; flex-direction: column; justify-content: center; height: 2.7rem; padding: 0 1rem; border-radius: .7rem; border: 1px solid var(--line2); background: var(--surface); color: var(--text); font: inherit; font-weight: 650; font-size: .92rem; line-height: 1.2; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.deck-btn:hover { border-color: var(--accent); background: var(--surface2); text-decoration: none; }
+.deck-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.deck-btn.primary:hover { filter: brightness(1.1); background: var(--accent); }
+.deck-btn[disabled] { opacity: .4; cursor: default; pointer-events: none; }
+.deck-btn .sub { display: block; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; font-size: .7rem; font-weight: 500; opacity: .85; }
+.deck-mid { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-start; gap: .8rem; padding: 0 .4rem; }
+.deck-bar { flex: 0 0 clamp(4rem, 14%, 11rem); height: .45rem; border-radius: 999px; background: var(--surface3); overflow: hidden; }
+.deck-bar i { display: block; height: 100%; width: 0; background: var(--jc); border-radius: 999px; transition: width .25s ease; }
+.deck-count { flex: none; font-weight: 700; font-size: .9rem; white-space: nowrap; min-width: 3.4rem; }
+.deck-label { color: var(--muted); font-size: .84rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-nav .done-btn { margin-left: 0; }
+.deck-menu-btn { display: inline-flex; align-items: center; gap: .4rem; height: 2.7rem; padding: 0 .9rem; border-radius: .7rem; border: 1px solid var(--line2); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; font-size: .88rem; cursor: pointer; }
+.deck-menu-btn:hover { border-color: var(--accent); background: var(--surface2); }
+.deck-menu { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + .5rem); z-index: 30; width: min(36rem, 96%); max-height: min(72vh, 32rem); overflow: auto; padding: .5rem; border: 1px solid var(--line2); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.deck-menu-h { padding: .3rem .6rem .5rem; font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.deck-mi { display: flex; align-items: baseline; gap: .7rem; width: 100%; padding: .45rem .6rem; border: 0; border-radius: .5rem; background: transparent; color: var(--text); font: inherit; font-size: .9rem; text-align: left; cursor: pointer; }
+.deck-mi b { flex: none; min-width: 1.8rem; color: var(--muted); font-weight: 700; }
+.deck-mi:hover { background: var(--surface2); }
+.deck-mi.on { background: color-mix(in srgb, var(--jc) 16%, transparent); }
+@media (max-width: 820px) {
+  .deck-bar, .deck-btn .sub, .deck-label { display: none; }
+  .deck-nav .done-btn .dt { display: none; }
+  .deck-btn { padding: .25rem .8rem; }
+  .deck-mid { justify-content: center; }
+}
+
+/* ---------- print: every slide in turn, as a normal document ---------- */
+@media print {
+  html.deck, html.deck body, html.deck .app, html.deck main, html.deck .wrap { height: auto; overflow: visible; display: block; }
+  .deck-stage { position: static; overflow: visible; height: auto; }
+  .slide, .slide.is-before { position: static; visibility: visible; opacity: 1; transform: none; page-break-inside: avoid; margin-bottom: 1.2rem; }
+  .slide-body, .slide-body.two { display: block; }
+  .col { overflow: visible; }
+  .slide-body.one .col.b { display: none; }
+  .deck-nav, .deck-top .journey-bar, .deck-holder { display: none; }
+}
