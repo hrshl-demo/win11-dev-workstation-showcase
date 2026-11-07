@@ -36,6 +36,7 @@ Describe 'Developer script and VS Code contracts' {
         }
         $script:DeveloperAst.Extent.Text | Should -Match 'Set-StrictMode -Version Latest'
         $script:DeveloperAst.Extent.Text | Should -Not -Match 'Invoke-Expression|ExecutionPolicy\s+(Bypass|Unrestricted)|Install-PackageProvider|Install-Module'
+        $script:DeveloperAst.Extent.Text | Should -Not -Match '\$home\s*='
     }
 
     It 'excludes legacy from All' {
@@ -139,7 +140,7 @@ Describe 'Developer safe execution and failure paths' {
     }
 
     It 'rejects unsafe namespace rather than interpolating a shell command' {
-        { Invoke-DeveloperKubernetes -Action KubernetesLogs -Sample Python -Namespace 'demo;calc' -Port 8080 } |
+        { Invoke-DeveloperCluster -Action KubernetesLogs -Sample Python -Namespace 'demo;calc' -Port 8080 } |
             Should -Throw
         Should -Invoke Get-NativeCommandPath -Times 0 -Exactly
     }
@@ -147,7 +148,7 @@ Describe 'Developer safe execution and failure paths' {
     It 'keeps fixed deployment names and bounded logs' {
         Mock Get-DeveloperTool { 'synthetic-kubectl.exe' }
         Mock Invoke-DeveloperNative {}
-        Invoke-DeveloperKubernetes -Action KubernetesLogs -Sample Java -Namespace 'approved-demo' -Port 8080
+        Invoke-DeveloperCluster -Action KubernetesLogs -Sample Java -Namespace 'approved-demo' -Port 8080
         Should -Invoke Invoke-DeveloperNative -Times 1 -Exactly -ParameterFilter {
             $Arguments -contains 'deployment/ifsc' -and $Arguments -contains '--tail=100'
         }
