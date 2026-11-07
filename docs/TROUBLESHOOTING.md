@@ -41,6 +41,7 @@ Repair-WinGetPackageManager -Force -Latest
 
 | Symptom | Action |
 | --- | --- |
+| Repository script blocked before bootstrap/preflight runs, or module import denied | An effective Restricted policy blocks repository scripts; AllSigned requires trusted signatures for scripts and modules. Bootstrap may be blocked before its body or preflight runs, and module imports may also be denied. Obtain an IT-approved script-execution context first. The upstream Microsoft signature does not authorize this repository's scripts. No automatic policy override is permitted. |
 | Base restarted; add-on missing | Wait for `WindowsDevConfigResume` and the base summary, then run `.\scripts\bootstrap.ps1 -SkipBase` in a fresh terminal |
 | Signature invalid / wrong publisher | Stop. Do not run the downloaded wrapper; review network inspection, trust chain and upstream source with IT |
 | Tools missing immediately after install | Open a new terminal; compare PATH and `.\scripts\verify.ps1`. Do not claim success until verification passes |

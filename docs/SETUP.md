@@ -10,6 +10,8 @@ Run setup only on an approved development device. These are instructions for a h
 - Network access and approved proxies described in [IT prerequisites](IT-PREREQUISITES.md).
 - An assigned organisation Copilot seat; Azure sign-in is only needed for Azure work.
 
+An effective Restricted policy blocks repository scripts; AllSigned requires trusted signatures for scripts and modules. Bootstrap may be blocked before its body or preflight runs, and module imports may also be denied. Obtain an IT-approved script-execution context first. The upstream Microsoft signature does not authorize this repository's scripts. No automatic policy override is permitted.
+
 The [Microsoft base guide](https://github.com/microsoft/WindowsDeveloperConfig/blob/main/src/windows-dev-config/README.md) estimates roughly 30 minutes on a clean machine with a good connection. Add-on downloads and enterprise inspection can take longer; the 15-minute demo assumes setup is already complete.
 
 ## Three steps

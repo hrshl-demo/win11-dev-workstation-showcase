@@ -10,7 +10,7 @@ This repository consumes enterprise controls; it does not deploy Intune policies
 | Administrator elevation | Approve base machine-wide changes and package licences; expect up to two base UAC prompts, plus add-on elevation where resources require it |
 | Hardware virtualization | Enable approved BIOS/UEFI virtualization; for Cloud PCs/VMs, confirm supported nested virtualization and SKU capabilities |
 | Storage | About 15 GB free for the base; budget additional SDK, build-cache and image space |
-| Signed execution | Permit trusted Microsoft-signed wrappers under enterprise execution policy; never instruct users to bypass it |
+| Signed execution | An effective Restricted policy blocks repository scripts; AllSigned requires trusted signatures for scripts and modules. Bootstrap may be blocked before its body or preflight runs, and module imports may also be denied. Obtain an IT-approved script-execution context first. The upstream Microsoft signature does not authorize this repository's scripts. No automatic policy override is permitted. |
 | User context | Register App Installer for the signed-in developer; WinGet CLI is not supported as SYSTEM |
 
 The base changes Windows settings and can restart. Full setup additionally enables Remote Desktop/firewall and other settings: it is not the default and needs separate review.
