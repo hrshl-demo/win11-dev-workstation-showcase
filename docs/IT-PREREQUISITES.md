@@ -4,14 +4,19 @@ This repository consumes enterprise controls; it does not deploy Intune policies
 
 ## Device and elevation
 
+Start with [Phase 0 before scripts](SETUP.md#phase-0-prerequisites-before-repository-scripts). This is the approval/minimum-access checklist, **not** a request to manually install Python/Java/Go or twelve extensions: the standard Microsoft base and required add-on supply those in Phase 2.
+
 | Requirement | IT decision |
 | --- | --- |
 | Windows 11 build 22621+ | Select a supported servicing release and approved device image |
-| Administrator elevation | Approve base machine-wide changes and package licences; expect up to two base UAC prompts, plus add-on elevation where resources require it |
+| Administrator elevation | Approve machine-wide changes and package licences; UAC/restart interactions depend on resources/device state, not a promised prompt count |
 | Hardware virtualization | Enable approved BIOS/UEFI virtualization; for Cloud PCs/VMs, confirm supported nested virtualization and SKU capabilities |
 | Storage | About 15 GB free for the base; budget additional SDK, build-cache and image space |
 | Signed execution | An effective Restricted policy blocks repository scripts; AllSigned requires trusted signatures for scripts and modules. Bootstrap may be blocked before its body or preflight runs, and module imports may also be denied. Obtain an IT-approved script-execution context first. The upstream Microsoft signature does not authorize this repository's scripts. No automatic policy override is permitted. |
 | User context | Register App Installer for the signed-in developer; WinGet CLI is not supported as SYSTEM |
+| Clone minimum | Supply approved Git/VS Code and private repository access before cloning; the later configuration cannot resolve that circular prerequisite |
+
+Inline `Get-ExecutionPolicy -List` **and** `Get-ExecutionPolicy` can run before repository scripts. Undefined scopes do not prove permission or absence of other IT controls. The guide documents human-only, explicitly permitted CurrentUser RemoteSigned for default restriction, its persistent scope, and stop conditions for imposed policy/AllSigned. No setup/agent policy override, public-source switch or blanket Unblock-File is permitted.
 
 The base changes Windows settings and can restart. Full setup additionally enables Remote Desktop/firewall and other settings: it is not the default and needs separate review.
 
@@ -59,6 +64,12 @@ IT must install the supported plug-in and verify its health/version and connecti
 
 ## Identity, Copilot and VS Code
 
+### Automated extension delivery acceptance
+
+The required configuration declares **12 extensions**; modernization adds the optional 13th. These are automatically installed through `Microsoft.VSCode.Dsc`, not twelve manual clicks. IT must approve their IDs/bundled dependencies/licences and actual installed VS Code CLI/user context before apply. See [source/profile acceptance](SETUP.md#extension-source-and-profile-acceptance).
+
+The [official DSC resource](https://github.com/microsoft/winget-dsc/blob/main/resources/Help/Microsoft.VSCode.Dsc/VSCodeExtension.md) has no profile/marketplace parameter; its CLI calls and Verify's unqualified list do not certify the active window's profile, enabled state or private-source routing. The [enterprise extension guide](https://code.visualstudio.com/docs/enterprise/extensions) documents allowlists/private marketplaces and disabled blocked extensions. A private-marketplace banner is not proof the requested IDs are blocked. IT must validate effective policy/source/authentication in the CLI context and intended window. If incompatible, provide a compatible managed automated distribution/configuration; **stop setup acceptance**, never fall back to public sources or individual unapproved VSIX installs.
+
 - Assign organisation-approved Copilot Business/Enterprise seats and enforce GitHub organisation policies, model/tool permissions and data-handling rules. A personal/free sign-in is not the enterprise licence path.
 - Deliver supported VS Code/Copilot policies using [VS Code enterprise policy templates](https://code.visualstudio.com/docs/enterprise/policies) through device management. Policy values override user/workspace settings; workspace recommendations are not security enforcement.
 - Confirm sign-in, Workspace Trust, MCP consent and agent-skill discovery in the target editor/harness. [Customization compatibility](https://code.visualstudio.com/docs/agent-customization/overview) varies; prompt files require Local sessions.
@@ -66,7 +77,7 @@ IT must install the supported plug-in and verify its health/version and connecti
 
 ## GitHub CI and existing AKS approval
 
-The developer workflow stays in VS Code: Source Control/GitHub sign-in, branch/commit/publish/PR and integrated-terminal tasks. IT supplies approved VS Code/Git on a fresh laptop before cloning; an already configured laptop skips bootstrap. Setup and explicit project package Restore are human actions, not agent permissions.
+The developer workflow stays in VS Code: Phase 0 prerequisites, Phase 1 Preflight, Phase 2 automated setup, Phase 3 verification, then project Restore, coding/CI and separate existing-AKS deployment. Fresh **and partial** devices use full bootstrap if the base is incomplete (including WSL absent); SkipBase is only for a confirmed complete base or after resume. Fully verified devices skip installation. Setup and explicit project Restore are human actions, not agent permissions.
 
 Review pinned test dependencies/modules and allowed package sources: pytest/pytest-cov and Ruff, JUnit 5/JaCoCo and Maven Checkstyle, Go built-in tests/coverage/vet, Pester **5.7.1** and PSScriptAnalyzer **1.24.0**. Daily checks must not download missing packages/toolchains. Optional Docker Desktop remains commented and licence-reviewed; `wslc` failure must not cause policy-bypassing Docker fallback. Shared `-Runtime Auto|wslc|docker` selection probes only an explicitly selected approved runtime; explicit choice is not a workaround for denied policy.
 

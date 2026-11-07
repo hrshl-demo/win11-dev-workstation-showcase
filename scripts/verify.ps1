@@ -5,6 +5,10 @@ Verify the installed tools and VS Code workspace extension profile.
 Read-only. The default profile requires 12 extensions; the optional Java
 modernization profile requires all 13 recommendations. Missing required tools
 or wrong required versions return exit 1. Authentication is not inspected.
+Before setup this exit 1 is expected inventory, not an installation failure
+or the bootstrap preflight gate. After setup required FAIL means not accepted.
+Extension listing uses the CLI without a profile argument; confirm approved
+source/profile and enabled extensions in the intended window separately.
 .PARAMETER RunConfigTest
 Also run the read-only WinGet configuration test, including modernization when selected.
 .PARAMETER IncludeJavaModernization
@@ -91,7 +95,7 @@ function Get-VerificationCheck {
             $present = $installed -icontains $extension
             $status = if ($present) { 'PASS' } else { 'FAIL' }
             $found = if ($present) { 'Installed' } else { 'Missing' }
-            Get-CheckResult $extension $status 'Install the recommended extension in this VS Code profile.' -Expected 'Installed' -Found $found
+            Get-CheckResult $extension $status 'Required configuration automates extension installation. See SETUP Phase 2/3 for approved source, CLI account/profile and enabled-state acceptance; do not bypass enterprise policy.' -Expected 'Installed' -Found $found
         }
     } catch { Get-CheckResult 'Extension profile' FAIL $_.Exception.Message }
     if ($RunConfigTest) {

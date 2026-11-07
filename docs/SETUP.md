@@ -1,10 +1,53 @@
-# VS Code quickstart
+# End-to-end VS Code setup
 
-Keep five activities separate: **setup once → restore project packages → daily checks → GitHub review → approved existing-AKS deployment**. These are human-operated instructions, not agent permissions.
+Follow **Phase 0 prerequisites → Phase 1 preflight → Phase 2 automated laptop setup → Phase 3 verification → Phase 4 project restore and checks → Phase 5 run/debug → Phase 6 GitHub CI → Phase 7 existing AKS**. Humans approve/run setup; agents explain and inspect, never install or change policy. Missing languages/extensions on a fresh or partially configured device belong to automated setup, not individual manual installation.
 
-## Open the repository
+## Phase 0: prerequisites before repository scripts
 
-IT supplies approved VS Code and Git on a fresh laptop. In VS Code use **Source Control → Clone Repository**, or **Ctrl+Shift+P → Git: Clone**, with:
+Complete this checklist **before running any repository script**, including Preflight:
+
+| Human / IT prerequisite | Acceptance criterion |
+| --- | --- |
+| Supported Windows 11 | Serviced Windows 11 release, build 22621+; approved device image |
+| Elevation and changes | Permission for administrator/UAC, Windows/WSL changes, reboot and package licences; save work |
+| Hardware and storage | Approved virtualization/nested virtualization enabled; at least 15 GB free for the base, plus SDK/cache/image budget |
+| App Installer / WinGet | Registered for the signed-in developer, executable and configuration capability allowed; not SYSTEM |
+| Network / proxy / trust | Approved WinHTTP and WinGet proxy, payload/module/image endpoints and TLS/AuthentiCode validation paths |
+| Minimum clone tools | Approved Git and VS Code available **before cloning**; repository access and permission to trust reviewed source |
+| Script execution | Effective policy permits reviewed repository scripts/modules; see the inline checks below |
+| Extension delivery | Approved marketplace, extension allowlist, target VS Code installation/account/profile and licences; see [extension acceptance](#extension-source-and-profile-acceptance) |
+
+Python 3.14, Java 25, Go, WSL/wslc and the 12 required extensions are **setup outputs**, not things you must manually install first. See [IT prerequisites](IT-PREREQUISITES.md) for approvals outside this repository's checks.
+
+This VS Code-first route genuinely requires Git/VS Code first. IT can supply an approved image or software distribution for that minimum; the later add-on also declares Git/VS Code but cannot install them before you have cloned it. If they are absent, use the [official Microsoft base entrypoint guidance](https://github.com/microsoft/WindowsDeveloperConfig) through IT first, reviewing source/signatures/changes and its resume instructions. That base-only alternative is not this add-on and is not permission to paste an unchecked download-and-execute command.
+
+### Script execution before Preflight
+
+In **VS Code → Terminal → New Terminal → PowerShell**, these inline read-only commands work even when scripts are blocked:
+
+```powershell
+Get-ExecutionPolicy -List
+Get-ExecutionPolicy
+```
+
+`Undefined` means no setting in that scope, not permission: all scopes Undefined can still produce effective `Restricted` on a Windows client. The effective command is authoritative for that shell. The list does **not** prove other IT controls (application control, endpoint security, WinGet/WSL or extension policy) are clear.
+
+If effective policy is `Restricted` only because of the default/unset policy, and IT explicitly permits this account to run reviewed local repository scripts, the **human**, not a script/agent, may use:
+
+```powershell
+# HUMAN ONLY, after IT approval; this persists for this account:
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+Get-ExecutionPolicy -List
+Get-ExecutionPolicy
+```
+
+Record the previous CurrentUser value. This is a persistent account-level change until changed again, not a process-only exception; it does not change LocalMachine and cannot override MachinePolicy/UserPolicy. Do not loosen an explicitly imposed policy. Under `AllSigned`, IT must supply trusted signatures for repository scripts **and modules**; Microsoft's wrapper signature does not sign this repository. If Group Policy or other controls block execution, stop for IT's approved execution/signing route. Never use Bypass, Unrestricted, process overrides or embedded-script execution to evade a block.
+
+A reviewed Git clone and a downloaded ZIP can have different provenance/mark-of-the-web behavior. RemoteSigned still rejects unsigned internet-marked files; inspect the specific blocked file and its provenance with IT, rather than recursively unblocking the repository. No automatic unblocking is supplied. [PowerShell policy reference](https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-5.1).
+
+### Clone and open
+
+In VS Code use **Source Control → Clone Repository**, or **Ctrl+Shift+P → Git: Clone**, with:
 
 ```text
 https://github.com/hrshl-demo/win11-dev-workstation-showcase
@@ -12,56 +55,118 @@ https://github.com/hrshl-demo/win11-dev-workstation-showcase
 
 Select an approved local folder and open the clone. Read the source before granting Workspace Trust. Use **Terminal → New Terminal**, select **PowerShell**, and keep the repository root as the working directory. **Terminal → Run Task** exposes the same developer actions without leaving the editor. Open a second integrated terminal with the **+** button when a server/port-forward occupies the first.
 
-No outside terminal is required. GitHub/Entra browser authentication, Windows UAC and reboot are OS/service interactions, not terminal work.
+Browser authentication, UAC and reboot remain external OS/service interactions. Setup duration depends on downloads, device and restart; full provisioning is **not the 15-minute coding demo**, and hosted CI does not prove fresh-laptop acceptance.
 
-## Setup once: fresh approved laptop
+## Phase 1: preflight and optional inventory
 
-Before proceeding, IT approves Windows 11 build 22621+, virtualization, App Installer/WinGet, administrator elevation, package licences, script execution and network/proxy access. Budget about 15 GB for the Microsoft base plus SDKs, caches and images. See [IT prerequisites](IT-PREREQUISITES.md).
-
-An effective Restricted policy blocks repository scripts; AllSigned requires trusted signatures for scripts/modules. Obtain an IT-approved execution context. **Do not use `ExecutionPolicy Bypass`, change process policy or disable signature checks.** Microsoft's signature on its wrapper does not sign this repository.
-
-In the VS Code integrated PowerShell terminal:
+Choose **Terminal → Run Task → Preflight**, or:
 
 ```powershell
 .\scripts\preflight.ps1
+```
+
+**Gate:** no Preflight FAIL and exit 0, plus Phase 0 approvals. WARN is advisory: missing WSL/wslc is expected before setup and does not block the Microsoft base. A policy, disk, virtualization, WinGet or endpoint FAIL must be resolved before bootstrap; a PASS does not certify every enterprise control or payload source.
+
+Optionally choose **Verify** (`.\scripts\verify.ps1`) to inventory existing tools. Before setup, missing/wrong Python, Java, Go, runtime or extensions deliberately produce **exit 1**. This is an expected inventory failure, **not installation failure** and not the Preflight gate. Do not require all Verify checks to pass before installing their outputs.
+
+| Laptop state | Automated route |
+| --- | --- |
+| Fresh or partial; Microsoft base absent/incomplete, including WSL missing | Phase 2 full **User-run setup** (standard base + add-on) after Phase 0/1 |
+| Microsoft standard base confirmed complete; only add-on packages/extensions missing | Phase 2 **Finish setup** (`-SkipBase`) after Phase 0/1 |
+| Entire profile already verified | Skip Phase 2; continue with Phase 3 verification then Phase 4 |
+
+## Phase 2: automated laptop setup
+
+Review `.config\configuration.winget` and the Microsoft standard base. Choose exact task **Setup preview**, then **User-run setup** only after approval, or:
+
+```powershell
 .\scripts\bootstrap.ps1 -WhatIf
 # Only after reviewing the preview and obtaining IT approval:
 .\scripts\bootstrap.ps1
 ```
 
-Preflight is read-only. Bootstrap validates the standard Microsoft wrapper's Authenticode signature before execution; invalid/unverifiable signatures stop setup. Only the human operator runs preview/setup, never an agent.
+Preview describes the plan; it does not install or prove sources will work. Full bootstrap reruns Preflight, validates the downloaded Microsoft wrapper's Authenticode signature before execution, and asks consent before base/configuration changes. Invalid/unverifiable signatures stop setup. Agents never execute preview or setup.
+
+| Automated layer | What it supplies / changes |
+| --- | --- |
+| Microsoft **standard** base | Upstream developer tools/settings, PowerShell, uv, Node and WSL; may elevate/restart. Review the current [base definition](https://github.com/microsoft/WindowsDeveloperConfig); full setup/uninstall is not selected |
+| Required add-on | VS Code, Git, GitHub CLI/Copilot CLI, Python 3.14, Microsoft OpenJDK 25, Go, Azure CLI, azd, kubectl; updates WSL if wslc is absent |
+| Extension automation | 12 `Microsoft.VSCode.Dsc/VSCodeExtension` resources in `.config\configuration.winget`; no twelve separate install clicks |
+| Optional only | 13th Java modernization extension and Java 11 opt-in; Docker Desktop commented out, separately licensed/approved, never default |
+
+The **12 required extension IDs**, installed as a set by the add-on, are:
+
+| Support | Extension ID |
+| --- | --- |
+| Python | `ms-python.python` |
+| Java pack | `vscjava.vscode-java-pack` |
+| Go | `golang.go` |
+| Azure resources | `ms-azuretools.vscode-azureresourcegroups` |
+| Azure Copilot | `ms-azuretools.vscode-azure-github-copilot` |
+| Bicep | `ms-azuretools.vscode-bicep` |
+| Containers | `ms-azuretools.vscode-containers` |
+| Dev Containers | `ms-vscode-remote.remote-containers` |
+| WSL | `ms-vscode-remote.remote-wsl` |
+| GitHub PRs | `GitHub.vscode-pull-request-github` |
+| PowerShell | `ms-vscode.powershell` |
+| YAML | `redhat.vscode-yaml` |
+
+`vscjava.migrate-java-to-azure` is the **optional 13th**, only with modernization opt-in. Extension packs can bring bundled dependencies; IT must approve those too. Recommendations do not install extensions by themselves.
+
+Existing tools are evaluated by their resource tests; setup may install/update packages and Windows settings, not remove everything and start over. Do not promise exact UAC counts, unchanged machine settings, or perfect no-change idempotence. WinGet source/version selection and the later manifest-defined development toolchain checks must both pass.
 
 Save work first. The Microsoft base may elevate and restart. Sign back in and wait for `WindowsDevConfigResume` to finish **the base only**. Reopen this folder in VS Code and a new integrated terminal:
 
 ```powershell
 .\scripts\bootstrap.ps1 -SkipBase
+```
+
+Use task **Finish setup** after that base resume. `-SkipBase` is valid **only when the base is already complete or after its resume**, not a fix for an absent/incomplete base or missing WSL. If no restart occurred, bootstrap can already have completed the add-on; proceed to verification. Complete any first-use Ubuntu prompts through the approved VS Code WSL workflow.
+
+### Extension source and profile acceptance
+
+The [official DSC implementation](https://github.com/microsoft/winget-dsc/blob/main/resources/Microsoft.VSCode.Dsc/Microsoft.VSCode.Dsc.psm1) locates an installed VS Code CLI and invokes extension installation. Its [resource contract](https://github.com/microsoft/winget-dsc/blob/main/resources/Help/Microsoft.VSCode.Dsc/VSCodeExtension.md) exposes no target profile or marketplace parameter; this add-on does not pass `--profile`. The repository verifier likewise lists CLI extensions without `--profile`. These are **not proof of the active window's profile, enabled extensions or enterprise marketplace routing**.
+
+Before apply, IT must approve the selected CLI installation/user context, all 12 IDs and bundled dependencies, and verify its effective [AllowedExtensions/private marketplace policy](https://code.visualstudio.com/docs/enterprise/extensions). A private-marketplace banner alone is not proof any ID is blocked. Conversely, a CLI exit 0 does not prove the extension went through that approved source or is enabled in your window. Do not assume the DSC process inherits the window's authentication/profile. The module uses `--force` for version changes; that is not authorization to bypass enterprise policy.
+
+If the approved enterprise profile/source cannot be honored by this resource, **stop: setup is not accepted**. IT must provide a compatible managed automated extension-delivery route (approved image/bootstrap distribution or audited configuration), not ask developers to install the missing IDs one by one or switch to the public marketplace. Do not override marketplace/allowlist policy, switch accounts/installs to evade it, or download unapproved VSIX files. This repository does not silently implement such a fallback.
+
+## Phase 3: post-setup verification
+
+After base/add-on completion, open a **fresh terminal** (reload VS Code if its inherited PATH is stale), then choose **Verify**:
+
+```powershell
 .\scripts\verify.ps1
 ```
 
-If no restart occurred, bootstrap can already have completed the add-on; verification still matters. Complete any first-use Ubuntu prompts through the approved VS Code WSL workflow. Do not rerun base setup to solve a package/test failure.
+Now required FAIL/exit 1 means setup is **not accepted**: diagnose installation/configuration logs, PATH/version selection, reboot/resume and approved extension source/profile. Do not treat an old Python first on PATH as proof Python 3.14 was not installed; compare executable locations with IT, without deleting other runtimes.
 
-Default verification requires 12 extensions. Java modernization is optional:
+Default verification requires **12 extensions**. In the intended VS Code window, also confirm its profile, enabled required extensions, approved source and enterprise sign-in. The [CLI reference](https://code.visualstudio.com/docs/configure/command-line) documents read-only `code --list-extensions --show-versions --profile "Your approved existing profile"`; use the actual existing approved profile, not a newly invented profile. Compare this with Verify's unqualified CLI list. Policy-disabled installed extensions are not accepted.
+
+Java modernization remains optional:
 
 ```powershell
 .\scripts\bootstrap.ps1 -SkipBase -IncludeJavaModernization
 .\scripts\verify.ps1 -IncludeJavaModernization
 ```
 
-This does not select Java 11 for legacy tests. `verify.ps1 -Json` returns readiness results; `-RunConfigTest` invokes WinGet configuration test logic and may need modules/network. Run that switch only when explicitly approved, not as a daily test or from the onboarding agent.
+This does not select Java 11 for legacy tests. `verify.ps1 -Json` returns readiness results. After setup, the human may explicitly approve `.\scripts\verify.ps1 -RunConfigTest` to test the applied configuration; it can require modules/network, so it is not a daily test or agent action. Combine with `-IncludeJavaModernization` only when opted in; inspect actual exit/result rather than assuming success.
 
 Read configuration in the editor before choosing to apply it. `winget configure show -f .config\configuration.winget` inspects the profile; test/apply and any repairs remain separate, user-approved actions. The upstream full setup/uninstall changes more machine state and is not a shortcut for this quickstart.
 
-## Already configured laptop
+### Before / after acceptance
 
-**Skip setup.** Open the clone in VS Code and run:
+| Evidence | Before setup | After setup |
+| --- | --- | --- |
+| Phase 0 approvals and script policy | Required before scripts | Still required; no bypass |
+| Preflight | No FAIL; WSL/wslc WARN expected if absent | Recheck infrastructure failures; no claimed payload/enterprise certification |
+| Verify | Optional inventory exit 1 expected for missing setup outputs | Required profile exit 0; CLI/profile/source/enabled checks also accepted |
+| Project dependencies | Not supplied by laptop setup | Explicit Phase 4 Restore before daily checks |
+| GitHub / AKS | Access/governance decisions separate | CI checked; deployment independently manual, not automatically provisioned |
 
-```powershell
-.\scripts\verify.ps1
-```
+## Phase 4: project restore and daily checks
 
-Use **Extensions → Show Recommended Extensions** to review workspace recommendations. Approve installations yourself under IT policy; the required profile and optional modernization recommendation are distinct. A missing runtime/module is a prerequisite to resolve, not permission for an agent to download it.
-
-## Restore project packages
+### Restore project packages
 
 Tool installation is not project dependency restoration. After setup/verification, explicitly choose the Restore task or run:
 
@@ -87,7 +192,7 @@ This confirmed Restore target is the **only local image-build/acquisition step**
 it can download approved base images and build packages. It is not hidden in
 Run, Test, Lint, Coverage or F5.
 
-## Daily test, lint and coverage
+### Daily test, lint and coverage
 
 Use **Terminal → Run Task** for the named test/lint/coverage actions or run:
 
@@ -135,21 +240,7 @@ launch/dispatch remains a separate explicit user action.
 
 Sample READMEs retain direct commands for the named sample directory. Developer actions route to those directories; do not execute a sample's build from the repository root.
 
-## GitHub workflow
-
-Basic clone/fetch/push authentication is **built into VS Code**, not dependent on Copilot. PRs/issues use the official [GitHub Pull Requests and Issues](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-pull-request-github) extension, ID **`GitHub.vscode-pull-request-github`**, already in the required recommendations.
-
-1. Open the **GitHub** Activity Bar view → **Sign In**. Follow the organisation-approved browser sign-in and return to VS Code. Copilot's **Use AI Features** sign-in/seat is separate from repository write access.
-2. Confirm the approved Git commit identity. If it is absent, configure it yourself through the integrated terminal using your organisation's documented values; do not put customer identities or tokens in source.
-3. Select the branch in the Status Bar → **Create new branch**, starting from current reviewed `main`.
-4. Make a small change. Run focused checks, inspect the Source Control diff, stage only intended files, and **Commit** with a conventional message.
-5. Select **Publish Branch** (or push/sync an already published branch). If you have no repository write access, use an approved fork; sign-in does not grant write permissions. Protect unrelated local work.
-6. **Ctrl+Shift+P → GitHub Pull Requests: Create Pull Request**. Verify base repo/branch, preserve the supplied PR template, include exact commands and observed results/skips, and request reviewers. The extension can publish the branch when prompted.
-7. Inspect PR checks and diffs in the GitHub view. The workflow status task (`developer.ps1 -Action WorkflowStatus`) uses an already authenticated approved GitHub CLI from the integrated terminal; missing CLI/authentication is reported, not repaired by agents. Merge only with repository approvals and passing required checks.
-
-The [official VS Code walkthrough](https://code.visualstudio.com/docs/sourcecontrol/github) documents this flow. GitHub Actions CI checks modern services and PowerShell/configuration changes; legacy is intentionally excluded. A PR or push **never deploys** to Azure.
-
-## Run locally or in a container
+## Phase 5: run, debug and containers
 
 Only the developer launches services, from **Terminal → Run Task** or:
 
@@ -196,12 +287,26 @@ RunContainer first inspects the existing local image and runs with
 restores packages. Choose the separate confirmed ContainerImages Restore target
 beforehand; agents do not build/run merely because a task exists.
 
-## Existing AKS
+## Phase 6: GitHub and CI
+
+Basic clone/fetch/push authentication is **built into VS Code**, not dependent on Copilot. PRs/issues use the official [GitHub Pull Requests and Issues](https://marketplace.visualstudio.com/items?itemName=GitHub.vscode-pull-request-github) extension, ID **`GitHub.vscode-pull-request-github`**, included in automated extension setup.
+
+1. Open the **GitHub** Activity Bar view → **Sign In**. Follow the organisation-approved browser sign-in and return to VS Code. Copilot's **Use AI Features** sign-in/seat is separate from repository write access.
+2. Confirm the approved Git commit identity. If absent, configure it yourself in the integrated terminal using your organisation's values; never put tokens/customer identities in source.
+3. Select the branch in the Status Bar → **Create new branch**, starting from reviewed `main`.
+4. Make a small change, run focused checks, inspect the Source Control diff, stage intended files and **Commit** with a conventional message.
+5. Select **Publish Branch** (or push/sync an existing branch). Without repository write access, use an approved fork; sign-in does not grant write permissions.
+6. **Ctrl+Shift+P → GitHub Pull Requests: Create Pull Request**. Check the base, preserve the PR template, include observed commands/results/skips and request reviewers.
+7. Inspect PR checks/diffs. **GitHub workflow status** uses an already authenticated approved GitHub CLI; missing CLI/auth is reported, not repaired by agents. Merge only with required approvals and passing checks.
+
+The [official VS Code walkthrough](https://code.visualstudio.com/docs/sourcecontrol/github) documents this flow. CI checks modern services/PowerShell/configuration and builds modern containers; legacy is excluded. A push or PR **never deploys** to Azure.
+
+## Phase 7: existing AKS
 
 [GITHUB-AKS.md](GITHUB-AKS.md) describes IT-owned prerequisites and the separate manual deployment. Use the Kubernetes check/status/logs/port-forward tasks only in the documented context. Static checks do not authenticate or provision; live checks require a previously approved user context and network path. Dispatch is explicit, main-only, and requires the current main `source_sha` plus a different environment reviewer.
 
 ## Support and logs
 
-Do not change execution policy, run repairs or reinstall the workstation to get past a failed check. See [Troubleshooting](TROUBLESHOOTING.md); route policy and licensing decisions to IT.
+Use only the explicit human/IT-approved Phase 0 policy route; never change policy or run repairs automatically to make a check pass. Use Phase 2 for incomplete laptop setup, Phase 4 for missing project packages, and [Troubleshooting](TROUBLESHOOTING.md) for post-setup failures.
 
 Base log: `%ProgramData%\CalmOS\devconfig-log.txt`. Add-on logs: `%LOCALAPPDATA%\win11-dev-workstation\bootstrap-*.log`. Redact identities, sensitive paths and secrets before sharing. Verification proves only what its observed output reports for that user/device/revision.

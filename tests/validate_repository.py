@@ -225,6 +225,52 @@ def check_workflow() -> None:
     check()
 
 
+def check_onboarding_journey() -> None:
+    setup = (ROOT / "docs" / "SETUP.md").read_text(encoding="utf-8-sig")
+    readme = (ROOT / "README.md").read_text(encoding="utf-8-sig")
+    phases = re.findall(r"^## Phase (\d):", setup, re.M)
+    require(phases == [str(index) for index in range(8)],
+            "SETUP must order Phase 0 prerequisites through Phase 7 AKS")
+    before_preflight = setup.split("## Phase 1:", 1)[0]
+    for command in ("Get-ExecutionPolicy -List", "\nGet-ExecutionPolicy\n",
+                    "Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned"):
+        require(command in before_preflight, f"missing prerequisite policy guidance: {command}")
+    require("before running any repository script" in before_preflight.lower(),
+            "prerequisites must precede script execution")
+    for boundary in ("persistent account-level", "MachinePolicy/UserPolicy",
+                     "AllSigned", "mark-of-the-web", "before cloning"):
+        require(boundary in before_preflight, f"missing Phase 0 boundary: {boundary}")
+    inventory = setup.split("## Phase 1:", 1)[1].split("## Phase 2:", 1)[0]
+    require("exit 1" in inventory and re.search(r"\bexpected inventory failure\b", inventory)
+            and "missing WSL/wslc" in inventory and "WARN" in inventory,
+            "pre-install Verify failure and WSL WARN must be distinguished from preflight gate")
+    for extension in EXTENSIONS | {MODERNIZER}:
+        require(f"`{extension}`" in setup.lower(),
+                f"setup extension inventory missing {extension}")
+    require("12 required extension IDs" in setup and "optional 13th" in setup,
+            "required versus optional extension profile must be explicit")
+    for boundary in ("no target profile or marketplace parameter", "stop: setup is not accepted",
+                     "managed automated", "not proof any ID is blocked"):
+        require(boundary in setup, f"missing enterprise extension acceptance: {boundary}")
+    tasks = json.loads((ROOT / ".vscode" / "tasks.json").read_text(encoding="utf-8-sig"))
+    labels = {task["label"] for task in tasks["tasks"]}
+    required_labels = (
+        "Preflight", "Setup preview", "User-run setup", "Finish setup", "Verify",
+        "Restore project dependencies", "Test all samples", "Lint all samples",
+        "Coverage all samples", "Run EMI API (local)", "GitHub workflow status",
+        "Deploy AKS (manual main only)",
+    )
+    for label in required_labels:
+        require(label in labels and f"**{label}**" in readme,
+                f"README journey/task contract missing {label}")
+    anchors = {
+        re.sub(r"[^\w -]", "", heading.lower()).replace(" ", "-")
+        for heading in re.findall(r"^#{1,6} (.+)$", setup, re.M)
+    }
+    for anchor in re.findall(r"docs/SETUP\.md#([^)]+)", readme):
+        require(anchor in anchors, f"README references missing SETUP heading: {anchor}")
+
+
 def check_files_and_links() -> None:
     for name in REQUIRED:
         path = ROOT / name
@@ -301,6 +347,7 @@ def main() -> int:
                 ("Copilot frontmatter and locations", check_customizations),
                 ("pinned least-privilege CI", check_workflow),
                 ("required files, images and local Markdown links", check_files_and_links),
+                ("Phase 0–7 onboarding and automated extension acceptance", check_onboarding_journey),
             ):
                 check()
                 print(f"PASS {name}")
