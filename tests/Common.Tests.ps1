@@ -166,6 +166,22 @@ Describe 'HTTPS and health waiting' {
     BeforeEach {
         Mock Start-Sleep -ModuleName _common {}
     }
+    It 'budgets six hosts with three attempts plus fixed backoff/platform allowance' -TestCases @(
+        @{ Timeout = 5; Budget = 213 }, @{ Timeout = 15; Budget = 393 }, @{ Timeout = 30; Budget = 663 }
+    ) {
+        param($Timeout, $Budget)
+        Get-PreflightTimeout -HttpsTimeoutSeconds $Timeout | Should -Be $Budget
+        (Get-PreflightTimeout -HttpsTimeoutSeconds $Timeout) | Should -BeGreaterThan (6 * 3 * $Timeout)
+    }
+    It 'rejects an unbounded preflight budget' {
+        { Get-PreflightTimeout -HttpsTimeoutSeconds 31 } | Should -Throw
+    }
+    It 'uses the explicit timeout while preserving the normal default' {
+        Mock Invoke-WebRequest -ModuleName _common { [pscustomobject]@{ StatusCode = 200 } }
+        (Get-HttpsProbe 'https://github.com/' -TimeoutSeconds 30).TimeoutSeconds | Should -Be 30
+        Should -Invoke Invoke-WebRequest -ModuleName _common -Times 1 -Exactly -ParameterFilter { $TimeoutSec -eq 30 }
+        (Get-HttpsProbe 'https://github.com/').TimeoutSeconds | Should -Be 5
+    }
     It 'accepts root 404/405 as reachability only' -TestCases @(@{ Code = 404 }, @{ Code = 405 }) {
         param($Code)
         Mock Invoke-WebRequest -ModuleName _common { [pscustomobject]@{ StatusCode = $Code } }

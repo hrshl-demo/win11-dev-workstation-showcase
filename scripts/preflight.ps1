@@ -4,17 +4,21 @@ Read-only Windows developer workstation readiness checks.
 .DESCRIPTION
 No elevation or changes are made. FAIL returns exit 1; WARN is advisory.
 HTTPS checks use at most three five-second attempts with bounded backoff for
-transient transport failures only. Native output is captured, including
+transient transport failures only by default; operators may select 1-30 seconds
+per HTTPS attempt. Native output is captured, including
 stderr, so -Json emits only one JSON array.
 .PARAMETER Json
 Emit machine-readable checks instead of human-readable messages.
 .PARAMETER Quiet
 Suppress PASS and WARN messages (JSON still contains every check).
+.PARAMETER HttpsTimeoutSeconds
+HTTPS-only per-attempt timeout, default 5; choose 30 for an approved slow network.
 .EXAMPLE
 .\scripts\preflight.ps1 -Json
 #>
 [CmdletBinding()]
-param([switch]$Json, [switch]$Quiet)
+param([switch]$Json, [switch]$Quiet,
+    [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
@@ -22,7 +26,7 @@ Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
 function Get-PreflightCheck {
     [CmdletBinding()]
     [OutputType([pscustomobject], [object[]])]
-    param()
+    param([ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
     try {
         $os = Get-CimInstance Win32_OperatingSystem
         $build = [int]$os.BuildNumber
@@ -93,9 +97,9 @@ function Get-PreflightCheck {
             'codeload.github.com' { 'https://codeload.github.com/microsoft/WindowsDeveloperConfig/zip/refs/heads/main' }
             default { "https://$hostName/" }
         }
-        $probe = Get-HttpsProbe -Uri $uri -TimeoutSeconds 5
+        $probe = Get-HttpsProbe -Uri $uri -TimeoutSeconds $HttpsTimeoutSeconds
         $status = if ($probe.Reachable) { 'PASS' } else { 'FAIL' }
-        $message = "URI: $($probe.Uri); HTTP: $($probe.StatusCode); attempts: $($probe.Attempts)/3; type: $($probe.ErrorType); $($probe.Reason)"
+        $message = "URI: $($probe.Uri); HTTP: $($probe.StatusCode); attempts: $($probe.Attempts)/3; timeout: $HttpsTimeoutSeconds seconds/attempt; type: $($probe.ErrorType); $($probe.Reason)"
         if ($probe.Reachable -and $probe.Attempts -gt 1) { $message = "Recovered after transient transport retries. $message" }
         $check = Get-CheckResult "HTTPS $hostName" $status $message
         $check | Add-Member -NotePropertyName Probe -NotePropertyValue $probe
@@ -130,8 +134,9 @@ function Get-PreflightCheck {
 function Invoke-Preflight {
     [CmdletBinding()]
     [OutputType([int])]
-    param([switch]$Json, [switch]$Quiet)
-    try { $checks = @(Get-PreflightCheck) }
+    param([switch]$Json, [switch]$Quiet,
+        [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
+    try { $checks = @(Get-PreflightCheck -HttpsTimeoutSeconds $HttpsTimeoutSeconds) }
     catch { $checks = @(Get-CheckResult 'Preflight' FAIL $_.Exception.Message) }
     Write-CheckReport $checks -Json:$Json -Quiet:$Quiet
     return (Get-CheckExitCode $checks)

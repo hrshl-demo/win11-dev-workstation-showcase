@@ -254,6 +254,18 @@ def check_onboarding_journey() -> None:
         require(boundary in setup, f"missing enterprise extension acceptance: {boundary}")
     tasks = json.loads((ROOT / ".vscode" / "tasks.json").read_text(encoding="utf-8-sig"))
     labels = {task["label"] for task in tasks["tasks"]}
+    timeout_inputs = [item for item in tasks["inputs"] if item["id"] == "httpsTimeoutSeconds"]
+    require(len(timeout_inputs) == 1 and timeout_inputs[0]["default"] == "5"
+            and timeout_inputs[0]["options"] == ["5", "15", "30"],
+            "HTTPS timeout picker must default to 5 with explicit 15/30 choices")
+    for task in tasks["tasks"]:
+        relevant = task["label"] in {"Preflight", "Setup preview", "User-run setup", "Finish setup"}
+        require(("${input:httpsTimeoutSeconds}" in task["args"]) == relevant,
+                f"HTTPS timeout picker scope: {task['label']}")
+        if relevant:
+            position = task["args"].index("-HttpsTimeoutSeconds")
+            require(task["args"][position + 1] == "${input:httpsTimeoutSeconds}",
+                    "timeout task input must reach the named dispatcher parameter")
     required_labels = (
         "Preflight", "Setup preview", "User-run setup", "Finish setup", "Verify",
         "Restore project dependencies", "Test all samples", "Lint all samples",

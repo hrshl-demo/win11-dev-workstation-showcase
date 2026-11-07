@@ -12,13 +12,16 @@ LOCALAPPDATA\win11-dev-workstation. Explicit policy blocks are never bypassed.
 Apply this add-on without running the Microsoft base (also used after reboot).
 .PARAMETER IncludeJavaModernization
 Also apply the Java 11 and Copilot modernization add-on and verify its extension.
+.PARAMETER HttpsTimeoutSeconds
+Pass an operator-selected 1-30 second HTTPS timeout to child preflight; default 5.
 .EXAMPLE
 .\scripts\bootstrap.ps1 -WhatIf
 .EXAMPLE
 .\scripts\bootstrap.ps1 -SkipBase -IncludeJavaModernization
 #>
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
-param([switch]$SkipBase, [switch]$IncludeJavaModernization)
+param([switch]$SkipBase, [switch]$IncludeJavaModernization,
+    [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
@@ -26,7 +29,8 @@ Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
 function Invoke-Bootstrap {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     [OutputType([int])]
-    param([switch]$SkipBase, [switch]$IncludeJavaModernization)
+    param([switch]$SkipBase, [switch]$IncludeJavaModernization,
+        [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
     $transcript = $false
     $downloadDirectory = $null
     $downloadPath = $null
@@ -34,6 +38,7 @@ function Invoke-Bootstrap {
     try {
         $root = Get-ShowcaseRoot
         if ($WhatIfPreference) {
+            Write-ShowcaseMessage "[PASS] Plan: child preflight HTTPS timeout $HttpsTimeoutSeconds seconds/attempt; overall budget $(Get-PreflightTimeout $HttpsTimeoutSeconds) seconds."
             Write-ShowcaseMessage '[PASS] Plan only: run read-only preflight; stop on any FAIL or organisation policy block.'
             if (-not $SkipBase) {
                 Write-ShowcaseMessage '[WARN] Plan: download https://aka.ms/devconfig/standard/setup.ps1 to a private TEMP directory; verify Valid Microsoft Corporation Authenticode signature; execute verified text. Base may restart and resumes itself.'
@@ -45,8 +50,10 @@ function Invoke-Bootstrap {
         }
         Assert-WorkstationPolicy
         $shell = (Get-Process -Id $PID).Path
-        $preflight = Invoke-NativeCommand $shell @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'preflight.ps1'), '-Json') -TimeoutSeconds 180
-        if ($preflight.TimedOut) { throw 'Preflight exceeded its 180-second budget; no setup actions started. Review read-only readiness/network diagnostics.' }
+        $preflightBudget = Get-PreflightTimeout -HttpsTimeoutSeconds $HttpsTimeoutSeconds
+        $preflight = Invoke-NativeCommand $shell @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'preflight.ps1'),
+            '-Json', '-HttpsTimeoutSeconds', [string]$HttpsTimeoutSeconds) -TimeoutSeconds $preflightBudget
+        if ($preflight.TimedOut) { throw "Preflight exceeded its $preflightBudget-second budget; no setup actions started. Review read-only readiness/network diagnostics." }
         $parsedChecks = $preflight.StdOut | ConvertFrom-Json
         $checks = @($parsedChecks)
         if ($preflight.ExitCode -ne 0 -or (Get-CheckExitCode $checks) -ne 0) {
