@@ -83,7 +83,7 @@ function Invoke-Sample {
     param([Parameter(Mandatory)][string]$Name, [string]$Mode = 'local',
         [int]$Port = 8080, [int]$HealthTimeoutSeconds = 90,
         [ValidateSet('Auto', 'wslc', 'docker')][string]$Runtime = 'Auto')
-    $runtime = $null
+    $containerRuntime = $null
     $started = $false
     $containerName = "win11-demo-$Name"
     try {
@@ -94,18 +94,18 @@ function Invoke-Sample {
             $command = Get-LocalSampleCommand -Name $Name -Directory $directory -Port $Port
             return (Invoke-LocalSampleProcess -Command $command -Directory $directory -Name $Name -Port $Port -WhatIf:$WhatIfPreference)
         }
-        $runtime = Get-ContainerRuntime -Preferred $Runtime
-        Write-ShowcaseMessage "[PASS] Container runtime: $($runtime.Name) ($($runtime.Path))."
+        $containerRuntime = Get-ContainerRuntime -Preferred $Runtime
+        Write-ShowcaseMessage "[PASS] Container runtime: $($containerRuntime.Name) ($($containerRuntime.Path))."
         if (-not $PSCmdlet.ShouldProcess($containerName, "Run an existing $Name image, publishing localhost port $Port")) { return 0 }
-        $existing = Invoke-NativeCommand $runtime.Path @('ps', '-a', '--filter', "name=$containerName", '--format', '{{.Names}}')
-        Assert-NativeSuccess $existing "List $($runtime.Name) containers (no runtime fallback on denial)"
+        $existing = Invoke-NativeCommand $containerRuntime.Path @('ps', '-a', '--filter', "name=$containerName", '--format', '{{.Names}}')
+        Assert-NativeSuccess $existing "List $($containerRuntime.Name) containers (no runtime fallback on denial)"
         if (@($existing.StdOut -split '[\r\n]+' | Where-Object { $_.Trim() -eq $containerName }).Count -gt 0) {
             throw "Container $containerName already exists. Use demo-reset.ps1 after reviewing its confirmation."
         }
         $image = "win11-demo/${Name}:latest"
-        $inspection = Invoke-NativeCommand $runtime.Path @('image', 'inspect', $image) -TimeoutSeconds 60
+        $inspection = Invoke-NativeCommand $containerRuntime.Path @('image', 'inspect', $image) -TimeoutSeconds 60
         Assert-NativeSuccess $inspection 'Locate existing image; use Restore project dependencies / ContainerImages explicitly before Run'
-        $run = Invoke-NativeCommand $runtime.Path @('run', '--pull=never', '-d', '-p', "127.0.0.1:${Port}:8080",
+        $run = Invoke-NativeCommand $containerRuntime.Path @('run', '--pull=never', '-d', '-p', "127.0.0.1:${Port}:8080",
             '--name', $containerName, '--label', 'io.win11-dev-workstation.showcase=true', $image) -TimeoutSeconds 120
         Assert-NativeSuccess $run 'Start sample container'
         $started = $true
@@ -115,11 +115,11 @@ function Invoke-Sample {
         return 0
     } catch {
         Write-ShowcaseMessage "[FAIL] Sample: $($_.Exception.Message)"
-        if ($started -and $null -ne $runtime -and $PSCmdlet.ShouldProcess($containerName, 'Stop and remove the container created by this failed run')) {
+        if ($started -and $null -ne $containerRuntime -and $PSCmdlet.ShouldProcess($containerName, 'Stop and remove the container created by this failed run')) {
             try {
-                $stop = Invoke-NativeCommand $runtime.Path @('stop', $containerName)
+                $stop = Invoke-NativeCommand $containerRuntime.Path @('stop', $containerName)
                 Assert-NativeSuccess $stop 'Stop failed demo container'
-                $remove = Invoke-NativeCommand $runtime.Path @('rm', $containerName)
+                $remove = Invoke-NativeCommand $containerRuntime.Path @('rm', $containerName)
                 Assert-NativeSuccess $remove 'Remove failed demo container'
             } catch { Write-ShowcaseMessage "[WARN] Failed-run cleanup: $($_.Exception.Message)" }
         }
