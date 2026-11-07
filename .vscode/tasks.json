@@ -5,7 +5,30 @@
       "label": "Preflight",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\preflight.ps1"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Preflight"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Setup preview",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "SetupPreview"],
+      "problemMatcher": []
+    },
+    {
+      "label": "User-run setup",
+      "detail": "HUMAN ONLY: approved setup may elevate/restart; confirmation in terminal, no policy bypass.",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Finish setup",
+      "detail": "HUMAN ONLY: finish approved setup after restart; confirmation required.",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "FinishSetup", "-Confirm"],
       "problemMatcher": []
     },
     {
@@ -16,55 +39,267 @@
       "problemMatcher": []
     },
     {
+      "label": "Restore project dependencies",
+      "detail": "HUMAN ONLY: select Dependencies or ContainerImages, sample and approved runtime. Builds/restores happen here only, never in Run tasks.",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Restore", "-RestoreTarget", "${input:restoreTarget}", "-Sample", "${input:restoreSample}", "-Runtime", "${input:containerRuntime}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Restore Python",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Restore", "-Sample", "Python", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Restore Java",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Restore", "-Sample", "Java", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Restore Go",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Restore", "-Sample", "Go", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Restore PowerShell",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Restore", "-Sample", "PowerShell", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
       "label": "Test Python",
       "type": "process",
-      "command": "uv",
-      "args": ["run", "pytest"],
-      "options": { "cwd": "${workspaceFolder}\\samples\\python-emi-api" },
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Test", "-Sample", "Python"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Coverage Python",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Coverage", "-Sample", "Python"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint Python",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Lint", "-Sample", "Python"],
       "problemMatcher": []
     },
     {
       "label": "Test Java",
       "type": "process",
-      "command": "${workspaceFolder}\\samples\\java-ifsc-service\\mvnw.cmd",
-      "args": ["-B", "verify"],
-      "options": { "cwd": "${workspaceFolder}\\samples\\java-ifsc-service" },
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Test", "-Sample", "Java"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Coverage Java",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Coverage", "-Sample", "Java"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint Java",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Lint", "-Sample", "Java"],
       "problemMatcher": []
     },
     {
       "label": "Test Go",
       "type": "process",
-      "command": "go",
-      "args": ["test", "./..."],
-      "options": { "cwd": "${workspaceFolder}\\samples\\go-fx-rates" },
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Test", "-Sample", "Go"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Coverage Go",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Coverage", "-Sample", "Go"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint Go",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Lint", "-Sample", "Go"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Test PowerShell",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Test", "-Sample", "PowerShell"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Coverage PowerShell",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Coverage", "-Sample", "PowerShell"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint PowerShell",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Lint", "-Sample", "PowerShell"],
       "problemMatcher": []
     },
     {
       "label": "Test all samples",
-      "dependsOn": ["Test Python", "Test Java", "Test Go"],
-      "dependsOrder": "sequence",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Test", "-Sample", "All"],
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Coverage all samples",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Coverage", "-Sample", "All"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Lint all samples",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Lint", "-Sample", "All"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Test legacy Java (Java 11 opt-in)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Test", "-Sample", "Legacy"],
       "problemMatcher": []
     },
     {
       "label": "Run EMI API (local)",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\run-sample.ps1", "-Name", "python-emi-api", "-Mode", "local"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "RunLocal", "-Sample", "Python", "-Confirm"],
       "problemMatcher": []
     },
     {
       "label": "Run EMI API (container)",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\run-sample.ps1", "-Name", "python-emi-api", "-Mode", "container"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "RunContainer", "-Sample", "Python", "-Runtime", "${input:containerRuntime}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run IFSC service (local)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "RunLocal", "-Sample", "Java", "-Port", "8081", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run IFSC service (container)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "RunContainer", "-Sample", "Java", "-Port", "8081", "-Runtime", "${input:containerRuntime}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run FX rates (local)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "RunLocal", "-Sample", "Go", "-Port", "8082", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run FX rates (container)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "RunContainer", "-Sample", "Go", "-Port", "8082", "-Runtime", "${input:containerRuntime}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run legacy Java (container, opt-in)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "RunContainer", "-Sample", "Legacy", "-Port", "8083", "-Runtime", "${input:containerRuntime}", "-Confirm"],
       "problemMatcher": []
     },
     {
       "label": "Reset demo",
+      "detail": "HUMAN ONLY: protected reset to fetched safe origin/main; destructive sample/container confirmation in terminal, no automatic cleanup.",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\demo-reset.ps1"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\demo-reset.ps1", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "GitHub workflow status",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "WorkflowStatus"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Deploy AKS (manual main only)",
+      "detail": "HUMAN ONLY: current reviewed main SHA; requires live aks-demo approval protections, existing configured AKS.",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "DeployDispatch", "-SourceSha", "${input:mainSha}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Kubernetes manifest check",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "KubernetesCheck"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Kubernetes status",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "KubernetesStatus", "-Sample", "${input:kubernetesSample}", "-Namespace", "${input:kubernetesNamespace}"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Kubernetes logs",
+      "detail": "Current approved context; tail 100 lines for a fixed demo deployment.",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "KubernetesLogs", "-Sample", "${input:kubernetesSample}", "-Namespace", "${input:kubernetesNamespace}"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Kubernetes port-forward",
+      "detail": "HUMAN ONLY: foreground loopback 8080; stop with Ctrl+C.",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "KubernetesPortForward", "-Sample", "${input:kubernetesSample}", "-Namespace", "${input:kubernetesNamespace}", "-Confirm"],
       "problemMatcher": []
     }
+  ],
+  "inputs": [
+    { "id": "restoreTarget", "type": "pickString", "description": "Dependencies or explicit container image build/restore (Run never builds/pulls)", "options": ["Dependencies", "ContainerImages"], "default": "Dependencies" },
+    { "id": "restoreSample", "type": "pickString", "description": "Explicit user-run restore (Legacy separately requires Java 11)", "options": ["Python", "Java", "Go", "PowerShell", "All", "Legacy"], "default": "All" },
+    { "id": "containerRuntime", "type": "pickString", "description": "Already-approved runtime; auto prefers wslc, no fallback after denial", "options": ["auto", "wslc", "docker"], "default": "auto" },
+    { "id": "mainSha", "type": "promptString", "description": "Reviewed CURRENT remote main commit SHA (40 lowercase hex characters)" },
+    { "id": "kubernetesSample", "type": "pickString", "description": "Existing modern demo workload", "options": ["Python", "Java", "Go"], "default": "Python" },
+    { "id": "kubernetesNamespace", "type": "promptString", "description": "Existing approved AKS_NAMESPACE (DNS label, no namespace creation)" }
   ]
 }

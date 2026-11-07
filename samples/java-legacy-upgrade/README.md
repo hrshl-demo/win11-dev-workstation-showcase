@@ -13,16 +13,32 @@ is stored and no request payload is logged.
 
 ## Test and run
 
-From this directory, with a Java **11** JDK on `JAVA_HOME`:
+This sample is excluded from `-Sample All`, modern CI and AKS deployment.
+In the **VS Code integrated terminal**, from the repository root, select Java
+11 independently and use the explicit optional actions:
 
 ```powershell
-.\mvnw.cmd -B verify
-.\mvnw.cmd -B spring-boot:run
+# User-approved restoration only, after optional tooling is arranged:
+.\scripts\developer.ps1 -Action Restore -Sample Legacy
+.\scripts\developer.ps1 -Action Test -Sample Legacy
 ```
 
-Linux/macOS equivalents: `./mvnw -B verify` and
-`./mvnw -B spring-boot:run`. Maven 3.9.16 is supplied by the official wrapper;
-its first invocation needs Maven Central network access. `verify` runs
+The optional modernization extension does not select Java 11 or authorize tool
+installation. Missing prerequisites mean **NOT RUN**. See [Setup](../../docs/SETUP.md).
+
+From this directory, with a Java **11** JDK on `JAVA_HOME` and the approved
+wrapper distribution/plugins/dependencies **already restored**:
+
+```powershell
+.\mvnw.cmd -o -B verify
+# Separate human-operated launch, not a CI/deployment action:
+.\mvnw.cmd -o -B spring-boot:run
+```
+
+Linux/macOS equivalents use the same offline `-o` switch.
+Maven 3.9.16 is supplied by the official wrapper; its first invocation needs
+Maven Central network access through the explicit user Restore stage.
+The original revision's `verify` ran
 **29 test invocations across two JUnit 5 test files** and creates `target/app.jar`.
 
 Default port: **8080**. Override only in your current terminal:
@@ -34,7 +50,7 @@ java -jar .\target\app.jar
 Remove-Item Env:PORT
 ```
 
-In another terminal (replace 8080 with 8081 if overridden):
+In another **VS Code integrated PowerShell terminal** (replace 8080 with 8081 if overridden):
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/health
@@ -63,22 +79,20 @@ this is not an idempotent payment processing system.
 
 ## Container
 
-Only run these commands with an already-approved runtime, from this directory:
+Only the human operator runs these optional commands with an already-approved
+runtime, from the **repository root**. This image is excluded from `All`:
 
 ```powershell
-$runtime = if (Get-Command wslc -ErrorAction SilentlyContinue) { 'wslc' } elseif (Get-Command docker -ErrorAction SilentlyContinue) { 'docker' } else { throw 'No approved container runtime is available.' }
-Write-Host "Runtime: $runtime"
-& $runtime build -t showcase-legacy .
-& $runtime run -d --name showcase-legacy -p 8080:8080 showcase-legacy
+.\scripts\developer.ps1 -Action Restore -RestoreTarget ContainerImages -Sample Legacy -Runtime Auto -Confirm
+# Existing-image run only, with --pull=never; no build/pull:
+.\scripts\developer.ps1 -Action RunContainer -Sample Legacy -Runtime Auto
 Invoke-RestMethod http://localhost:8080/health
 $payment = @{ sourceAccount = 'SYN-ACCOUNT-001'; beneficiaryIfsc = 'ABCD0123456'; amount = 1005.00 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri http://localhost:8080/payments -ContentType 'application/json' -Body $payment
-& $runtime stop showcase-legacy
-& $runtime rm showcase-legacy
 ```
 
-Wait for startup before calling `/health`. For a container port override use
-`-e PORT=8081 -p 8081:8081`. Do not run both samples on host port 8080
+Wait for startup before calling `/health`. Use the operator launch task's port
+selection and reported endpoint for an override. Do not run both samples on host port 8080
 simultaneously. The multi-stage Dockerfile runs the tests on Java 11 and the
 final JRE runs as non-root UID/GID 10001. Images are digest-pinned.
 Its health check runs `java -jar app.jar --healthcheck`, a two-second Java
@@ -110,6 +124,10 @@ Verified on **7 November 2026**, from official primary endpoints:
 
 ## Validation on the build workstation
 
+The following is **historical original-revision evidence**, not current
+acceptance. This documentation revision ran no legacy tests, package restoration,
+container build or deployment. No historical run adds legacy to modern CI.
+
 `.\mvnw.cmd -B verify` passed on portable Temurin **11.0.32.1+1**: **29 tests,
 zero failures, zero errors, zero skipped**; the executable JAR was packaged.
 `JAVA_HOME`, `MAVEN_USER_HOME` and `MAVEN_OPTS` were scoped to the validating
@@ -129,5 +147,5 @@ not permitted and neither `wslc` nor `docker` was available. MockMvc verified
 official Linux shell wrapper was not executed on this Windows host; its
 executable mode is preserved.
 
-No credentials belong in this sample. For later Azure integration use
-environment configuration, Azure Key Vault and managed identity.
+No credentials belong in this sample. Keep it out of the existing-AKS pipeline;
+modernization and any later delivery require separate explicit review.

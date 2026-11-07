@@ -6,9 +6,10 @@
       "type": "debugpy",
       "request": "launch",
       "module": "uvicorn",
+      "python": "${workspaceFolder}\\samples\\python-emi-api\\.venv\\Scripts\\python.exe",
       "cwd": "${workspaceFolder}\\samples\\python-emi-api",
       "args": ["app.main:app", "--host", "127.0.0.1", "--port", "8080"],
-      "env": { "PORT": "8080" },
+      "env": { "PORT": "8080", "UV_OFFLINE": "1", "UV_NO_SYNC": "1", "UV_PYTHON_DOWNLOADS": "never" },
       "justMyCode": true
     },
     {
@@ -17,7 +18,7 @@
       "request": "launch",
       "mainClass": "showcase.ifsc.IfscApplication",
       "projectName": "java-ifsc-service",
-      "env": { "PORT": "8080" }
+      "env": { "PORT": "8081" }
     },
     {
       "name": "Go FX",
@@ -25,7 +26,7 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}\\samples\\go-fx-rates",
-      "env": { "PORT": "8080" }
+      "env": { "PORT": "8082", "GOTOOLCHAIN": "local", "GOPROXY": "off", "GOSUMDB": "off" }
     }
   ]
 }

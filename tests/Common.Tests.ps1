@@ -149,6 +149,17 @@ Describe 'Container runtime choice' {
         Mock Get-NativeCommandPath -ModuleName _common { $null }
         { Get-ContainerRuntime } | Should -Throw '*No container runtime*'
     }
+    It 'explicit Docker never probes wslc or falls back' {
+        Mock Get-NativeCommandPath -ModuleName _common { throw 'Do not probe wslc.' } -ParameterFilter { $Name -eq 'wslc' }
+        Mock Get-NativeCommandPath -ModuleName _common { 'C:\docker.exe' } -ParameterFilter { $Name -eq 'docker' }
+        (Get-ContainerRuntime -Preferred docker).Name | Should -Be 'docker'
+        Should -Invoke Get-NativeCommandPath -ModuleName _common -Times 0 -Exactly -ParameterFilter { $Name -eq 'wslc' }
+    }
+    It 'explicit missing wslc does not switch to Docker' {
+        Mock Get-NativeCommandPath -ModuleName _common { $null } -ParameterFilter { $Name -eq 'wslc' }
+        Mock Get-NativeCommandPath -ModuleName _common { throw 'Do not probe Docker.' } -ParameterFilter { $Name -eq 'docker' }
+        { Get-ContainerRuntime -Preferred wslc } | Should -Throw '*No container runtime*'
+    }
 }
 
 Describe 'HTTPS and health waiting' {

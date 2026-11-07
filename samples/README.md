@@ -1,28 +1,45 @@
-# Banking sample applications
+# Synthetic sample applications
 
-These independent, synthetic applications illustrate a governed developer
-workflow. They do not contact banks, move money or use market/customer data.
-Each defaults to port **8080** and exposes `GET /health`; run them sequentially,
-or use the per-sample `PORT` override to avoid conflicts.
+These independent applications do not contact banks, move money or use
+customer/market data. Each exposes `/health` and defaults to port 8080; run
+sequentially or choose explicit ports.
 
-| Sample | Runtime | Checks from its directory |
+Open the **repository root in VS Code**. Follow [Setup](../docs/SETUP.md) for the
+fresh-approved versus already-configured routes, then choose the explicit
+**Restore project dependencies** user task. Daily Test/Lint/Coverage tasks do
+not install or restore missing prerequisites.
+
+| Sample | Runtime | Focused developer tasks |
 | --- | --- | --- |
-| [EMI API](python-emi-api/README.md) | Python 3.14, FastAPI, uv | `uv run pytest` |
-| [IFSC format service](java-ifsc-service/README.md) | Java 25, Spring Boot 4.1.2, official Maven wrapper | `.\mvnw.cmd -B verify` |
-| [Synthetic FX conversion](go-fx-rates/README.md) | Go 1.27.3, standard library | `go vet ./...`; `go test ./...` |
-| [Legacy payment service](java-legacy-upgrade/README.md) | Java 11, Spring Boot 2.7.18 | `.\mvnw.cmd -B verify` |
+| [EMI API](python-emi-api/README.md) | Python 3.14, FastAPI, uv | Test/Lint/Coverage Python: pytest, pytest-cov, Ruff |
+| [IFSC format service](java-ifsc-service/README.md) | Java 25, Spring Boot 4.1.2, Maven wrapper | Test/Lint/Coverage Java: JUnit 5, JaCoCo, Checkstyle |
+| [Synthetic FX conversion](go-fx-rates/README.md) | Go 1.27.3, standard library | Test/Lint/Coverage Go: built-in tests/coverage, vet |
+| [Legacy payment service](java-legacy-upgrade/README.md) | Java 11, Spring Boot 2.7.18 | Test legacy Java (Java 11 opt-in); excluded from All/modern CI/deployment |
 
-The legacy runtime/framework is an explicit modernization-demo exception and
-is excluded from normal CI. Do not deploy these samples as banking systems.
-See each README for input contracts, test cases, container commands and
-verified image/version provenance.
+Use **Terminal → Run Task**, Testing, Run and Debug or integrated PowerShell.
+F5 requires the approved interpreter/JDK/debugger and packages already present.
+Reports and direct sample-directory commands are in the individual READMEs.
+Historical provenance/test evidence is revision-specific, not current CI or
+cloud acceptance.
 
-Use only tools already approved and installed by your organisation. The sample
-commands are for the developer to run; repository creation does not perform
-machine setup. A first `uv` or Maven invocation may restore project dependencies.
-Container examples prefer `wslc`, fall back to `docker`, and require an
-already-approved runtime. No sample uses Compose or Dev Container features.
+Only the developer launches applications/containers. The shared launcher uses
+`-Runtime Auto|wslc|docker`: Auto is WSL-first, Docker only when `wslc` is absent;
+explicit selection probes only the approved runtime and never falls back on
+denial. Docker Desktop remains a commented optional licensing choice. No sample
+needs Compose or automatic Dev Container post-create installs.
 
-Never put credentials or personal data here. Use environment configuration
-locally; a future Azure integration should use Azure Key Vault and managed
-identity. The baseline has no amortisation schedule or Azure deployment files.
+Container image builds are a separately confirmed **Restore → ContainerImages**
+target. RunContainer inspects existing local images and uses `--pull=never`;
+missing images mean NOT RUN, never an implicit build/pull. Modern `All` image
+restoration excludes PowerShell and the optional legacy image.
+
+The revised Go service is safe; review defects only in non-serving
+`tests\fixtures\go-review-example.txt`. The historical `demo-baseline` tag is
+not runnable/deployable. Revised main is the safe baseline; `demo-complete`
+retains the inspected EMI schedule fallback and shared existing-AKS delivery.
+
+[Existing AKS + ACR](../docs/GITHUB-AKS.md) uses application-only manifests,
+manual current-main-SHA dispatch, successful modern-service gates, same-run
+immutable image digests and independent approval. No resource provisioning,
+legacy deployment, public ingress or customer credentials. Use environment
+configuration; any future real secrets require a reviewed Key Vault/identity design.

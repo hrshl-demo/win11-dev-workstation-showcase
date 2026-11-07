@@ -7,16 +7,38 @@ call a bank or an external directory.
 
 ## Test and run
 
+Open the repository root in **VS Code**. Choose **Terminal → Run Task** or use
+the integrated PowerShell terminal:
+
+```powershell
+# Explicit human package restore:
+.\scripts\developer.ps1 -Action Restore -Sample Java
+# Daily checks, with restored wrapper/plugins/dependencies and Java 25:
+.\scripts\developer.ps1 -Action Test -Sample Java
+.\scripts\developer.ps1 -Action Lint -Sample Java
+.\scripts\developer.ps1 -Action Coverage -Sample Java
+```
+
+JUnit 5/Surefire writes `target\surefire-reports\`; JaCoCo writes
+`target\site\jacoco\index.html` and `jacoco.xml`. Maven Checkstyle provides the
+configured lint rules. The Java pack's Test Runner supports Testing-view
+run/debug with the approved Java 25 JDK. Missing prerequisites mean NOT RUN,
+not automatic downloads. See [Setup](../../docs/SETUP.md).
+
 From this directory, with a Java 25 JDK on `JAVA_HOME`:
 
 ```powershell
-.\mvnw.cmd -B verify
-.\mvnw.cmd -B spring-boot:run
+.\mvnw.cmd -o -B verify
+# Separate, human-operated launch after explicit restoration:
+.\mvnw.cmd -o -B spring-boot:run
 ```
 
-On Linux/macOS the equivalent commands are `./mvnw -B verify` and
-`./mvnw -B spring-boot:run`. The first wrapper invocation needs network access to
-Maven Central; no global Maven installation is needed. `verify` runs **18 test
+On Linux/macOS the equivalent commands add the same offline `-o` switch.
+The first wrapper invocation needs network access to
+Maven Central; choose the explicit Restore task rather than allow daily commands
+to download it. Offline verification requires its distribution and every plugin/
+dependency already present. No global Maven installation is needed.
+The original revision's `verify` ran **18 test
 invocations across two JUnit 5 test files**, then creates `target/app.jar`.
 The JUnit 5 override is intentional: Boot 4 otherwise manages JUnit 6.
 Controller tests use current Spring MockMvc with standalone setup and real
@@ -32,7 +54,7 @@ java -jar .\target\app.jar
 Remove-Item Env:PORT
 ```
 
-In another PowerShell terminal:
+In another **VS Code integrated PowerShell terminal**:
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/health
@@ -73,22 +95,26 @@ performed by the sample itself.
 The Docker health check runs `java -jar app.jar --healthcheck`: a two-second
 standard-library HTTP probe of `/health`, not another Spring server.
 
-From this directory, use an already-approved runtime (prefer `wslc`):
+From the repository root, only the developer restores images/runs using an already-approved
+runtime (automatic `wslc` first, `docker` only if `wslc` is absent; never switch after
+a WSL failure/policy denial). Docker Desktop remains optional and licence-reviewed:
+
+The shared repository launcher accepts `-Runtime Auto|wslc|docker` (choose one
+value) with `-Name java-ifsc-service -Mode container`; explicit selection probes
+only the approved runtime and never falls back. See [Setup](../../docs/SETUP.md).
 
 ```powershell
-$runtime = if (Get-Command wslc -ErrorAction SilentlyContinue) { 'wslc' } elseif (Get-Command docker -ErrorAction SilentlyContinue) { 'docker' } else { throw 'No approved container runtime is available.' }
-Write-Host "Runtime: $runtime"
-& $runtime build -t showcase-ifsc .
-& $runtime run -d --name showcase-ifsc -p 8080:8080 showcase-ifsc
+# From the repository root, explicit user-approved image restoration:
+.\scripts\developer.ps1 -Action Restore -RestoreTarget ContainerImages -Sample Java -Runtime Auto -Confirm
+# Separate launch uses the existing image, with --pull=never:
+.\scripts\developer.ps1 -Action RunContainer -Sample Java -Runtime Auto
 Invoke-RestMethod http://localhost:8080/health
 Invoke-RestMethod http://localhost:8080/ifsc/ABCD0123456
-& $runtime stop showcase-ifsc
-& $runtime rm showcase-ifsc
 ```
 
-Wait for startup before calling `/health`. For a changed container port use
-`-e PORT=8081 -p 8081:8081` instead of `-p 8080:8080`. Run the two samples
-sequentially, or map this sample with `-p 8081:8080`.
+Wait for startup before calling `/health`. Use the launcher's `-Port` parameter
+and its reported endpoint for an override; run samples sequentially or use
+distinct host ports. Run never builds or pulls a missing image.
 
 ## Verified provenance
 
@@ -113,6 +139,10 @@ Wrapper JAR SHA-256:
 
 ## Validation on the build workstation
 
+The following is **historical original-revision evidence**, not a claim about
+the newly configured lint/coverage pipeline or current CI/AKS. This documentation
+revision did not execute sample tests, restore packages, build containers or deploy.
+
 `.\mvnw.cmd -B verify` passed on portable Temurin **25.0.5+8**: **18 tests,
 zero failures, zero errors, zero skipped**; the executable JAR was packaged.
 `JAVA_HOME`, `MAVEN_USER_HOME` and `MAVEN_OPTS` were set only in the validating
@@ -132,5 +162,7 @@ services/containers were outside the permitted execution scope, and neither
 in-process with MockMvc instead. Linux `./mvnw` execution was not run on this
 Windows host; the official shell launcher is stored with executable mode.
 
-Do not add credentials to this sample. Use environment configuration locally;
-for a future Azure integration use Azure Key Vault and managed identity.
+Do not add credentials. [Existing AKS + ACR](../../docs/GITHUB-AKS.md) uses shared
+application-only manifests, manual current-main-SHA dispatch, immutable same-run
+image digests and independent environment review. No sample provisions resources.
+Use Key Vault/managed identity only if a later reviewed design requires secrets.

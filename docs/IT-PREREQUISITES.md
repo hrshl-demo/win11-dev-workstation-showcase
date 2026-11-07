@@ -64,6 +64,16 @@ IT must install the supported plug-in and verify its health/version and connecti
 - Confirm sign-in, Workspace Trust, MCP consent and agent-skill discovery in the target editor/harness. [Customization compatibility](https://code.visualstudio.com/docs/agent-customization/overview) varies; prompt files require Local sessions.
 - [GitHub Copilot for Azure](https://learn.microsoft.com/en-us/azure/developer/github-copilot-azure/introduction) includes Azure MCP and `azure-prepare`, `azure-validate`, `azure-deploy` skills. Presence is not approval to deploy. Azure access follows Entra identity and least-privilege RBAC; use managed identity/Key Vault in reviewed designs.
 
+## GitHub CI and existing AKS approval
+
+The developer workflow stays in VS Code: Source Control/GitHub sign-in, branch/commit/publish/PR and integrated-terminal tasks. IT supplies approved VS Code/Git on a fresh laptop before cloning; an already configured laptop skips bootstrap. Setup and explicit project package Restore are human actions, not agent permissions.
+
+Review pinned test dependencies/modules and allowed package sources: pytest/pytest-cov and Ruff, JUnit 5/JaCoCo and Maven Checkstyle, Go built-in tests/coverage/vet, Pester **5.7.1** and PSScriptAnalyzer **1.24.0**. Daily checks must not download missing packages/toolchains. Optional Docker Desktop remains commented and licence-reviewed; `wslc` failure must not cause policy-bypassing Docker fallback. Shared `-Runtime Auto|wslc|docker` selection probes only an explicitly selected approved runtime; explicit choice is not a workaround for denied policy.
+
+For the [existing-AKS plan](GITHUB-AKS.md), IT owns cluster/ACR/namespace/RBAC/OIDC identities and runner connectivity. Use separate build and deploy identities, user rather than admin kubeconfig, Entra kubelogin, kubelet image pulls, ACR mode-aware roles and restricted namespace rights. Private cluster APIs require an approved network-connected runner with preinstalled tools. No workflow provisions resources or exposes public ingress.
+
+Repository administrators must configure `aks-demo` with required reviewers, prevent self-review, no admin bypass and only the main branch. **Private environment creation is not proof of required-reviewer availability**: GitHub Free/Pro/Team reviewer protection is public-repository-only per the current primary reference. Private deployment requires a compatible plan and verifiably active protection. Workflow checks fail closed if the API cannot prove the controls; do not bypass them. Verify actual immutable/legacy OIDC subject claims before federation.
+
 ## Windows 365
 
 The [official developer overview](https://blogs.windows.com/windowsdeveloper/2026/09/14/build-anywhere-stay-in-flow-with-windows-365/) describes ready-to-code developer configurations. This does **not** establish that this repository's exact add-on is a built-in Windows 365 public-preview offering. Pilot supported images, policies, licences and virtualization for the intended Cloud PC; do not promise automatic portability or feature availability.

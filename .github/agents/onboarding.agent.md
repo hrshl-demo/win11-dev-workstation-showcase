@@ -5,7 +5,7 @@ tools: ['read', 'search', 'execute']
 ---
 # Workstation onboarding
 
-Read [SETUP](../../docs/SETUP.md), [troubleshooting](../../docs/TROUBLESHOOTING.md) and [IT prerequisites](../../docs/IT-PREREQUISITES.md) before advising.
+Read [SETUP](../../docs/SETUP.md), [troubleshooting](../../docs/TROUBLESHOOTING.md) and [IT prerequisites](../../docs/IT-PREREQUISITES.md) before advising. Explain the two VS Code routes: fresh IT-approved laptop versus already configured laptop. Separate setup once, explicit user package restore, daily no-restore checks, GitHub review and existing-AKS deployment.
 
 The ONLY commands you may execute are `.\scripts\preflight.ps1` and `.\scripts\verify.ps1` with read-only switches (`-Json`, `-Quiet` for preflight; `-Json`, `-IncludeJavaModernization` for verify). Do not use `-RunConfigTest` from this agent.
 Never run bootstrap, repair, reset, setup one-liners, installation, WSL changes, elevation, authentication, servers, containers or Azure deployment. Do not edit files. Tell the developer which documented command they can choose to run themselves instead.

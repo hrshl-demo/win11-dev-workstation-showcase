@@ -1,25 +1,42 @@
 name: Workstation showcase checks
-on:
+'on':
   push:
+    branches: ['**']
   pull_request:
+    branches: [main, demo-complete]
+  workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
   python:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6 commit, not annotated tag
         with:
           version: '0.13.7'
       - run: uv sync --locked
         working-directory: samples/python-emi-api
-      - run: uv run --locked pytest
+      - run: uv run --no-sync ruff check app tests
         working-directory: samples/python-emi-api
+      - run: uv run --no-sync pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junitxml=test-results.xml
+        working-directory: samples/python-emi-api
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: python-reports
+          path: |
+            samples/python-emi-api/coverage.xml
+            samples/python-emi-api/htmlcov
+            samples/python-emi-api/test-results.xml
+          if-no-files-found: error
   java:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -32,8 +49,17 @@ jobs:
           cache-dependency-path: samples/java-ifsc-service/pom.xml
       - run: ./mvnw -B verify
         working-directory: samples/java-ifsc-service
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: java-reports
+          path: |
+            samples/java-ifsc-service/target/surefire-reports
+            samples/java-ifsc-service/target/site/jacoco
+          if-no-files-found: error
   go:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -42,27 +68,66 @@ jobs:
         with:
           go-version-file: samples/go-fx-rates/go.mod
           cache: false
-      - run: go vet ./... && go test ./...
+      - name: Format, vet and race-tested coverage
         working-directory: samples/go-fx-rates
+        run: |
+          test -z "$(gofmt -l *.go)"
+          go vet ./...
+          go test -race -coverprofile=coverage.out -json ./... | tee test-results.json
+          go tool cover -html=coverage.out -o coverage.html
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: go-reports
+          path: |
+            samples/go-fx-rates/coverage.out
+            samples/go-fx-rates/coverage.html
+            samples/go-fx-rates/test-results.json
+          if-no-files-found: error
   powershell:
     runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shell: [powershell, pwsh]
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-      - name: Analyze and run safe script tests
+      - name: Restore pinned test modules on the disposable CI runner
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          Install-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Scope CurrentUser -Force -Repository PSGallery
-          Install-Module Pester -RequiredVersion 5.7.1 -Scope CurrentUser -Force -Repository PSGallery
+          Save-Module PSScriptAnalyzer -RequiredVersion 1.24.0 -Path .tools/powershell -Repository PSGallery
+          Save-Module Pester -RequiredVersion 5.7.1 -Path .tools/powershell -Repository PSGallery
+      - name: Analyze and run safe script tests with NUnit report
+        shell: ${{ matrix.shell }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Import-Module ./.tools/powershell/PSScriptAnalyzer/1.24.0/PSScriptAnalyzer.psd1
+          Import-Module ./.tools/powershell/Pester/5.7.1/Pester.psd1
           $issues = @(Invoke-ScriptAnalyzer -Path scripts -Recurse -Severity Error,Warning)
           $issues | Format-Table -AutoSize
           if ($issues.Count -gt 0) { throw "PSScriptAnalyzer reported $($issues.Count) findings" }
-          $result = Invoke-Pester -Path tests -PassThru
+          New-Item artifacts -ItemType Directory -Force | Out-Null
+          $config = New-PesterConfiguration
+          $config.Run.Path = 'tests'
+          $config.Run.PassThru = $true
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputFormat = 'NUnitXml'
+          $config.TestResult.OutputPath = 'artifacts/pester.xml'
+          $result = Invoke-Pester -Configuration $config
           if ($result.FailedCount -gt 0 -or $result.PassedCount -eq 0) { throw 'Safe script tests failed or did not run' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: powershell-${{ matrix.shell }}-reports
+          path: artifacts/pester.xml
+          if-no-files-found: error
   config:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -72,3 +137,19 @@ jobs:
           python-version: '3.14'
       - run: python -m pip install -r tests/requirements.txt
       - run: python tests/validate_repository.py
+      - run: python tests/check_kubernetes.py
+      - run: python -m unittest discover -s tests -p test_deployment.py -v
+  containers:
+    needs: [python, java, go, powershell, config]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: [python-emi-api, java-ifsc-service, go-fx-rates]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Build and test the modern container without publishing or launching
+        run: docker build --tag "showcase-test:${GITHUB_SHA}" "samples/${{ matrix.sample }}"

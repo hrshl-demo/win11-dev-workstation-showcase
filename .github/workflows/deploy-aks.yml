@@ -1,0 +1,167 @@
+name: Manually promote modern services to existing AKS
+'on':
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact current main commit SHA to test, build and promote
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: existing-aks-demo
+  cancel-in-progress: false
+env:
+  SOURCE_SHA: ${{ inputs.source_sha }}
+  AZURE_BUILD_CLIENT_ID: ${{ vars.AZURE_BUILD_CLIENT_ID }}
+  AZURE_DEPLOY_CLIENT_ID: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ACR_NAME: ${{ vars.ACR_NAME }}
+  AKS_RESOURCE_GROUP: ${{ vars.AKS_RESOURCE_GROUP }}
+  AKS_CLUSTER_NAME: ${{ vars.AKS_CLUSTER_NAME }}
+  AKS_NAMESPACE: ${{ vars.AKS_NAMESPACE }}
+  AKS_RUNNER_LABELS_JSON: ${{ vars.AKS_RUNNER_LABELS_JSON }}
+  ACR_RUNNER_LABELS_JSON: ${{ vars.ACR_RUNNER_LABELS_JSON }}
+jobs:
+  governance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Fail closed on missing targets or independent approval protection
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_deployment.py
+  tests:
+    needs: governance
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+  build:
+    needs: [governance, tests]
+    runs-on: ${{ fromJSON(vars.ACR_RUNNER_LABELS_JSON || '["ubuntu-latest"]') }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      registry: ${{ steps.registry.outputs.server }}
+      emi: ${{ steps.images.outputs.emi }}
+      ifsc: ${{ steps.images.outputs.ifsc }}
+      fx: ${{ steps.images.outputs.fx }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Recheck trusted source and gate before registry OIDC
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_deployment.py
+      - name: Isolate authentication files on the approved runner
+        run: |
+          echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azure-build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/docker-build-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+      - uses: Azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ vars.AZURE_BUILD_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Authenticate to the existing registry with the federated identity
+        id: registry
+        run: |
+          set -euo pipefail
+          server="$(az acr show --name "$ACR_NAME" --query loginServer --output tsv)"
+          [[ "$server" =~ ^[a-z0-9.-]+\.azurecr\.io$ ]] || { echo 'Invalid existing ACR login server'; exit 1; }
+          az acr login --name "$ACR_NAME"
+          echo "server=$server" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - name: Build tested source, push unique tags and capture exact digests
+        id: images
+        env:
+          REGISTRY: ${{ steps.registry.outputs.server }}
+        run: |
+          set -euo pipefail
+          for pair in emi:python-emi-api ifsc:java-ifsc-service fx:go-fx-rates; do
+            service="${pair%%:*}"
+            sample="${pair#*:}"
+            tag="$REGISTRY/showcase/$service:${GITHUB_SHA}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+            metadata="$RUNNER_TEMP/$service-image.json"
+            docker buildx build --platform linux/amd64 --provenance=mode=max --sbom=true --push \
+              --tag "$tag" --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --metadata-file "$metadata" "samples/$sample"
+            digest="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["containerimage.digest"])' "$metadata")"
+            [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]] || { echo 'Invalid build digest'; exit 1; }
+            echo "$service=$REGISTRY/showcase/$service@$digest" >> "$GITHUB_OUTPUT"
+            echo "$service: $REGISTRY/showcase/$service@$digest" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - name: Remove job-local authentication files
+        if: always()
+        run: |
+          if [[ -n "${AZURE_CONFIG_DIR:-}" ]]; then rm -rf -- "$AZURE_CONFIG_DIR"; fi
+          if [[ -n "${DOCKER_CONFIG:-}" ]]; then rm -rf -- "$DOCKER_CONFIG"; fi
+  deploy:
+    needs: [governance, tests, build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    environment:
+      name: aks-demo
+    # Governance rejects an unset variable; this only keeps expression evaluation valid.
+    runs-on: ${{ fromJSON(vars.AKS_RUNNER_LABELS_JSON || '["ubuntu-latest"]') }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      ACR_LOGIN_SERVER: ${{ needs.build.outputs.registry }}
+      EMI_IMAGE: ${{ needs.build.outputs.emi }}
+      IFSC_IMAGE: ${{ needs.build.outputs.ifsc }}
+      FX_IMAGE: ${{ needs.build.outputs.fx }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify approved runner prerequisites without installing
+        run: |
+          set -euo pipefail
+          for tool in python3 az kubectl kubelogin; do
+            command -v "$tool" >/dev/null || { echo "IT must preinstall $tool on this approved Linux runner"; exit 1; }
+          done
+      - name: Recheck live approval protection and exact source after approval
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_deployment.py
+      - name: Isolate user kubeconfig and federated authentication files
+        run: |
+          echo "AZURE_CONFIG_DIR=$RUNNER_TEMP/azure-deploy-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+          echo "KUBECONFIG=$RUNNER_TEMP/kubeconfig-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_ENV"
+      - uses: Azure/login@7184910d9eb2b1c5e48f7073824a90609bb9b6d6 # v2
+        with:
+          client-id: ${{ vars.AZURE_DEPLOY_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Obtain temporary Entra user credentials for the existing cluster
+        run: |
+          set -euo pipefail
+          az aks get-credentials --resource-group "$AKS_RESOURCE_GROUP" --name "$AKS_CLUSTER_NAME" \
+            --file "$KUBECONFIG" --overwrite-existing
+          kubelogin convert-kubeconfig --login azurecli
+          kubectl --namespace "$AKS_NAMESPACE" auth can-i patch deployments --quiet
+          python3 scripts/render_kubernetes.py --output "$RUNNER_TEMP/workloads.json"
+          kubectl --namespace "$AKS_NAMESPACE" apply --dry-run=server -f "$RUNNER_TEMP/workloads.json"
+      - name: Roll out only digest-pinned workloads in the existing namespace
+        run: |
+          set -euo pipefail
+          kubectl --namespace "$AKS_NAMESPACE" apply -f "$RUNNER_TEMP/workloads.json"
+          for service in emi ifsc fx; do
+            kubectl --namespace "$AKS_NAMESPACE" rollout status "deployment/$service" --timeout=300s
+          done
+          python3 scripts/smoke_aks.py
+          echo "Deployed source $GITHUB_SHA after independent approval; all three health checks passed." >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove only job-local credentials and rendered manifests
+        if: always()
+        run: |
+          if [[ -n "${KUBECONFIG:-}" ]]; then rm -f -- "$KUBECONFIG"; fi
+          rm -f -- "$RUNNER_TEMP/workloads.json"
+          if [[ -n "${AZURE_CONFIG_DIR:-}" ]]; then rm -rf -- "$AZURE_CONFIG_DIR"; fi

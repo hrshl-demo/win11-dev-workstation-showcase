@@ -1,14 +1,15 @@
 ---
 name: prepare-for-azure
-description: Prepare Azure Container Apps infrastructure with managed identity and Key Vault using Azure skills, without deploying.
+description: Prepare and review application manifests for an existing AKS cluster and ACR, without authentication, provisioning or deployment.
 ---
-# Prepare for Azure
+# Prepare for existing AKS
 
-1. Read the application Dockerfile and architecture, and select GitHub Copilot for Azure's azure-prepare skill in the developer's VS Code session.
-2. Plan azd preparation for the Python API with Container Apps, a user-assigned managed identity and an RBAC-enabled Key Vault. Use environment parameters for region and the application's built image; never fabricate an account, subscription, credentials or a secret.
-3. Generate azure.yaml and Bicep plus parameter bindings. Keep secrets out of source and environment examples; use Key Vault and managed identity for actual secret retrieval.
-4. Compile/validate the files locally if the developer has approved tooling. Describe all resources, roles, HTTPS ingress, cost implications and what still needs user values.
-5. Do NOT run azd up, azd deploy, az deployment, terraform apply or Azure login. Do not create resources, push images or claim deployment.
-6. If network/tooling is unavailable, inspect the committed demo-complete preparation and explain it without deploying.
+1. Read `docs\GITHUB-AKS.md`, `docs\ARCHITECTURE.md`, the chosen sample README/Dockerfile and the committed Kubernetes templates. Use already available official Azure documentation tools for reference only; do not query an account or authenticate.
+2. Prepare application-only Deployment and ClusterIP Service manifests for the existing, IT-created restricted namespace. Preserve non-root containers, resource limits and health probes. No namespace, RBAC, registry, cluster, ingress, public LoadBalancer or infrastructure creation.
+3. Require application image/namespace inputs; never invent values, use `latest`, supply placeholder images or pretend an image is published. Deployment consumes immutable digests from the same main-only workflow run. Report unset inputs.
+4. Review separate OIDC build/deploy identities, exact federated subject matching, registry permissions, kubelet pull identity, namespace RBAC and private-API runner connectivity. IT owns configuration and role grants. Actual secrets, if ever needed, belong in Key Vault accessed through managed/workload identity, not source.
+5. Validate only offline/static files with already installed tooling/dependencies. Do not fetch packages or tools. Distinguish static checks, missing prerequisites and unobserved live acceptance.
+6. Never run Azure login, Actions dispatch, image build/push, `kubectl apply`, `az aks get-credentials`, azd deployment, ARM/Terraform provisioning or any service/container launch. Approval to edit files is not approval to execute them.
+7. If blocked, inspect the reviewed existing-AKS files on revised `main`/`demo-complete` and provide a preparation-only handoff. Do not fall back to old Container Apps infrastructure or the historical unsafe tag.
 
-Done: meaningful infrastructure and azd bindings exist, the application remains testable locally, and the developer has an explicit preparation-only handoff.
+Done: reviewable application files and a missing-input/validation summary, with no authentication, provisioning, package restoration or deployment.

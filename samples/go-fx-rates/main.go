@@ -39,7 +39,7 @@ func convert(w http.ResponseWriter, r *http.Request) {
 		safeError(w, http.StatusBadRequest, "Query is too large.")
 		return
 	}
-	slog.Info("conversion request", "query", r.URL.RawQuery)
+	slog.Info("conversion request", "route", "/convert")
 	query, err := url.ParseQuery(r.URL.RawQuery)
 	if err != nil || len(query) != 3 {
 		safeError(w, http.StatusBadRequest, "Provide from, to and amount exactly once.")
@@ -64,7 +64,7 @@ func convert(w http.ResponseWriter, r *http.Request) {
 	}
 	rate, err := syntheticRate(from)
 	if err != nil {
-		safeError(w, http.StatusBadRequest, err.Error())
+		safeError(w, http.StatusBadRequest, "Unsupported source currency.")
 		return
 	}
 	select {

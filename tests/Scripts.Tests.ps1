@@ -263,17 +263,18 @@ Describe 'Actual sample launch planning and mocked container execution' {
     It 'respects the Python local port argument' {
         $command = Get-LocalSampleCommand python-emi-api 'C:\sample' 8181
         $command.Arguments[-1] | Should -Be '8181'
-        $command.Arguments | Should -Contain 'app.main:app'
+        $command.Arguments | Should -Contain 'RunLocal'
+        $command.Arguments | Should -Contain 'Python'
     }
-    It 'uses the Windows Maven wrapper and Java local port override' {
+    It 'delegates Java to the same offline guarded dispatcher with a port override' {
         $command = Get-LocalSampleCommand java-ifsc-service 'C:\sample' 8182
-        $command.Path | Should -Be 'C:\sample\mvnw.cmd'
-        $command.Arguments | Should -Contain '-Dspring-boot.run.arguments=--server.port=8182'
+        $command.Arguments | Should -Contain 'Java'
+        $command.Arguments[-1] | Should -Be '8182'
     }
     It 'uses the Go sample tooling without invoking a service' {
         $command = Get-LocalSampleCommand go-fx-rates 'C:\sample' 8183
-        $command.Path | Should -Be 'C:\go.exe'
-        $command.Arguments -join ' ' | Should -Be 'run .'
+        $command.Arguments | Should -Contain 'Go'
+        $command.Arguments | Should -Contain 'RunLocal'
         $script:Ast['run-sample.ps1'].Text | Should -Match '\$env:PORT = \[string\]\$Port'
         $script:Ast['run-sample.ps1'].Text | Should -Match "SetEnvironmentVariable\('PORT', \`$originalPort"
     }
@@ -304,6 +305,8 @@ Describe 'Actual sample launch planning and mocked container execution' {
     It 'publishes the selected container port and requires actual health waiting' {
         Invoke-Sample python-emi-api container 8181 5 -Confirm:$false | Should -Be 0
         Should -Invoke Invoke-NativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList[0] -eq 'run' -and $ArgumentList -contains '127.0.0.1:8181:8080' }
+        Should -Invoke Invoke-NativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList[0] -eq 'run' -and $ArgumentList -contains '--pull=never' }
+        Should -Invoke Invoke-NativeCommand -Times 0 -Exactly -ParameterFilter { $ArgumentList[0] -in @('build', 'pull') }
         Should -Invoke Wait-SampleHealth -Times 1 -Exactly -ParameterFilter { $Port -eq 8181 -and $TimeoutSeconds -eq 5 }
     }
     It 'does not fall back after wslc denies access' {
@@ -361,7 +364,7 @@ Describe 'Actual reset status/path confinement with safe Git mocks' {
     BeforeEach {
         Mock Assert-SafeSampleTree {}
         Mock Invoke-NativeCommand {
-            $text = if ($ArgumentList[0] -eq 'ls-tree') { 'samples/python-emi-api/app/main.py' } else { '' }
+            $text = if ($ArgumentList[0] -eq 'ls-tree') { 'samples/python-emi-api/app/main.py' } elseif ($ArgumentList[0] -eq 'rev-parse') { 'a' * 40 } else { '' }
             [pscustomobject]@{ ExitCode = 0; Output = $text; StdOut = $text; StdErr = ''; TimedOut = $false }
         }
     }
@@ -407,7 +410,13 @@ Describe 'Actual reset status/path confinement with safe Git mocks' {
         Mock Invoke-NativeCommand {
             [pscustomobject]@{ ExitCode = 128; Output = 'Unknown tag'; StdOut = ''; StdErr = 'Unknown tag'; TimedOut = $false }
         } -ParameterFilter { $ArgumentList[0] -eq 'rev-parse' }
-        { Get-SampleResetState 'C:\git.exe' $script:Repository } | Should -Throw '*demo-baseline*'
+        { Get-SampleResetState 'C:\git.exe' $script:Repository } | Should -Throw '*origin/main*'
         Should -Invoke Invoke-NativeCommand -Times 1 -Exactly
+    }
+    It 'refuses the historical unsafe Go baseline' {
+        Mock Invoke-NativeCommand {
+            [pscustomobject]@{ ExitCode = 0; Output = ''; StdOut = 'slog.Info("conversion request", "query", r.URL.RawQuery)'; StdErr = ''; TimedOut = $false }
+        } -ParameterFilter { $ArgumentList[0] -eq 'show' }
+        { Get-SampleResetState 'C:\git.exe' $script:Repository } | Should -Throw '*historical Go gaps*'
     }
 }

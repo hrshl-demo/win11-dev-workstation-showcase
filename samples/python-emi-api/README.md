@@ -6,25 +6,45 @@ integration. No customer data, account details or credentials are required.
 
 ## Test and run
 
-From this directory, after you have installed your approved Python/uv tools:
+Open the **repository root** in VS Code; use **Terminal → Run Task** or the
+integrated PowerShell terminal. Tool installation, package restoration and daily
+checks are separate [quickstart](../../docs/SETUP.md) stages:
 
 ```powershell
-uv run pytest
-uv run uvicorn app.main:app --host 127.0.0.1 --port 8080
+# Explicit user-approved package restore, not an agent or daily test:
+.\scripts\developer.ps1 -Action Restore -Sample Python
+# Daily checks require the restored pinned environment:
+.\scripts\developer.ps1 -Action Test -Sample Python
+.\scripts\developer.ps1 -Action Lint -Sample Python
+.\scripts\developer.ps1 -Action Coverage -Sample Python
 ```
 
-uv uses `.python-version` **3.14**. Its first invocation may restore project
-dependencies; the repository creation process does not install them.
+pytest/pytest-cov produces `test-results.xml`, `coverage.xml` and
+`htmlcov\index.html` in this sample; Ruff supplies lint checks. Use the Testing
+view after selecting the locked `.venv` interpreter. Missing runtime/packages
+mean **NOT RUN**, never automatic installation.
+
+For a direct daily test, from **this sample directory**, with approved Python
+3.14/uv and the locked dependencies **already restored**:
+
+```powershell
+uv run --no-sync --offline --no-python-downloads pytest
+# Separately chosen human-operated launch:
+uv run --no-sync --offline --no-python-downloads uvicorn app.main:app --host 127.0.0.1 --port 8080
+```
+
+uv uses `.python-version` **3.14**. Do not let daily checks restore project
+dependencies; choose Restore explicitly beforehand.
 The module entry point also defaults to 8080 and reads `PORT`:
 
 ```powershell
 $env:PORT = '8081'
-uv run python -m app.main
+uv run --no-sync --offline --no-python-downloads python -m app.main
 # After stopping with Ctrl+C:
 Remove-Item Env:PORT
 ```
 
-For uvicorn's CLI, override `--port` rather than `PORT`. In another terminal:
+For uvicorn's CLI, override `--port` rather than `PORT`. In another **VS Code integrated PowerShell terminal**:
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/health
@@ -83,31 +103,43 @@ only fabricated placeholders, not actual identifiers.
 
 ## Container and VS Code
 
-Use your already-approved runtime, preferring `wslc`:
+Only the developer builds/launches containers. Use your already-approved
+runtime; automatic selection uses `wslc` first and `docker` only if `wslc` is absent. A failing
+or policy-blocked `wslc` is not permission to switch. Docker Desktop is a
+commented, optional licensing choice, not installed by default:
+
+For explicit approved selection, use the shared repository launcher
+`scripts\run-sample.ps1 -Name python-emi-api -Mode container -Runtime Auto|wslc|docker`;
+choose one runtime value. Explicit selection probes only that runtime and never
+falls back. See [Setup](../../docs/SETUP.md#run-locally-or-in-a-container).
 
 ```powershell
-$runtime = if (Get-Command wslc -ErrorAction SilentlyContinue) { 'wslc' } elseif (Get-Command docker -ErrorAction SilentlyContinue) { 'docker' } else { throw 'No approved container runtime is available.' }
-Write-Host "Runtime: $runtime"
-& $runtime build -t showcase-emi .
-& $runtime run -d --name showcase-emi -p 8080:8080 showcase-emi
+# From the repository root, explicit user-approved image restoration:
+.\scripts\developer.ps1 -Action Restore -RestoreTarget ContainerImages -Sample Python -Runtime Auto -Confirm
+# Separate launch uses the existing image, with --pull=never:
+.\scripts\developer.ps1 -Action RunContainer -Sample Python -Runtime Auto
 Invoke-RestMethod http://localhost:8080/health
-& $runtime stop showcase-emi
-& $runtime rm showcase-emi
 ```
 
 Wait for startup before calling `/health`; send the example EMI request above.
-Use `-e PORT=8081 -p 8081:8081` for a container port override.
+Use the launcher's `-Port` parameter and reported endpoint for a port override.
+Missing images mean NOT RUN; Run never builds or pulls.
 The multi-stage slim-Python Dockerfile restores locked dependencies using uv,
 runs tests, removes development dependencies, and runs as non-root UID/GID
 **10001**. Its health check uses the image's Python standard library.
 
-Open this **sample directory** in VS Code and select **Dev Containers: Reopen
-in Container** to use `.devcontainer/devcontainer.json`. The official MCR Python
-image runs the editor as `vscode`; there are **no features, Compose files or
-automatic post-create installation commands**. Run `uv run pytest` from the
-sample root after arranging an approved uv installation in that environment.
+The optional `.devcontainer\devcontainer.json` uses an official MCR Python image
+and the `vscode` user, with **no features, Compose files or automatic post-create
+installation commands**. Reopening can acquire an image, so it is not part of
+the daily no-restoration Run workflow. Use the documented explicit image Restore
+and existing-image Run tasks for the reproducible demo.
 
 ## Verification and provenance
+
+**Historical evidence below applies to the original revision only.** It does
+not establish current pinned-environment, coverage, CI or AKS acceptance.
+Inspect current task/CI output; this documentation revision ran no sample tests,
+restoration, container build or deployment.
 
 Primary metadata checked **7 November 2026**, without downloading Python
 packages or container layers:
@@ -137,6 +169,9 @@ artifact URLs, sizes and hashes and their Python 3.14 dependency graphs were
 checked against PyPI JSON metadata for Windows, Linux and macOS; no package
 archives were downloaded.
 
-For a future Azure integration, use environment configuration, Azure Key Vault
-and managed identity. Do not add secrets or an amortisation schedule to this
-baseline.
+For [existing AKS + ACR](../../docs/GITHUB-AKS.md), use the shared application-only
+manifests and manual main-only delivery pipeline, same-run image digests and
+independent approval. No sample provisions infrastructure or needs customer
+credentials. Key Vault/managed identity requires a separate design if real
+secrets are later needed. The schedule exercise remains on the inspected
+`demo-complete` fallback; the historical unsafe baseline is not deployable.

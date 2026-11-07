@@ -48,6 +48,10 @@ REQUIRED = (
     "docs/IT-PREREQUISITES.md", "docs/WINDOWS-VS-MAC.md", "docs/ARCHITECTURE.md",
     "samples/python-emi-api/pyproject.toml", "samples/python-emi-api/uv.lock",
     "samples/python-emi-api/.python-version",
+    "scripts/developer.ps1", "tests/Developer.Tests.ps1", ".vscode/project-tools.json",
+    ".github/workflows/deploy-aks.yml", "docs/GITHUB-AKS.md", "k8s/workloads.json",
+    "scripts/check_deployment.py", "scripts/render_kubernetes.py", "scripts/smoke_aks.py",
+    "tests/check_kubernetes.py", "tests/test_deployment.py",
 )
 
 
@@ -180,7 +184,7 @@ def check_workflow() -> None:
         (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"),
         Loader=yaml.BaseLoader,
     )
-    require(set(workflow["on"]) == {"push", "pull_request"}, "CI triggers")
+    require(set(workflow["on"]) == {"push", "pull_request", "workflow_dispatch", "workflow_call"}, "CI triggers")
     require(workflow["permissions"] == {"contents": "read"}, "CI least privilege")
     for name, job in workflow["jobs"].items():
         for step in job["steps"]:
@@ -191,6 +195,34 @@ def check_workflow() -> None:
                     "legacy excluded from CI")
     require({"python", "java", "go", "powershell", "config"}.issubset(workflow["jobs"]),
             "CI workload inventory")
+    require(set(workflow["jobs"]["containers"]["needs"]) == {"python", "java", "go", "powershell", "config"},
+            "every test/lint gate must precede modern container builds")
+    deployment = yaml.load(
+        (ROOT / ".github" / "workflows" / "deploy-aks.yml").read_text(),
+        Loader=yaml.BaseLoader,
+    )
+    require(set(deployment["on"]) == {"workflow_dispatch"}, "AKS must be manual-only")
+    require(deployment["permissions"] == {"contents": "read"}, "AKS root permissions")
+    jobs = deployment["jobs"]
+    require(jobs["tests"]["uses"] == "./.github/workflows/ci.yml", "same-source complete test gate")
+    require(jobs["deploy"]["environment"]["name"] == "aks-demo", "independent approval environment")
+    require(set(jobs["build"]["needs"]) == {"governance", "tests"}, "tested, protected builds")
+    require(set(jobs["deploy"]["needs"]) == {"governance", "tests", "build"}, "digest promotion gates")
+    for name, job in jobs.items():
+        permissions = job.get("permissions", {"contents": "read"})
+        require(permissions == ({"contents": "read", "id-token": "write"}
+                                if name in {"build", "deploy"} else {"contents": "read"}),
+                f"{name}: OIDC only on Azure jobs")
+        for step in job.get("steps", []):
+            if "uses" in step:
+                require(bool(re.fullmatch(r"[\w.-]+/[\w.-]+@[0-9a-f]{40}", step["uses"])),
+                        f"{name}: unpinned deployment action")
+            require("--admin" not in step.get("run", ""), "never AKS admin credentials")
+    require(jobs["build"]["outputs"].keys() >= {"registry", "emi", "ifsc", "fx"},
+            "same-run immutable image outputs")
+    require("check_deployment.py" in str(jobs["governance"]), "live gate must fail closed")
+    from check_kubernetes import check
+    check()
 
 
 def check_files_and_links() -> None:
@@ -231,6 +263,12 @@ def check_files_and_links() -> None:
                 require(path.is_file() and path.stat().st_size > 0, f"missing/empty {path}")
     for name in ("go.mod", "main.go", "main_test.go", "money.go", "money_test.go"):
         require((ROOT / "samples" / "go-fx-rates" / name).is_file(), f"missing Go {name}")
+    go = (ROOT / "samples" / "go-fx-rates" / "main.go").read_text()
+    require('slog.Info("conversion request", "query"' not in go
+            and "safeError(w, http.StatusBadRequest, err.Error())" not in go,
+            "historical Go demo gaps must never enter live/container deployment code")
+    require((ROOT / "tests" / "fixtures" / "go-review-example.txt").is_file(),
+            "non-serving review exercise fixture required")
     markdown = [ROOT / name for name in ("README.md", "SECURITY.md", "AGENTS.md")]
     markdown += list((ROOT / "docs").glob("*.md"))
     markdown += list((ROOT / ".github").rglob("*.md"))

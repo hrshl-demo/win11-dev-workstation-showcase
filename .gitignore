@@ -28,6 +28,11 @@ devconfig-uninstall.ps1
 **/obj/
 *.test
 coverage.out
+coverage.xml
+coverage.html
+test-results.xml
+test-results.json
+artifacts/
 *.log
 *.tmp
 *.bak
