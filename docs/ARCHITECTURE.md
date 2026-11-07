@@ -32,7 +32,29 @@ The main services expose `/health` and listen on their sample-defined port, with
 
 Monetary input/calculation uses decimal or exact arithmetic, explicit half-up rounding and **fixed two-decimal strings in JSON**. INR presentation uses lakh grouping. Baseline EMI totals multiply the rounded EMI by tenure. The schedule exercise preserves EMI, applies a one-time principal prepayment after the chosen installment, shortens tenure and settles the final installment exactly; it is not a change to the existing EMI contract.
 
-Azure preparation generates reviewable files inside the selected sample subtree. Its application image is a required environment-backed parameter without a placeholder or unrelated demo-service default. Missing runtime inputs are reported separately from static template checks; preparation neither publishes an image nor proves it exists. It does not authenticate, create resources or prove a live deployment. Production identity, Key Vault, network and registry designs require separate review.
+## Prepared Azure fallback
+
+On `demo-complete`, repository-root `azure.yaml` targets `samples\python-emi-api` as an azd Container Apps service. Root `infra\main.bicep` declares subscription-scoped infrastructure using published AVM modules pinned in that file; `infra\main.parameters.json` maps these required azd environment values:
+
+| azd value | Bicep parameter | Required input |
+| --- | --- | --- |
+| `AZURE_ENV_NAME` | `environmentName` | Approved environment name |
+| `AZURE_LOCATION` | `location` | IT-approved Azure region |
+| `EMI_CONTAINER_IMAGE` | `containerImage` | Actual, already-published EMI application image, preferably digest-qualified; no placeholder/default |
+
+**Seed the image first, under a separately approved provisioning plan.** The template declares a new registry and application together, but does not seed/import/publish an image. A new registry is empty; an existing image elsewhere does not automatically appear there. Resolve registry provisioning and image-seeding order, the AVM `imageName` format and managed-identity pull access before the first app deployment. Preparation performs none of those operations.
+
+The intended hosting design is external HTTPS ingress to port 8080, zero to one replica, a user-assigned managed identity and AVM-managed `AcrPull`. Key Vault uses RBAC, purge protection and disabled public network access; the identity is assigned **Key Vault Secrets User**. The application needs no secrets, and the vault is intentionally empty and sealed: no private endpoint/network path is provisioned here. IT must approve private connectivity before any future secret use; role assignment alone does not establish working secret retrieval.
+
+Declared outputs cover resource group, registry endpoint/name, Container Apps environment ID, Log Analytics workspace ID, vault name/URI, identity client ID and `API_URL`. These are template declarations, not observed deployed values.
+
+Validation performed for this fallback is limited to static JSON/YAML/reference checks. No Bicep compiler was available: compilation, deployment and live launch tests are **NOT RUN**. A separately authorised user with their own compiler can later run from the repository root:
+
+```powershell
+bicep build .\infra\main.bicep
+```
+
+This may restore AVM modules. Agents must not install missing tooling, restore modules or run that compilation under the current no-download boundary. Static checks do not prove compilation, deployment, image availability or effective access.
 
 ## Pull request → CI → tagged release → adoption
 
@@ -47,6 +69,6 @@ Desired-state configuration and upstream setup are **designed for re-running**, 
 
 ## Demo assets and recovery
 
-Release/demo preparation supplies a reviewed `demo-baseline` tag and `demo-complete` branch holding the finished schedule, Azure preparation and Go review exercise. Confirm refs and contents before presenting; bootstrap does not create them. Recovery protects unrelated work and stops/removes only known demo containers. Use the [demo recovery procedure](DEMO-SCRIPT.md#recovery-without-losing-unrelated-work), never repository-wide destructive cleanup.
+Release/demo preparation supplies an immutable `demo-baseline` tag and a `demo-complete` branch holding the schedule, preparation-only Azure files and Go review exercise. Confirm refs and contents before presenting; bootstrap does not create them. Root `azure.yaml` and `infra\` are deliberate fallback assets outside the sample-reset scope: `demo-reset.ps1` neither restores nor removes them and can refuse reset while unrelated root changes are present. Recovery protects unrelated work and stops/removes only known demo containers. Use the [demo recovery procedure](DEMO-SCRIPT.md#recovery-without-losing-unrelated-work), never repository-wide destructive cleanup or changes to the baseline tag.
 
 For upstream behaviour and signed/source separation, consult [Windows Developer Config](https://github.com/microsoft/WindowsDeveloperConfig). For governance constraints, consult [IT prerequisites](IT-PREREQUISITES.md).

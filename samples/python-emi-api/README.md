@@ -81,6 +81,78 @@ filter removes synthetic PAN, Aadhaar, mobile and 9–18-digit account patterns
 from formatted messages; the formatter also masks exception text. Tests use
 only fabricated placeholders, not actual identifiers.
 
+## Amortisation schedule
+
+The `demo-complete` fallback adds `POST /emi/schedule`. It accepts the existing
+loan fields plus optional `prepayment: {"month": 1, "amount": "100000"}`.
+Omitting prepayment, or sending `null`, produces an ordinary schedule. The
+same bounded Decimal JSON parser is used, including for nested numeric
+prepayment literals. No external service or additional dependency is required.
+
+```json
+{
+  "principal": "1000",
+  "annual_rate_percent": "12",
+  "tenure_months": 12,
+  "prepayment": {"month": 1, "amount": "100000"}
+}
+```
+
+This over-balance example returns:
+
+```json
+{
+  "emi": "88.85",
+  "rows": [
+    {
+      "month": 1,
+      "payment": "88.85",
+      "principal": "78.85",
+      "interest": "10.00",
+      "prepayment": "921.15",
+      "remaining_balance": "0.00"
+    }
+  ],
+  "actual_tenure_months": 1,
+  "total_principal": "1000.00",
+  "total_payment": "1010.00",
+  "total_interest": "10.00",
+  "total_prepayment": "921.15"
+}
+```
+
+`emi` remains the original `/emi` calculation, not a recalculated payment
+after prepayment. The schedule uses a 50-digit local Decimal context and a
+cent-denominated ledger: starting principal and requested prepayment are
+rounded HALF_UP to two decimals. Interest is rounded HALF_UP **each month**
+on that month's opening balance. The regular installment is applied first;
+the one-off prepayment is then capped to the remaining balance. Subsequent
+installments keep the original EMI, shortening tenure when applicable.
+The final installment is adjusted to exactly settle remaining principal and
+that month's interest; it can be slightly above or below EMI because monthly
+interest/EMI are rounded. No balance or interest is silently written off.
+
+Row `payment` is the **regular installment only**; row `principal` is its
+principal component. Row `prepayment` is separate additional principal cash.
+The aggregates reconcile as:
+
+- `total_principal = sum(row.principal + row.prepayment)` = starting rounded principal;
+- `total_payment = sum(row.payment + row.prepayment)` = all actual cash paid;
+- `total_interest = sum(row.interest)`;
+- `total_prepayment = sum(row.prepayment)`;
+- `total_payment = total_principal + total_interest`.
+
+Rows have integer months and fixed-two-decimal monetary **strings**.
+`actual_tenure_months` is the row count; final `remaining_balance` is `"0.00"`.
+Prepayment month must be an integer from 1 through the original tenure and
+amount must be positive, at most 100000000, and round to at least one paise.
+If the loan has already closed by that month, no prepayment is taken; a
+prepayment in the final scheduled month is zero after the closing installment.
+Zero/negative/out-of-bounds input returns safe HTTP 422 validation errors.
+Loans whose rounded EMI is zero, whose principal rounds to zero, or whose
+installments cannot reduce principal fail safely with HTTP 422; they do not
+produce zero-progress loops. A successful schedule is bounded to 480 rows.
+
 ## Container and VS Code
 
 Use your already-approved runtime, preferring `wslc`:
@@ -137,6 +209,14 @@ artifact URLs, sizes and hashes and their Python 3.14 dependency graphs were
 checked against PyPI JSON metadata for Windows, Linux and macOS; no package
 archives were downloaded.
 
+The `demo-complete` additions passed **103 tests**, including **45 schedule
+test invocations**, with `python -m pytest -q` on the same existing Python
+3.12/Pydantic 2.11.10 environment. Five test files now cover the original
+contract and schedule reconciliation, prepayment capping/tenure reduction,
+first/final months, safe failure cases, fixed-decimal JSON and precise nested
+numeric inputs. No dependencies/tools were installed or restored for these
+checks. Python 3.14/locked-environment execution remains **NOT RUN**.
+
 For a future Azure integration, use environment configuration, Azure Key Vault
-and managed identity. Do not add secrets or an amortisation schedule to this
-baseline.
+and managed identity. Do not add secrets. The `demo-baseline` tag retains the
+original EMI-only API; the schedule is confined to the `demo-complete` fallback.

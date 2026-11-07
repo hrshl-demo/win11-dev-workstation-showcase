@@ -244,6 +244,50 @@ def check_files_and_links() -> None:
             require((path.parent / target).exists(), f"{path}: broken link {target}")
 
 
+def check_azure_preparation() -> None:
+    path = ROOT / "azure.yaml"
+    if not path.exists():
+        return
+    schema_url = (
+        "https://raw.githubusercontent.com/Azure/azure-dev/main/"
+        "schemas/v1.0/azure.yaml.json"
+    )
+    with urllib.request.urlopen(schema_url, timeout=20) as response:
+        schema = json.load(response)
+    config = load_yaml(path)
+    jsonschema.validate(config, schema)
+    require(config["services"]["emi"]["host"] == "containerapp", "Azure host")
+    require((ROOT / config["services"]["emi"]["project"]).is_dir(), "Azure project path")
+    parameters = json.loads(
+        (ROOT / "infra" / "main.parameters.json").read_text(encoding="utf-8")
+    )
+    bindings = {
+        "environmentName": "${AZURE_ENV_NAME}",
+        "location": "${AZURE_LOCATION}",
+        "containerImage": "${EMI_CONTAINER_IMAGE}",
+    }
+    require(
+        {name: value["value"] for name, value in parameters["parameters"].items()}
+        == bindings,
+        "Azure parameters must bind real developer-provided environment values",
+    )
+    source = (ROOT / "infra" / "main.bicep").read_text(encoding="utf-8")
+    for name in bindings:
+        require(bool(re.search(rf"^param {name} string$", source, re.M)),
+                f"missing Azure parameter {name}")
+    require("param containerImage string =" not in source, "no seed-image placeholder")
+    require("ingressAllowInsecure: false" in source, "HTTPS ingress required")
+    require("enableRbacAuthorization: true" in source, "Key Vault RBAC required")
+    require("publicNetworkAccess: 'Disabled'" in source, "sealed Key Vault required")
+    modules = re.findall(r"'br/public:([^']+)'", source)
+    require(len(modules) == 5, "Azure module inventory")
+    for module in modules:
+        require(bool(re.fullmatch(r"avm/(res|ptn)/[\w/-]+:\d+\.\d+\.\d+", module)),
+                f"unpinned AVM module {module}")
+    print("PASS Azure preparation schema, bindings and static security invariants")
+    print("NOT RUN Bicep compile/deployment: separate developer acceptance checks")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--schema-file", type=Path, help="Previously downloaded official schema")
@@ -266,6 +310,7 @@ def main() -> int:
             ):
                 check()
                 print(f"PASS {name}")
+            check_azure_preparation()
         return 0
     except (ValueError, KeyError, OSError, jsonschema.ValidationError,
             yaml.YAMLError) as error:

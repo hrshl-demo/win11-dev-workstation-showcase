@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -88,6 +90,61 @@ func TestPortConfiguration(t *testing.T) {
 			port, err := serverPort()
 			if (err == nil) != tt.valid || port != tt.want {
 				t.Fatalf("port %q, error %v", port, err)
+			}
+
+			func TestConversionLogsExcludeQueryValues(t *testing.T) {
+				var output bytes.Buffer
+				original := slog.Default()
+				slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
+				t.Cleanup(func() { slog.SetDefault(original) })
+
+				for _, target := range []string{
+					"/convert?from=USD&to=INR&amount=12345.67890123",
+					"/convert?from=ZZZ&to=INR&amount=12345.67890123",
+					"/convert?from=USD&to=INR&amount=1&synthetic=SYN-QUERY-PRIVATE",
+				} {
+					response := httptest.NewRecorder()
+					handler().ServeHTTP(response, httptest.NewRequest("GET", target, nil))
+				}
+				logs := output.String()
+				for _, supplied := range []string{"12345.67890123", "SYN-QUERY-PRIVATE", "from=", "USD", "ZZZ"} {
+					if strings.Contains(logs, supplied) {
+						t.Fatalf("logs contain supplied query data %q", supplied)
+					}
+				}
+				for _, line := range strings.Split(strings.TrimSpace(logs), "\n") {
+					var record map[string]any
+					if err := json.Unmarshal([]byte(line), &record); err != nil {
+						t.Fatal(err)
+					}
+					if record["route"] != "/convert" {
+						t.Fatal("safe route diagnostic missing")
+					}
+				}
+				if strings.TrimSpace(logs) == "" {
+					t.Fatal("expected safe diagnostics")
+				}
+			}
+
+			func TestUnknownCurrencyErrorIsSafe(t *testing.T) {
+				response := httptest.NewRecorder()
+				handler().ServeHTTP(response, httptest.NewRequest(
+					"GET", "/convert?from=ZZZ&to=INR&amount=100", nil))
+				if response.Code != http.StatusBadRequest {
+					t.Fatalf("got %d, want 400", response.Code)
+				}
+				var payload map[string]string
+				if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+					t.Fatal(err)
+				}
+				if payload["error"] != "Unsupported source currency." {
+					t.Fatalf("unexpected public error: %v", payload)
+				}
+				for _, internal := range []string{"synthetic rate table", "no INR entry", "ZZZ"} {
+					if strings.Contains(response.Body.String(), internal) {
+						t.Fatalf("response leaks %q", internal)
+					}
+				}
 			}
 		})
 	}
