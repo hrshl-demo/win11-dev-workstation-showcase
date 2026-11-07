@@ -54,6 +54,8 @@ REQUIRED = (
     "tests/check_kubernetes.py", "tests/test_deployment.py",
     "scripts/cleanup.ps1", "scripts/_ownership.psm1", "tests/Ownership.Tests.ps1",
     "tests/BaseSetup.Tests.ps1",
+    "scripts/_setup.psm1", "scripts/legacy-bootstrap.ps1", ".config/setup-packages.json",
+    "tests/Setup.Tests.ps1",
 )
 
 
@@ -158,7 +160,7 @@ def check_workspace() -> None:
             and base_picker[0]["options"] == ["7200", "14400", "28800"], "bounded base-only wait picker")
     for task in tasks:
         require(("${input:baseSetupTimeoutSeconds}" in task["args"])
-                == (task["label"] in {"Setup preview", "User-run setup"}), "base wait picker scope")
+                == (task["label"] == "Legacy Microsoft bundle (optional)"), "legacy-only base wait picker scope")
     for task in tasks:
         require(set(task.get("dependsOn", [])).issubset(labels), "unresolved task")
     require({"Preflight", "Verify", "Test all samples", "Run EMI API (local)",
@@ -273,7 +275,7 @@ def check_onboarding_journey() -> None:
             and timeout_inputs[0]["options"] == ["5", "15", "30"],
             "HTTPS timeout picker must default to 5 with explicit 15/30 choices")
     for task in tasks["tasks"]:
-        relevant = task["label"] in {"Preflight", "Setup preview", "User-run setup", "Finish setup"}
+        relevant = bool(set(task["args"]) & {"Preflight", "SetupPreview", "Setup", "LegacySetup", "FinishSetup"})
         require(("${input:httpsTimeoutSeconds}" in task["args"]) == relevant,
                 f"HTTPS timeout picker scope: {task['label']}")
         if relevant:
@@ -289,6 +291,14 @@ def check_onboarding_journey() -> None:
     for label in required_labels:
         require(label in labels and f"**{label}**" in readme,
                 f"README journey/task contract missing {label}")
+    for label in ("Install core tools", "Install Python SDK", "Install Java SDK", "Install Go SDK",
+                  "Install extensions (approved source)", "Install WSL components"):
+        require(label in labels and f"**{label}**" in readme, f"missing modular journey task {label}")
+    require("installed-first" in readme and "stopped" in readme.lower(), "partial-install installed-first guidance")
+    bootstrap = (ROOT / "scripts" / "bootstrap.ps1").read_text()
+    require("if ($LegacyMicrosoftBundle)" in bootstrap and
+            "Invoke-SetupModule -Module $Module -Apply:$Apply" in bootstrap,
+            "default bootstrap must not select broad Microsoft bundle")
     anchors = {
         re.sub(r"[^\w -]", "", heading.lower()).replace(" ", "-")
         for heading in re.findall(r"^#{1,6} (.+)$", setup, re.M)

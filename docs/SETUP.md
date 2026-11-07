@@ -78,9 +78,9 @@ Direct equivalent user-operated commands:
 ```powershell
 .\scripts\preflight.ps1 -HttpsTimeoutSeconds 30
 # HUMAN ONLY after readiness/approvals; not executed by an agent:
-.\scripts\bootstrap.ps1 -HttpsTimeoutSeconds 30
-# Only after the Microsoft base is confirmed complete/resumed:
-.\scripts\bootstrap.ps1 -SkipBase -HttpsTimeoutSeconds 30
+.\scripts\bootstrap.ps1 -Module Python -Apply -HttpsTimeoutSeconds 30 -Confirm
+# Optional legacy finish ONLY after successful base/reboot/resume:
+.\scripts\bootstrap.ps1 -LegacyMicrosoftBundle -Apply -SkipBase -HttpsTimeoutSeconds 30 -Confirm
 ```
 
 `HttpsTimeoutSeconds` accepts **1–30** and affects only HTTPS readiness requests, not installer download/health/configuration timeouts or proxy/TLS policy. Three attempts across six hosts plus backoff allow **93 seconds of HTTPS budget at 5**, **273 at 15**, **543 at 30**; child Preflight additionally has a fixed 120-second platform allowance, giving bounded outer budgets **213 / 393 / 663 seconds**. Actual HTTP/DNS implementation timing may reach that outer timeout; a slow option can take about 11 minutes before a full six-host failure, not wait forever. Denials/certificate errors still stop without retry, and failed checks still gate setup.
@@ -91,30 +91,51 @@ Optionally choose **Verify** (`.\scripts\verify.ps1`) to inventory existing tool
 
 | Laptop state | Automated route |
 | --- | --- |
-| Fresh or partial; Microsoft base absent/incomplete, including WSL missing | Phase 2 full **User-run setup** (standard base + add-on) after Phase 0/1 |
-| Microsoft standard base confirmed complete; only add-on packages/extensions missing | Phase 2 **Finish setup** (`-SkipBase`) after Phase 0/1 |
+| Fresh or partial, including a stopped/cancelled Microsoft base | Phase 2 preview then independently chosen installed-first modules; keep installed software/settings and downloaded files |
+| Earlier Microsoft bundle confirmed successful, including reboot/resume | Prefer modules for missing targets; **Finish setup** is a separately chosen LEGACY broad add-on only |
 | Entire profile already verified | Skip Phase 2; continue with Phase 3 verification then Phase 4 |
 
 ## Phase 2: automated laptop setup
 
-Review `.config\configuration.winget` and the Microsoft standard base. Choose exact task **Setup preview**, then **User-run setup** only after approval, or:
+**Normal setup is modular, not the Microsoft preset.** Review `.config\setup-packages.json` and `scripts\_setup.psm1`, choose **Setup preview** and one module, then its named install task only after approval. **User-run setup** is an alternative one-module selector, never an all-in-one bundle. No-module `bootstrap.ps1` is a nonmutating Core preview; applying requires `-Apply`:
 
 ```powershell
-.\scripts\bootstrap.ps1 -WhatIf
-# Only after reviewing the preview and obtaining IT approval:
-.\scripts\bootstrap.ps1
+.\scripts\bootstrap.ps1 -Module Python
+.\scripts\bootstrap.ps1 -Module Python -Apply -WhatIf
+# HUMAN only after review and IT approval:
+.\scripts\bootstrap.ps1 -Module Python -Apply -Confirm
 ```
 
-Preview describes the plan; it does not install or prove sources will work. Full bootstrap reruns Preflight, validates the downloaded Microsoft wrapper's Authenticode signature before execution, and asks consent before base/configuration changes. Invalid/unverifiable signatures stop setup. Agents never execute preview or setup.
+**Ordering guarantee:** every target's installation is locally checked before any installer/payload download, source/provider activity or installer invocation. Existing compatible software shows its version/location and **SKIP download/install/upgrade**. Existing incompatible or unverified registered software is retained and fails readiness without downloads; inventory access/version errors are **unknown**, not “missing”. All targets in a module are inventoried before its first installer, then each missing target is checked again after approval. Only proven missing targets get individual WinGet/CLI/DISM actions; no broad configuration is applied first. No source/provider restore, automatic upgrade or installer-cache cleanup occurs.
 
-### Microsoft base launcher wait and slow full setup
+Discovery checks local uninstall registration, Python registration/Store packages, known executable locations and read-only version probes, including compatible SDKs installed off PATH. A stale VS Code terminal with an old Python first on PATH or no `pwsh` does not authorize redownloading a discovered installation. Unregistered portable/custom installations outside these supported locations cannot be guessed: tell IT their actual locations before approving “missing”; do not infer installation from cached payloads or Store/bootstrap aliases. Selection is command-local, never a persistent PATH/JAVA_HOME/profile rewrite.
 
-The **Setup preview** and **User-run setup** tasks also offer a separate base-only wait picker: **7200 = 2 hours**, **14400 = 4 hours (default)**, **28800 = 8 hours** for slow full provisioning. This is independent of the HTTPS picker. Four hours replaces the old one-hour watchdog because large downloads, retries, UAC/manual pauses (including the final keypress), package installation and reboot preparation can exceed an hour; eight hours is an explicit bounded slow-network option, not a guarantee setup will finish. **Finish setup** does not run the base and therefore has no base-wait picker. Direct bootstrap/developer calls accept `-BaseSetupTimeoutSeconds` in **7200–28800**, default **14400**; preview shows the value, and full setup passes it to the signed base launcher. HTTPS Preflight, installer-wrapper download (60 seconds), add-on configuration (3600 seconds), health checks and final Verify (600 seconds) retain their own budgets.
+| Module / exact task | Targets, only if locally missing |
+| --- | --- |
+| **Install core tools** / Core | Git, VS Code, gh, Copilot CLI, uv, PowerShell 7, Node LTS, Azure CLI, azd, kubectl. No fonts, PowerToys, NVM, Explorer/taskbar/profile or global Copilot tweaks |
+| **Install Python SDK** / Python | Python 3.14, separately retryable |
+| **Install Java SDK** / Java | Microsoft OpenJDK 25, separately retryable |
+| **Install Go SDK** / Go | Go, separately retryable; sample requires manifest-defined 1.27.3 |
+| **Install extensions (approved source)** / Extensions | Missing members of the 12 required set only, after CLI/default-profile source approval |
+| **Install WSL components** / WSL | Read-only runtime/features/distro inventory first; only disabled features or absent runtime. Approved Administrator terminal needed for feature inventory/actions |
+| **Install Ubuntu (optional)** / Ubuntu | Explicit distro opt-in after WSL/features/restart ready. Existing package/distro skips download; no reset/unregister/default changes or automatic launch |
+| **Install Docker Desktop (licensed optional)** / Docker | Separately licensed approved opt-in; existing Docker skips install, no fallback after wslc denial |
+| **Install modernization (optional approved source)** / Modernization | Java 11 and only the optional 13th extension; legacy stays excluded from All tests/CI |
+
+Run modules sequentially; each can be retried independently **only after any previous installer is confirmed stopped/completed**. No module claims full workstation verification. Normal setup does not restore project dependencies, launch services/containers, authenticate or deploy. WSL preserves all distributions/data and skips runtime updates when installed; an old WSL lacking `wslc` requires a separate IT-approved upgrade decision. DISM uses `/NoRestart`; a required/pending restart pauses the module before additional downloads. Save work and restart yourself, then preview again. Ubuntu requires installed WSL and enabled features, never a hidden prerequisite install.
+
+VS Code shows per-target streamed installer lines and elapsed progress, followed by actual exit/module results. Per missing target wait is **7200 seconds (2 hours) default**, selectable **3600 / 7200 / 14400**, direct `InstallTimeoutSeconds` range **300–14400**. HTTPS readiness timeout remains separate and is performed after local inventory, only if an approved missing install is needed. Timeout is a failure with unknown vendor/elevated-child state, not permission to retry; only its own launcher may be stopped, never unrelated processes. `.showcase-setup\module-*.jsonl` records non-secret state/elapsed events, not raw installer output; preview/WhatIf writes nothing. Existing downloaded files are retained and are not treated as proof of installation.
+
+### Optional legacy Microsoft bundle
+
+**Legacy Microsoft bundle (optional)** explicitly opts into the signed standard bundle and broad add-on preserved in `legacy-bootstrap.ps1`. **This is NOT the installed-first path**: upstream may download before detecting existing packages and apply Windows/profile/fonts/settings. Review its source separately; no module invokes its internal phase files or modifies the signed Microsoft tree. `.config\configuration.winget` and `.config\java-modernization.winget` are retained **legacy opt-in artifacts**, not normal module installers.
+
+Only this legacy task has the base wait picker **7200 / 14400 default / 28800 seconds (2 / 4 / 8 hours)**. The wait includes large downloads, retries, UAC/manual/final-keypress pauses; it remains bounded and independent from module/HTTPS budgets. Signature, policy, confirmations and reboot/timeout guards are retained. **Finish setup** is legacy-only, unused by the normal module journey, and requires confirmed successful base plus reboot/resume; a stopped partial base is not complete.
 
 For a future new approved setup, after confirming no earlier base is active:
 
 ```powershell
-.\scripts\bootstrap.ps1 -HttpsTimeoutSeconds 30 -BaseSetupTimeoutSeconds 28800
+.\scripts\bootstrap.ps1 -LegacyMicrosoftBundle -Apply -HttpsTimeoutSeconds 30 -BaseSetupTimeoutSeconds 28800 -Confirm
 ```
 
 **A launcher timeout is not an installer/UAC failure.** The watchdog stops only its own child launcher; elevated Microsoft setup may still be running. Timeout reports the selected wait and unknown elevated-base state, fails closed, and never starts the add-on/Verify or retries. Initial UAC informational text is not treated as the cause. Keep an existing base running and follow its safe progress/completion evidence in `%ProgramData%\CalmOS\devconfig-log.txt`; do not kill it, start a second setup, update its working clone or use SkipBase to escape the timeout. **Finish setup is safe only after the base and every required reboot/resume are confirmed complete**, using a fresh terminal. If completion/failure is uncertain, stop for human/IT diagnosis rather than rerunning automatically. See [watchdog recovery](TROUBLESHOOTING.md#microsoft-base-launcher-timeout).
@@ -123,12 +144,12 @@ Microsoft base prints a final **“Calm OS setup complete”** summary with flag
 
 | Automated layer | What it supplies / changes |
 | --- | --- |
-| Microsoft **standard** base | Upstream developer tools/settings, PowerShell, uv, Node and WSL; may elevate/restart. Review the current [base definition](https://github.com/microsoft/WindowsDeveloperConfig); full setup/uninstall is not selected |
-| Required add-on | VS Code, Git, GitHub CLI/Copilot CLI, Python 3.14, Microsoft OpenJDK 25, Go, Azure CLI, azd, kubectl; updates WSL if wslc is absent |
-| Extension automation | 12 `Microsoft.VSCode.Dsc/VSCodeExtension` resources in `.config\configuration.winget`; no twelve separate install clicks |
+| Normal module setup | Individual missing targets only, locally inventoried before downloading; no Microsoft preset or broad configuration |
+| Optional Microsoft **standard** base | Broad upstream tools/settings; may redownload existing tools and elevate/restart; separately reviewed [base definition](https://github.com/microsoft/WindowsDeveloperConfig) |
+| Extension automation | Normal Extensions module checks `code --list-extensions --show-versions` before installing only missing IDs, never uses `--force` |
 | Optional only | 13th Java modernization extension and Java 11 opt-in; Docker Desktop commented out, separately licensed/approved, never default |
 
-The **12 required extension IDs**, installed as a set by the add-on, are:
+The **12 required extension IDs**, checked individually and only missing members installed by Extensions, are:
 
 | Support | Extension ID |
 | --- | --- |
@@ -147,27 +168,27 @@ The **12 required extension IDs**, installed as a set by the add-on, are:
 
 `vscjava.migrate-java-to-azure` is the **optional 13th**, only with modernization opt-in. Extension packs can bring bundled dependencies; IT must approve those too. Recommendations do not install extensions by themselves.
 
-Existing tools are evaluated by their resource tests; setup may install/update packages and Windows settings, not remove everything and start over. Do not promise exact UAC counts, unchanged machine settings, or perfect no-change idempotence. WinGet source/version selection and the later manifest-defined development toolchain checks must both pass.
+Normal modules preserve existing versions/settings; incompatible versions are not automatically replaced. Newly installed vendor packages can require elevation/first-use changes; do not promise exact UAC counts or universal compatibility. Module success is not the later manifest-defined development toolchain acceptance.
 
-Save work first. The Microsoft base may elevate and restart. Sign back in and wait for `WindowsDevConfigResume` to finish **the base only**. Reopen this folder in VS Code and a new integrated terminal:
+Only if you deliberately selected the optional legacy bundle, save work before its possible restart. Wait for `WindowsDevConfigResume` and confirmed successful base completion, then in a new terminal:
 
 ```powershell
-.\scripts\bootstrap.ps1 -SkipBase
+.\scripts\bootstrap.ps1 -LegacyMicrosoftBundle -Apply -SkipBase -Confirm
 ```
 
-Use task **Finish setup** after that base resume. `-SkipBase` is valid **only when the base is already complete or after its resume**, not a fix for an absent/incomplete base or missing WSL. If no restart occurred, bootstrap can already have completed the add-on; proceed to verification. Complete any first-use Ubuntu prompts through the approved VS Code WSL workflow.
+**Finish setup** explicitly selects that legacy broad add-on. `-SkipBase` without `-LegacyMicrosoftBundle -Apply` is rejected. Do not use it for a cancelled/stopped partial installation. The normal modular path has no “finish base” step.
 
 ### Extension source and profile acceptance
 
-The [official DSC implementation](https://github.com/microsoft/winget-dsc/blob/main/resources/Microsoft.VSCode.Dsc/Microsoft.VSCode.Dsc.psm1) locates an installed VS Code CLI and invokes extension installation. Its [resource contract](https://github.com/microsoft/winget-dsc/blob/main/resources/Help/Microsoft.VSCode.Dsc/VSCodeExtension.md) exposes no target profile or marketplace parameter; this add-on does not pass `--profile`. The repository verifier likewise lists CLI extensions without `--profile`. These are **not proof of the active window's profile, enabled extensions or enterprise marketplace routing**.
+Normal Extensions uses the existing CLI/default profile, inventories versions first, skips existing IDs and invokes installation only for missing IDs without `--force`. The named approved-source task passes `ExtensionSourceApproved`, an explicit human/IT attestation, **not** proof or a source override. Neither this flag nor CLI exit 0 proves the active window's profile/source/enabled state. IT must establish compatible delivery before using it. The retained legacy [DSC resource](https://github.com/microsoft/winget-dsc/blob/main/resources/Help/Microsoft.VSCode.Dsc/VSCodeExtension.md) has no target profile or marketplace parameter; this historical limitation is not repaired by bypassing policy.
 
-Before apply, IT must approve the selected CLI installation/user context, all 12 IDs and bundled dependencies, and verify its effective [AllowedExtensions/private marketplace policy](https://code.visualstudio.com/docs/enterprise/extensions). A private-marketplace banner alone is not proof any ID is blocked. Conversely, a CLI exit 0 does not prove the extension went through that approved source or is enabled in your window. Do not assume the DSC process inherits the window's authentication/profile. The module uses `--force` for version changes; that is not authorization to bypass enterprise policy.
+Before apply, IT must approve the selected CLI installation/user context, all 12 IDs and bundled dependencies, and verify its effective [AllowedExtensions/private marketplace policy](https://code.visualstudio.com/docs/enterprise/extensions). A private-marketplace banner alone is not proof any ID is blocked. Conversely, CLI exit 0 does not prove approved source or enabled state. Do not assume another process inherits the window's authentication/profile. If the active profile is not the current CLI default, arrange IT-approved managed automated delivery, not a new profile or public-source workaround.
 
 If the approved enterprise profile/source cannot be honored by this resource, **stop: setup is not accepted**. IT must provide a compatible managed automated extension-delivery route (approved image/bootstrap distribution or audited configuration), not ask developers to install the missing IDs one by one or switch to the public marketplace. Do not override marketplace/allowlist policy, switch accounts/installs to evade it, or download unapproved VSIX files. This repository does not silently implement such a fallback.
 
 ## Phase 3: post-setup verification
 
-After base/add-on completion, open a **fresh terminal** (reload VS Code if its inherited PATH is stale), then choose **Verify**:
+After the selected modules/any user restart, open a **fresh terminal** (reload VS Code if its inherited PATH is stale), then choose **Verify**:
 
 ```powershell
 .\scripts\verify.ps1
@@ -180,11 +201,11 @@ Default verification requires **12 extensions**. In the intended VS Code window,
 Java modernization remains optional:
 
 ```powershell
-.\scripts\bootstrap.ps1 -SkipBase -IncludeJavaModernization
+.\scripts\bootstrap.ps1 -Module Modernization -Apply -ExtensionSourceApproved -Confirm
 .\scripts\verify.ps1 -IncludeJavaModernization
 ```
 
-This does not select Java 11 for legacy tests. `verify.ps1 -Json` returns readiness results. After setup, the human may explicitly approve `.\scripts\verify.ps1 -RunConfigTest` to test the applied configuration; it can require modules/network, so it is not a daily test or agent action. Combine with `-IncludeJavaModernization` only when opted in; inspect actual exit/result rather than assuming success.
+This does not select Java 11 for legacy tests. `verify.ps1 -Json` returns readiness results. `-RunConfigTest` is a separately approved **legacy configuration test**, not the normal modular acceptance path; it can restore test providers/modules and is not an agent or daily-test action.
 
 Read configuration in the editor before choosing to apply it. `winget configure show -f .config\configuration.winget` inspects the profile; test/apply and any repairs remain separate, user-approved actions. The upstream full setup/uninstall changes more machine state and is not a shortcut for this quickstart.
 

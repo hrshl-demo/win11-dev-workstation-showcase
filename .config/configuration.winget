@@ -1,4 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/configuration-dsc-schema/0.2
+# LEGACY OPT-IN ONLY: normal installed-first setup uses setup-packages.json/modules.
+# Broad configuration resource tests may download providers before testing targets.
 properties:
   configurationVersion: 0.2.0
   assertions:

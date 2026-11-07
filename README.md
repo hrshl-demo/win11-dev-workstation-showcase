@@ -2,7 +2,7 @@
 
 A VS Code-first developer workflow for synthetic Python EMI, Java IFSC and Go FX services: set up once, restore project packages explicitly, test locally, review on GitHub, then optionally deploy to **your existing AKS cluster and ACR**.
 
-> Community showcase, not an official Microsoft product. The workstation base is [Microsoft Windows Developer Config](https://github.com/microsoft/WindowsDeveloperConfig). This is not a production banking system.
+> Community showcase, not an official Microsoft product. Normal setup uses installed-first modules; the broad [Microsoft Windows Developer Config](https://github.com/microsoft/WindowsDeveloperConfig) bundle is optional legacy opt-in. This is not a production banking system.
 
 ## End-to-end journey: Phase 0 through Phase 7
 
@@ -29,14 +29,16 @@ Open the cloned folder. Review its source before accepting Workspace Trust. All 
 | --- | --- |
 | **0 — Prerequisites** | [Human/IT checklist and inline policy checks](docs/SETUP.md#phase-0-prerequisites-before-repository-scripts); Git/VS Code required before clone |
 | **1 — Preflight** | **Preflight**: no FAIL, exit 0. WSL/wslc WARN is expected before setup. Optional **Verify** inventory may deliberately exit 1 for missing setup outputs |
-| **2 — Automated laptop setup** | **Setup preview**, then confirmed **User-run setup** for fresh **or partial** devices whose base is incomplete. Standard Microsoft base + add-on installs tools and 12 extensions automatically, not per-extension clicks |
-| **3 — Verify setup** | After base reboot/resume, **Finish setup** only when base is complete, then fresh terminal and **Verify**. Require profile exit 0 and approved/enabled extensions in the intended window |
+| **2 — Modular laptop setup** | **Setup preview** → one module, then **Install core tools**, **Install Python SDK**, **Install Java SDK**, **Install Go SDK**, **Install extensions (approved source)** and **Install WSL components** as needed. **User-run setup** is a one-module selector, not a bundle |
+| **3 — Verify setup** | Fresh terminal and **Verify** after modules/restart; full profile acceptance is separate. **Finish setup** is LEGACY-only after confirmed successful optional bundle/reboot/resume, never for a stopped partial base |
 | **4 — Restore and test** | Explicit **Restore project dependencies** → **Dependencies**, then **Test all samples**, **Lint all samples**, **Coverage all samples**. `All` excludes legacy; daily checks do not restore |
 | **5 — Run/debug/containers** | **Run EMI API (local)**, first request below; F5 needs existing debugger prerequisites. Container Run needs explicitly prepared images, uses `--pull=never` |
 | **6 — GitHub / CI** | Source Control branch/commit/**Publish Branch**, GitHub PR/checks, **GitHub workflow status** |
 | **7 — Existing AKS** | [Human/IT variables, OIDC/RBAC/network and independent approval](docs/GITHUB-AKS.md), then separately chosen **Deploy AKS (manual main only)**; no push/PR deployment or provisioning |
 
-**Partial laptop:** already having Git/VS Code or some languages does not mean setup is complete. Missing WSL/base means full **User-run setup**; **Finish setup / `-SkipBase`** is only for a confirmed complete base with missing add-on outputs or after base resume. Fully verified devices skip installation, not verification. No forced removal of existing tools or guarantee of unchanged settings.
+**Partial/stopped setup:** keep installed software/settings and downloaded files. Modules locally check installations **before downloading anything for that target**; compatible installed tools show version/location and skip download/reinstall/upgrade. Incompatible or unknown inventory stops without download—never silently replacing the older version. A stale terminal/PATH miss alone does not cause a second download of a discoverable SDK. Fully verified devices skip installs, not verification.
+
+**Live modular progress:** per-target output, elapsed wait and exit results; only missing targets are eligible. Default/no-module bootstrap is a nonmutating Core preview. Normal setup excludes fonts/PowerToys/NVM/Explorer/taskbar/profile/global Copilot tweaks. **Legacy Microsoft bundle (optional)** is explicitly different and can redownload/tweak shared settings; it is not needed to recover a cancelled partial run. WSL and optional **Install Ubuntu (optional)** preserve existing distro data, never reset or automatically reboot.
 
 **Enterprise extension delivery:** automation uses VS Code DSC/CLI, which does not select the active window's profile or expose a marketplace parameter. Before apply, IT must verify approved CLI/account/profile/source compatibility and all required IDs; after apply verify they are enabled in the intended window. A private-marketplace banner alone proves neither a block nor automation compatibility. Unsupported routing is a setup acceptance failure requiring a compatible **managed automated delivery** route, not manual installation of each missing extension or a public-marketplace bypass. See [source/profile acceptance](docs/SETUP.md#extension-source-and-profile-acceptance).
 
@@ -58,7 +60,7 @@ Expect health `status: ok` and EMI `"21695.58"` (display `"₹21,695.58"`). Stop
 
 | Area | Included |
 | --- | --- |
-| Workstation | Signed Microsoft base, required WinGet add-on, read-only readiness and verification |
+| Workstation | Independently confirmed installed-first modules, live progress, read-only inventory/Verify; signed broad Microsoft bundle retained as optional legacy |
 | VS Code | Python, Java, Go and PowerShell support; testing/debugging, tasks and source control |
 | GitHub | Built-in Git authentication; official `GitHub.vscode-pull-request-github` extension for PRs/issues; CI with test/coverage artifacts |
 | Unit testing / lint | pytest + pytest-cov and Ruff; JUnit 5 + JaCoCo and Checkstyle; Go built-in tests/coverage + vet; Pester 5.7.1 + PSScriptAnalyzer 1.24.0 |

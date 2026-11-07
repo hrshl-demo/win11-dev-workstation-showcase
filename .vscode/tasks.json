@@ -28,23 +28,89 @@
       "label": "Setup preview",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "SetupPreview", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-BaseSetupTimeoutSeconds", "${input:baseSetupTimeoutSeconds}"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "SetupPreview", "-SetupModule", "${input:setupModule}", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}"],
       "problemMatcher": []
     },
     {
       "label": "User-run setup",
-      "detail": "HUMAN ONLY: approved setup may elevate/restart; confirmation in terminal, no policy bypass.",
+      "detail": "HUMAN ONLY: choose ONE installed-first module. Existing tools never downloaded/upgraded; no Microsoft bundle. Use named extension task only after source approval.",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-BaseSetupTimeoutSeconds", "${input:baseSetupTimeoutSeconds}", "-Confirm"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "${input:setupModule}", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
       "problemMatcher": []
     },
     {
       "label": "Finish setup",
-      "detail": "HUMAN ONLY: finish approved setup after restart; confirmation required.",
+      "detail": "LEGACY ONLY: broad add-on after confirmed successful Microsoft bundle and reboot/resume. Never use for a stopped partial base or normal modular setup.",
       "type": "process",
       "command": "powershell.exe",
       "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "FinishSetup", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Legacy Microsoft bundle (optional)",
+      "detail": "EXPLICIT OPT-IN: broad upstream preset may redownload installed software and tweak Windows/profile/fonts. Not the default installed-first modules.",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "LegacySetup", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-BaseSetupTimeoutSeconds", "${input:baseSetupTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install core tools",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "Core", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Python SDK",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "Python", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Java SDK",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "Java", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Go SDK",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "Go", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install extensions (approved source)",
+      "detail": "HUMAN/IT must first confirm current VS Code CLI/default-profile approved marketplace routing. No profile/source changes or public VSIX fallback.",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "Extensions", "-ExtensionSourceApproved", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install WSL components",
+      "detail": "HUMAN: approved Administrator terminal required for feature inventory/changes. No distro/reset/update or automatic reboot; preserve existing runtime.",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "WSL", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Ubuntu (optional)",
+      "detail": "Explicit distro opt-in after WSL/features/restart. Existing Ubuntu package/distro retained; never reset/unregister/start automatically.",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "Ubuntu", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install Docker Desktop (licensed optional)",
+      "detail": "HUMAN licensed opt-in only. Not a replacement after wslc policy/runtime denial.",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "Docker", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Install modernization (optional approved source)",
+      "detail": "Explicit Java 11 / 13th extension, with approved marketplace routing; no default legacy upgrades.",
+      "type": "process", "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-SetupModule", "Modernization", "-ExtensionSourceApproved", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-InstallTimeoutSeconds", "${input:installTimeoutSeconds}", "-Confirm"],
       "problemMatcher": []
     },
     {
@@ -312,7 +378,9 @@
   ],
   "inputs": [
     { "id": "httpsTimeoutSeconds", "type": "pickString", "description": "HTTPS seconds per attempt: 5 normal (default), 15 intermediate, 30 slow approved network; select again for setup/finish", "options": ["5", "15", "30"], "default": "5" },
-    { "id": "baseSetupTimeoutSeconds", "type": "pickString", "description": "Microsoft base-only wait: 7200=2h, 14400=4h default, 28800=8h slow full setup. Never rerun while a previous base is active.", "options": ["7200", "14400", "28800"], "default": "14400" },
+    { "id": "baseSetupTimeoutSeconds", "type": "pickString", "description": "OPTIONAL LEGACY Microsoft base wait only: 7200=2h, 14400=4h, 28800=8h. Never rerun an active or stopped-partial base blindly.", "options": ["7200", "14400", "28800"], "default": "14400" },
+    { "id": "installTimeoutSeconds", "type": "pickString", "description": "One missing target wait: 3600=1h, 7200=2h default, 14400=4h. Timeout may leave vendor installer active; never retry blindly.", "options": ["3600", "7200", "14400"], "default": "7200" },
+    { "id": "setupModule", "type": "pickString", "description": "ONE independently retryable module; Core default is not Microsoft bundle. For Extensions/Modernization use their named approved-source tasks.", "options": ["Core", "Python", "Java", "Go", "Extensions", "WSL", "Ubuntu", "Docker", "Modernization"], "default": "Core" },
     { "id": "restoreTarget", "type": "pickString", "description": "Dependencies or explicit container image build/restore (Run never builds/pulls)", "options": ["Dependencies", "ContainerImages"], "default": "Dependencies" },
     { "id": "restoreSample", "type": "pickString", "description": "Explicit user-run restore (Legacy separately requires Java 11)", "options": ["Python", "Java", "Go", "PowerShell", "All", "Legacy"], "default": "All" },
     { "id": "containerRuntime", "type": "pickString", "description": "Already-approved runtime; auto prefers wslc, no fallback after denial", "options": ["auto", "wslc", "docker"], "default": "auto" },

@@ -30,7 +30,7 @@ flowchart LR
   A --> K["Deploy identity · existing AKS namespace"]
 ```
 
-Fresh approved laptops use bootstrap only after source/signature/policy review. Already configured laptops skip setup and verify. Microsoft restart recovery resumes only its base; the operator reopens VS Code and finishes the add-on with `-SkipBase`. Setup does not authenticate, restore all project packages, run services or deploy.
+Fresh/partial approved laptops use installed-first modules after local inventory/source/policy review. Default bootstrap previews Core; explicit Apply installs only missing targets, never upgrades installed ones. SDKs/Extensions/WSL are independently retryable; unknown/incompatible inventory fails closed. Microsoft standard bundle is separately labelled legacy opt-in; only its confirmed successful base/reboot/resume permits LegacyMicrosoftBundle + SkipBase. Setup never authenticates, restores project packages, runs services or deploys.
 
 Restore is a separate user-approved package/network action. Daily Test/Lint/Coverage requires already installed/restored dependencies and does not automatically fix missing tools. Reports are Python JUnit/XML/HTML, Java Surefire/JaCoCo, Go JSON/coverage and PowerShell Pester XML; see [Setup](SETUP.md).
 

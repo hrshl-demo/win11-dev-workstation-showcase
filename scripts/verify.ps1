@@ -5,8 +5,9 @@ Verify the installed tools and VS Code workspace extension profile.
 Read-only. The default profile requires 12 extensions; the optional Java
 modernization profile requires all 13 recommendations. Missing required tools
 or wrong required versions return exit 1. Authentication is not inspected.
-Before setup this exit 1 is expected inventory, not an installation failure
-or the bootstrap preflight gate. After setup required FAIL means not accepted.
+Before setup this exit 1 is expected inventory, not an installation failure.
+Installed-first module tasks preserve existing versions; incompatible inventory
+does not authorize automatic upgrades. After setup required FAIL is not accepted.
 Extension listing uses the CLI without a profile argument; confirm approved
 source/profile and enabled extensions in the intended window separately.
 .PARAMETER RunConfigTest
@@ -23,6 +24,7 @@ param([switch]$RunConfigTest, [switch]$IncludeJavaModernization, [switch]$Json)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '_setup.psm1')
 
 function Get-VerificationCheck {
     [CmdletBinding()]
@@ -37,14 +39,16 @@ function Get-VerificationCheck {
         @{ Name = 'python'; Args = @('--version'); Expected = '3.14.x'; Pattern = '\b3\.14\.\d+' },
         @{ Name = 'uv'; Args = @('--version'); Expected = 'Installed' },
         @{ Name = 'java'; Args = @('-version'); Expected = '25.x'; Pattern = 'version\s+"25(?:[."]|$)' },
-        @{ Name = 'go'; Args = @('version'); Expected = 'Installed stable Go' },
+        @{ Name = 'go'; Args = @('version'); Expected = 'Go 1.27.3'; Pattern = '^go version go1\.27\.3\s' },
         @{ Name = 'az'; Args = @('version'); Expected = 'Installed' },
         @{ Name = 'azd'; Args = @('version'); Expected = 'Installed' },
         @{ Name = 'kubectl'; Args = @('version', '--client'); Expected = 'Installed' },
-        @{ Name = 'node'; Args = @('--version'); Expected = 'Installed LTS' },
+        @{ Name = 'node'; Args = @('--version'); Expected = 'Installed LTS'; Pattern = '^v(?:22|24|26)\.' },
         @{ Name = 'wsl'; Args = @('--version'); Expected = '>= 2.9.3'; Pattern = '\d+\.\d+\.\d+'; Minimum = '2.9.3' },
         @{ Name = 'wslc'; Args = @(); Expected = 'Present on PATH'; PresenceOnly = $true }
     )
+    $local = @(Get-LocalInstallation)
+    $packages = @('Core', 'Python', 'Java', 'Go' | ForEach-Object { Get-SetupPackage $_ })
     $policies = @(Get-WinGetPolicy)
     $policies
     $blocked = @($policies | Where-Object { $_.Status -eq 'FAIL' }).Count -gt 0
@@ -55,8 +59,10 @@ function Get-VerificationCheck {
             continue
         }
         $path = Get-NativeCommandPath $name
+        $package = @($packages | Where-Object Command -eq $name)
+        if ($package.Count -eq 1) { $path = Get-SetupExecutable $package[0] @($local | Where-Object { $_.Name -match $package[0].Product }) }
         if (-not $path) {
-            Get-CheckResult $name FAIL 'Missing from PATH. Run the approved bootstrap, then open a new terminal.' -Expected $definition.Expected -Found 'Missing'
+            Get-CheckResult $name FAIL 'No usable installed location found. Preview the matching module; unknown inventory is not permission to install. Use a fresh terminal after confirmed installation.' -Expected $definition.Expected -Found 'Missing/unusable'
             continue
         }
         if ($definition.ContainsKey('PresenceOnly')) {
@@ -76,7 +82,7 @@ function Get-VerificationCheck {
             }
             $found = ($text -split '[\r\n]+')[0]
             $status = if ($valid) { 'PASS' } else { 'FAIL' }
-            Get-CheckResult $name $status "Expected $($definition.Expected); command exit $($result.ExitCode). Update via the approved configuration if needed." -Expected $definition.Expected -Found $found
+            Get-CheckResult $name $status "Expected $($definition.Expected); command exit $($result.ExitCode); selected location $path. Existing versions are retained; incompatible versions require a separate IT-approved decision, not an automatic upgrade." -Expected $definition.Expected -Found $found
         } catch {
             Get-CheckResult $name FAIL $_.Exception.Message -Expected $definition.Expected -Found 'Could not run'
         }

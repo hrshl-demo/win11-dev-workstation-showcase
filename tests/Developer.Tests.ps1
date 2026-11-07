@@ -31,7 +31,8 @@ Describe 'Developer script and VS Code contracts' {
         @($timeoutInput.options) | Should -Be @('5', '15', '30')
         foreach ($task in $script:Tasks.tasks) {
             $hasChoice = $task.args -contains '${input:httpsTimeoutSeconds}'
-            $hasChoice | Should -Be ($task.label -in @('Preflight', 'Setup preview', 'User-run setup', 'Finish setup'))
+            $hasChoice | Should -Be ($task.args -contains 'Preflight' -or $task.args -contains 'SetupPreview' -or
+                $task.args -contains 'Setup' -or $task.args -contains 'LegacySetup' -or $task.args -contains 'FinishSetup')
             if ($hasChoice) { $task.args | Should -Contain '-HttpsTimeoutSeconds' }
         }
     }
@@ -121,7 +122,7 @@ Describe 'Developer safe execution and failure paths' {
         }
     }
     It 'propagates the timeout through setup and finish using a harmless in-memory child fixture' -TestCases @(
-        @{ SelectedAction = 'Setup' }, @{ SelectedAction = 'FinishSetup' }
+        @{ SelectedAction = 'Setup' }, @{ SelectedAction = 'LegacySetup' }, @{ SelectedAction = 'FinishSetup' }
     ) {
         param($SelectedAction)
         function Invoke-SetupFixture {
@@ -132,8 +133,15 @@ Describe 'Developer safe execution and failure paths' {
         Invoke-Developer -Action $SelectedAction -HttpsTimeoutSeconds 30 -BaseSetupTimeoutSeconds 28800 -Confirm:$false | Should -Be 0
         $script:CapturedSetupArguments | Should -Contain '-HttpsTimeoutSeconds'
         $script:CapturedSetupArguments | Should -Contain '30'
-        $script:CapturedSetupArguments | Should -Contain '-BaseSetupTimeoutSeconds'
-        $script:CapturedSetupArguments | Should -Contain '28800'
+        if ($SelectedAction -ne 'Setup') {
+            $script:CapturedSetupArguments | Should -Contain '-BaseSetupTimeoutSeconds'
+            $script:CapturedSetupArguments | Should -Contain '28800'
+            $script:CapturedSetupArguments | Should -Contain '-LegacyMicrosoftBundle'
+        } else {
+            $script:CapturedSetupArguments | Should -Contain '-Module'
+            $script:CapturedSetupArguments | Should -Contain 'Core'
+            $script:CapturedSetupArguments | Should -Not -Contain '-LegacyMicrosoftBundle'
+        }
         ($script:CapturedSetupArguments -contains '-SkipBase') | Should -Be ($SelectedAction -eq 'FinishSetup')
         Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
     }
@@ -147,7 +155,7 @@ Describe 'Developer safe execution and failure paths' {
         @($picker.options) | Should -Be @('7200', '14400', '28800')
         foreach ($task in $script:Tasks.tasks) {
             ($task.args -contains '${input:baseSetupTimeoutSeconds}') |
-                Should -Be ($task.label -in @('Setup preview', 'User-run setup'))
+                Should -Be ($task.label -eq 'Legacy Microsoft bundle (optional)')
         }
     }
     It 'rejects an unbounded or undersized base wait before dispatch' -TestCases @(
@@ -166,10 +174,10 @@ Describe 'Developer safe execution and failure paths' {
         $script:DeveloperAst.Extent.Text | Should -Not -Match 'Developer task \(missing cached dependencies'
     }
 
-    It 'shows source/config only without invoking bootstrap, even with WhatIf' {
-        Mock Get-Content { 'synthetic source preview' }
+    It 'shows read-only selected module inventory without invoking a setup process' {
+        Mock Invoke-SetupModule { 0 }
         Invoke-Developer -Action SetupPreview -WhatIf | Should -Be 0
-        Should -Invoke Get-Content -Times 3 -Exactly
+        Should -Invoke Invoke-SetupModule -Times 1 -Exactly -ParameterFilter { $Module -eq 'Core' -and -not $Apply }
         Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
     }
 
