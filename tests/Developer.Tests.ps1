@@ -129,14 +129,31 @@ Describe 'Developer safe execution and failure paths' {
             $global:LASTEXITCODE = 0
         }
         Mock Get-Process { [pscustomobject]@{ Path = 'Invoke-SetupFixture' } }
-        Invoke-Developer -Action $SelectedAction -HttpsTimeoutSeconds 30 -Confirm:$false | Should -Be 0
+        Invoke-Developer -Action $SelectedAction -HttpsTimeoutSeconds 30 -BaseSetupTimeoutSeconds 28800 -Confirm:$false | Should -Be 0
         $script:CapturedSetupArguments | Should -Contain '-HttpsTimeoutSeconds'
         $script:CapturedSetupArguments | Should -Contain '30'
+        $script:CapturedSetupArguments | Should -Contain '-BaseSetupTimeoutSeconds'
+        $script:CapturedSetupArguments | Should -Contain '28800'
         ($script:CapturedSetupArguments -contains '-SkipBase') | Should -Be ($SelectedAction -eq 'FinishSetup')
         Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
     }
     It 'rejects out-of-range HTTPS timeout without dispatching any native task' {
         { Invoke-Developer -Action Preflight -HttpsTimeoutSeconds 31 } | Should -Throw
+        Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
+    }
+    It 'offers the independent base-only budget picker only for full setup and preview' {
+        $picker = $script:Tasks.inputs | Where-Object id -eq baseSetupTimeoutSeconds
+        $picker.default | Should -Be '14400'
+        @($picker.options) | Should -Be @('7200', '14400', '28800')
+        foreach ($task in $script:Tasks.tasks) {
+            ($task.args -contains '${input:baseSetupTimeoutSeconds}') |
+                Should -Be ($task.label -in @('Setup preview', 'User-run setup'))
+        }
+    }
+    It 'rejects an unbounded or undersized base wait before dispatch' -TestCases @(
+        @{ Budget = 0 }, @{ Budget = 3600 }, @{ Budget = 28801 }) {
+        param($Budget)
+        { Invoke-Developer -Action Setup -BaseSetupTimeoutSeconds $Budget } | Should -Throw
         Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
     }
 

@@ -91,7 +91,7 @@ Describe 'PowerShell script structural contracts' {
     It 'bootstrap checks reboot markers only when not skipping the base' {
         $tree = $script:Ast['bootstrap.ps1'].Tree
         $resume = $tree.Find({ param($node)
-            $node -is [Management.Automation.Language.CommandAst] -and $node.GetCommandName() -eq 'Test-BaseResumePending'
+            $node -is [Management.Automation.Language.CommandAst] -and $node.GetCommandName() -eq 'Get-BaseSetupOutcome'
         }, $true)
         $parent = $resume.Parent
         $baseGuard = $false
@@ -100,6 +100,18 @@ Describe 'PowerShell script structural contracts' {
             $parent = $parent.Parent
         }
         $baseGuard | Should -BeTrue
+    }
+    It 'classifies launcher timeout before informational output and before add-on or Verify' {
+        $text = $script:Ast['bootstrap.ps1'].Text
+        $guard = $text.IndexOf('$baseOutcome = Get-BaseSetupOutcome')
+        $guard | Should -BeGreaterThan $text.IndexOf('$base = Invoke-NativeCommand')
+        $guard | Should -BeLessThan $text.IndexOf('if ($base.Output)')
+        $guard | Should -BeLessThan $text.IndexOf('$winget = Get-NativeCommandPath')
+        $guard | Should -BeLessThan $text.IndexOf('$verification = Invoke-NativeCommand')
+        $text | Should -Match '-InputText \$setupText -TimeoutSeconds \$BaseSetupTimeoutSeconds'
+        $text | Should -Match '\[ValidateRange\(7200, 28800\)\]\[int\]\$BaseSetupTimeoutSeconds = 14400'
+        $text | Should -Match "'--accept-configuration-agreements'\) -TimeoutSeconds 3600"
+        $text | Should -Match '\$verification = Invoke-NativeCommand \$shell \$arguments -TimeoutSeconds 600'
     }
     It 'repair checks policy before its first native readiness test and defines blocked exit 2' {
         $text = $script:Ast['repair-winget.ps1'].Text

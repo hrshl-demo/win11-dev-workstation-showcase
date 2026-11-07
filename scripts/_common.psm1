@@ -183,7 +183,7 @@ function Invoke-NativeCommand {
     [OutputType([pscustomobject])]
     param([Parameter(Mandatory)][string]$FilePath,
         [string[]]$ArgumentList = @(), [string]$WorkingDirectory = '',
-        [ValidateRange(1, 3600)][int]$TimeoutSeconds = 60,
+        [ValidateRange(1, 28800)][int]$TimeoutSeconds = 60,
         [AllowEmptyString()][string]$InputText)
     $start = New-Object System.Diagnostics.ProcessStartInfo
     $start.UseShellExecute = $false
@@ -522,9 +522,27 @@ function Read-MicrosoftSignedScript {
     } finally { $stream.Dispose() }
 }
 
+function Get-BaseSetupOutcome {
+    <#
+    .SYNOPSIS
+    Classify the bounded Microsoft launcher result without retrying its setup.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param([Parameter(Mandatory)][object]$Result,
+        [ValidateRange(7200, 28800)][int]$BaseSetupTimeoutSeconds = 14400)
+    if ($Result.TimedOut) {
+        throw "Microsoft base launcher wait exceeded $BaseSetupTimeoutSeconds seconds ($($BaseSetupTimeoutSeconds / 3600) hours). Elevated Microsoft base state is unknown and may still be in progress; this is not evidence of UAC denial or a Microsoft installer exit. No add-on or Verify started. Keep any existing base running; do not rerun setup or use SkipBase automatically. Confirm base completion plus any reboot/resume before choosing Finish setup."
+    }
+    if ($Result.ExitCode -in @(3010, 1641)) { return 'ResumePending' }
+    Assert-NativeSuccess $Result 'Microsoft base setup'
+    if (Test-BaseResumePending) { return 'ResumePending' }
+    return 'Complete'
+}
+
 Export-ModuleMember -Function Get-ShowcaseRoot, Get-CheckResult, Write-CheckReport, Write-ShowcaseMessage,
     Get-CheckExitCode, Get-WinGetPolicy, Assert-WinGetPolicy, Assert-WorkstationPolicy, Get-NativeCommandPath,
     ConvertTo-NativeArgument, Invoke-NativeCommand, Assert-NativeSuccess,
     Get-ContainerRuntime, Get-HttpsProbe, Get-PreflightTimeout, Test-HttpsEndpoint, Wait-SampleHealth, Test-IsAdministrator,
-    Test-BaseResumePending, Assert-SafeDirectory, Get-RequiredExtension,
+    Test-BaseResumePending, Get-BaseSetupOutcome, Assert-SafeDirectory, Get-RequiredExtension,
     Read-MicrosoftSignedScript, Assert-SafeSampleTree
