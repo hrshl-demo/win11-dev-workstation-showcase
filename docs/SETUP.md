@@ -159,7 +159,17 @@ Only the developer launches services, from **Terminal → Run Task** or:
 .\scripts\developer.ps1 -Action RunContainer -Sample Python
 ```
 
-Choose Java/Go similarly. Use the sample README for synthetic HTTP requests in a second integrated terminal. For an explicit launcher port:
+For the first EMI request, choose **Terminal → Run Task → Run EMI API (local)** and confirm the launch after restoring packages. Keep its terminal open, choose **Terminal → New Terminal → PowerShell** (or the **+** button), then paste:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/health
+$loan = @{ principal = '2500000'; annual_rate_percent = '8.5'; tenure_months = 240 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/emi -ContentType 'application/json' -Body $loan
+```
+
+Expect health `status: ok` and EMI `"21695.58"` (display `"₹21,695.58"`). Use **Ctrl+C** in the task terminal to stop it. No Docker or Azure setup is required for this local request.
+
+Choose Java/Go similarly; their sample READMEs contain the synthetic requests. For an explicit launcher port:
 
 ```powershell
 .\scripts\run-sample.ps1 -Name python-emi-api -Mode local -Port 8080

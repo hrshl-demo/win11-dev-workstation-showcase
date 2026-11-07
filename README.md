@@ -35,6 +35,18 @@ Then follow these separate stages:
 4. **Run a sample** — choose the local/container task only when you personally want to start it. Run never restores packages or builds/pulls images; container Run requires an existing local image and uses `--pull=never`. Automatic runtime selection uses `wslc` first and `docker` **only if `wslc` is absent**. The shared launcher also accepts an explicitly approved `-Runtime wslc` or `-Runtime docker`, probes only that runtime and never falls back after denial. Do not use selection to bypass policy. Docker Desktop remains a commented, optional licensing choice, not the default.
 5. **Existing AKS + ACR** — [review the GitHub/AKS plan](docs/GITHUB-AKS.md). Deployment is a separate, human-dispatched, main-only workflow with independent environment approval. No push or PR deploys, and no cluster/registry provisioning.
 
+## Your first request
+
+After the explicit package restore above, choose **Terminal → Run Task → Run EMI API (local)** and confirm the launch. Keep that task terminal open. Choose **Terminal → New Terminal** (or **+**) for a second integrated PowerShell terminal, then paste:
+
+```powershell
+Invoke-RestMethod http://localhost:8080/health
+$loan = @{ principal = '2500000'; annual_rate_percent = '8.5'; tenure_months = 240 } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri http://localhost:8080/emi -ContentType 'application/json' -Body $loan
+```
+
+Expect health `status: ok` and EMI `"21695.58"` (display `"₹21,695.58"`). Stop the server with **Ctrl+C** in its task terminal. This local first request needs no Docker or Azure configuration.
+
 ## Included integrations
 
 | Area | Included |
