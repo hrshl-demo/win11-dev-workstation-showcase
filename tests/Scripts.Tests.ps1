@@ -309,6 +309,10 @@ Describe 'Actual sample launch planning and mocked container execution' {
         Should -Invoke Invoke-NativeCommand -Times 0 -Exactly -ParameterFilter { $ArgumentList[0] -in @('build', 'pull') }
         Should -Invoke Wait-SampleHealth -Times 1 -Exactly -ParameterFilter { $Port -eq 8181 -and $TimeoutSeconds -eq 5 }
     }
+    It 'preserves an explicitly selected runtime without assigning its validated parameter' {
+        Invoke-Sample python-emi-api container 8181 5 -Runtime docker -Confirm:$false | Should -Be 0
+        Should -Invoke Get-ContainerRuntime -Times 1 -Exactly -ParameterFilter { $Preferred -eq 'docker' }
+    }
     It 'does not fall back after wslc denies access' {
         Mock Invoke-NativeCommand { [pscustomobject]@{ ExitCode = 5; Output = 'Denied by policy'; StdOut = ''; StdErr = 'Denied'; TimedOut = $false } }
         Invoke-Sample python-emi-api container 8181 5 -Confirm:$false | Should -Be 1
