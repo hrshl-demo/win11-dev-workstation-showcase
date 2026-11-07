@@ -16,6 +16,7 @@ BeforeAll {
     $script:ScriptsDirectory = Join-Path $script:Repository 'scripts'
     Import-Module (Join-Path $script:ScriptsDirectory '_common.psm1') -Force
     Import-Module (Join-Path $script:ScriptsDirectory '_ownership.psm1')
+    Import-Module (Join-Path $script:ScriptsDirectory '_setup.psm1')
     $script:Ast = @{}
     foreach ($file in Get-ChildItem -LiteralPath $script:ScriptsDirectory -File) {
         $tokens = $null
@@ -66,7 +67,7 @@ Describe 'PowerShell script structural contracts' {
         $script:Ast[$File].Text | Should -Match '\$PSCmdlet.ShouldProcess'
     }
     It 'bootstrap validates the signed payload before child execution and configuration' {
-        $text = $script:Ast['bootstrap.ps1'].Text
+        $text = $script:Ast['legacy-bootstrap.ps1'].Text
         $text.IndexOf('Read-MicrosoftSignedScript -Path') | Should -BeLessThan $text.IndexOf('$base = Invoke-NativeCommand')
         $text.IndexOf('$base = Invoke-NativeCommand') | Should -BeLessThan $text.IndexOf("'configure', '-f'")
         $text | Should -Not -Match '\bInvoke-Expression\b|\biex\b'
@@ -76,7 +77,7 @@ Describe 'PowerShell script structural contracts' {
         $text | Should -Not -Match 'Remove-Item[^\r\n]*-Recurse'
     }
     It 'bootstrap stops on failed structured preflight before any setup mutation without dumping JSON' {
-        $text = $script:Ast['bootstrap.ps1'].Text
+        $text = $script:Ast['legacy-bootstrap.ps1'].Text
         $guard = $text.IndexOf("Preflight failed before setup; no setup actions started.")
         $guard | Should -BeGreaterThan 0
         $guard | Should -BeLessThan $text.IndexOf('Start-Transcript')
@@ -89,7 +90,7 @@ Describe 'PowerShell script structural contracts' {
         $text | Should -Not -Match "Assert-NativeSuccess\s+\`$preflight"
     }
     It 'bootstrap checks reboot markers only when not skipping the base' {
-        $tree = $script:Ast['bootstrap.ps1'].Tree
+        $tree = $script:Ast['legacy-bootstrap.ps1'].Tree
         $resume = $tree.Find({ param($node)
             $node -is [Management.Automation.Language.CommandAst] -and $node.GetCommandName() -eq 'Get-BaseSetupOutcome'
         }, $true)
@@ -102,7 +103,7 @@ Describe 'PowerShell script structural contracts' {
         $baseGuard | Should -BeTrue
     }
     It 'classifies launcher timeout before informational output and before add-on or Verify' {
-        $text = $script:Ast['bootstrap.ps1'].Text
+        $text = $script:Ast['legacy-bootstrap.ps1'].Text
         $guard = $text.IndexOf('$baseOutcome = Get-BaseSetupOutcome')
         $guard | Should -BeGreaterThan $text.IndexOf('$base = Invoke-NativeCommand')
         $guard | Should -BeLessThan $text.IndexOf('if ($base.Output)')
@@ -239,6 +240,8 @@ Describe 'Actual preflight readiness functions with safe mocks' {
 Describe 'Actual tool and extension verification with safe mocks' {
     BeforeEach {
         Mock Get-ShowcaseRoot { $script:Repository }
+        Mock Get-LocalInstallation { @() }
+        Mock Get-SetupExecutable { Get-NativeCommandPath $Package.Command }
         Mock Get-WinGetPolicy { Get-CheckResult 'EnableAppInstaller' PASS 'Not configured.' }
         Mock Get-NativeCommandPath { "C:\$Name.exe" }
         Mock Get-RequiredExtension {
@@ -253,6 +256,8 @@ Describe 'Actual tool and extension verification with safe mocks' {
                     'C:\winget.exe' { 'v1.29.380' }
                     'C:\python.exe' { 'Python 3.14.0' }
                     'C:\java.exe' { 'openjdk version "25.0.1"' }
+                    'C:\go.exe' { 'go version go1.27.3 windows/amd64' }
+                    'C:\node.exe' { 'v24.0.0' }
                     'C:\wsl.exe' { 'WSL version: 2.9.3' }
                     default { 'Installed tool 1.0' }
                 }

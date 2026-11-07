@@ -34,6 +34,7 @@ test-results.xml
 test-results.json
 artifacts/
 .showcase-owned.json
+.showcase-setup/
 *.log
 *.tmp
 *.bak

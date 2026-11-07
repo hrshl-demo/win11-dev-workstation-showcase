@@ -4,7 +4,7 @@ This repository consumes enterprise controls; it does not deploy Intune policies
 
 ## Device and elevation
 
-Start with [Phase 0 before scripts](SETUP.md#phase-0-prerequisites-before-repository-scripts). This is the approval/minimum-access checklist, **not** a request to manually install Python/Java/Go or twelve extensions: the standard Microsoft base and required add-on supply those in Phase 2.
+Start with [Phase 0 before scripts](SETUP.md#phase-0-prerequisites-before-repository-scripts). This is approval/minimum access, **not** manual installation of SDKs/twelve extensions: normal Phase 2 modules automate only locally proven missing targets. Existing incompatible/unknown inventory is retained without downloads/upgrades; approve separate version decisions rather than force replacement.
 
 | Requirement | IT decision |
 | --- | --- |
@@ -77,7 +77,7 @@ The [official DSC resource](https://github.com/microsoft/winget-dsc/blob/main/re
 
 ## GitHub CI and existing AKS approval
 
-The developer workflow stays in VS Code: Phase 0 prerequisites, Phase 1 Preflight, Phase 2 automated setup, Phase 3 verification, then project Restore, coding/CI and separate existing-AKS deployment. Fresh **and partial** devices use full bootstrap if the base is incomplete (including WSL absent); SkipBase is only for a confirmed complete base or after resume. Fully verified devices skip installation. Setup and explicit project Restore are human actions, not agent permissions.
+The workflow stays in VS Code: prerequisites, local module preview/Preflight, independently confirmed missing-target installs, fresh-terminal full Verify, explicit project Restore, coding/CI and separate AKS. Fresh and partial devices use modules; a cancelled base is not completed or rolled back. SkipBase is only legacy opt-in after confirmed successful base/reboot/resume. WSL feature inventory requires an approved Administrator context; modules never elevate/restart automatically. Setup and project Restore are human actions, not agent permissions.
 
 Review pinned test dependencies/modules and allowed package sources: pytest/pytest-cov and Ruff, JUnit 5/JaCoCo and Maven Checkstyle, Go built-in tests/coverage/vet, Pester **5.7.1** and PSScriptAnalyzer **1.24.0**. Daily checks must not download missing packages/toolchains. Optional Docker Desktop remains commented and licence-reviewed; `wslc` failure must not cause policy-bypassing Docker fallback. Shared `-Runtime Auto|wslc|docker` selection probes only an explicitly selected approved runtime; explicit choice is not a workaround for denied policy.
 

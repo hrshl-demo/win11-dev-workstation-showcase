@@ -53,14 +53,14 @@ After a failure, use the recorded diagnostics and the read-only **Preflight** ta
 
 | Symptom | Action |
 | --- | --- |
-| Verify exit 1 before setup; languages/runtime/extensions absent | Expected optional inventory result, not failed installation or a bootstrap gate. If Preflight has no FAIL and approvals are complete, use **Setup preview → User-run setup** for missing/incomplete base; **Finish setup** only for confirmed complete base/add-on gaps |
+| Verify exit 1 before setup; outputs absent | Expected optional inventory; use **Setup preview** → matching independently confirmed module. Existing software is checked before downloading; incompatible/unknown is retained. **Finish setup** is optional LEGACY-only, never recovery for a stopped partial base |
 | Repository script blocked before bootstrap/preflight runs, or module import denied | An effective Restricted policy blocks repository scripts; AllSigned requires trusted signatures for scripts and modules. Bootstrap may be blocked before its body or preflight runs, and module imports may also be denied. Obtain an IT-approved script-execution context first. The upstream Microsoft signature does not authorize this repository's scripts. No automatic policy override is permitted. |
-| Base restarted; add-on missing | Wait for `WindowsDevConfigResume` and the base summary, then run `.\scripts\bootstrap.ps1 -SkipBase` in a fresh terminal |
+| Optional legacy base restarted; add-on missing | Wait for confirmed successful base summary/reboot/resume, then explicitly select legacy Finish setup. Normal modules do not require a Microsoft base |
 | Signature invalid / wrong publisher | Stop. Do not run the downloaded wrapper; review network inspection, trust chain and upstream source with IT |
 | Tools missing immediately after install | Open a new terminal; compare PATH and `.\scripts\verify.ps1`. Do not claim success until verification passes |
 | Default Restricted; all policy scopes Undefined | Read effective policy as well as the list. Only the human with IT permission may follow Phase 0's persistent CurrentUser RemoteSigned route. Undefined does not certify all IT policy is clear; no Bypass/process override |
 | Required extensions missing or disabled after setup; private marketplace shown | The banner alone proves no block. Compare the approved CLI installation/account, intended existing profile, enabled extensions and effective source/allowlist policy. DSC/Verify do not select that profile. Stop acceptance if unsupported; IT supplies compatible **automated** managed delivery, not twelve manual installs or a public-marketplace fallback |
-| WSL/wslc absent before setup | Preflight WARN is expected. Use the full standard-base bootstrap route after approvals, not SkipBase as a missing-WSL repair |
+| WSL/wslc absent before setup | Preflight WARN expected. Preview WSL module in an approved Administrator terminal. Existing runtime is not silently updated; an incompatible version needs a separate IT-approved decision. Ubuntu is a separate opt-in, never reset |
 | `wslc` unavailable after completed setup | Check `wsl --version`, resume/logs and policy; CLI requires WSL 2.9.3+. IT/human may approve the documented configuration update; agents must not run it |
 | Container image pull denied | Check WSL container/registry policies and approved registry availability. Never bypass the allowlist |
 | Dev Containers expects `wslc` on a Docker-standard device | Remove the workspace `dev.containers.dockerPath` override with approval; use the approved runtime |
@@ -88,13 +88,21 @@ See [Setup](SETUP.md) for VS Code tasks/reports and [GitHub/AKS](GITHUB-AKS.md) 
 
 The former one-hour wrapper watchdog could return synthetic exit **124** while elevated Microsoft setup continued. Its initial “Administrator rights / UAC prompt” output does **not** establish UAC denial. Large downloads and retries on a slow network can exceed that wait. Updated bootstrap distinguishes `TimedOut` before ordinary exit handling, reports the actual budget and **unknown, possibly still-running elevated-base state**, and never proceeds to add-on/Verify.
 
-The future **Setup preview / User-run setup** base-only picker is **7200 / 14400 / 28800 seconds (2 / default 4 / 8 hours)**; direct `-BaseSetupTimeoutSeconds` is bounded to that range. HTTPS readiness and other command budgets are independent; waits are not unlimited, and termination remains restricted to the owned launcher, never a broad process tree or elevated installer.
+Only **Legacy Microsoft bundle (optional)** has the **7200 / 14400 / 28800 second** base wait picker. Normal modules use a separate per-target default 7200-second bounded wait and never invoke that bundle. HTTPS readiness is independent; termination remains restricted to the owned launcher, never a broad process tree or vendor installer.
 
 **Leave an existing base running.** Do not start another setup, interrupt it, change the working clone or use SkipBase just because the wrapper timed out. Inspect retained base completion/progress evidence and resolve genuine errors with IT; log activity alone is not completion. Only choose **Finish setup** after Microsoft base completion and any required reboot/resume are confirmed, in a fresh terminal. Unknown state requires diagnosis, not an automatic retry. Genuine non-timeout failures and reboot/resume outcomes remain separately reported.
 
 The Microsoft base has a **final keypress pause** after its final “Calm OS setup complete” summary (including flagged steps), or a genuine “stopped early” report, and after transcript closure/lock release. The outer launcher wait includes this and other manual/UAC pauses. A live elevated PID can be awaiting dismissal after success or failure, not necessarily installing. Review the existing final summary/flagged steps and answer its final keypress prompt; confirm successful completion and actual reboot/resume before **Finish setup**. PID presence, log activity or lock release alone is not evidence that setup is incomplete or accepted.
 
-## Project cleanup is not uninstall or reset
+## Stopped partial setup and modular retries
+
+A force-closed/cancelled Microsoft run is **stopped partial installation**, not rollback or completed base. Keep installed tools/settings and downloaded files. After confirming previous installers stopped/completed and reviewing the published revision, use matching module **Setup preview** first. Do not rerun the broad bundle or SkipBase as recovery.
+
+Each module inventories actual local installations before any download/provider/source action, including known off-PATH SDK locations. Installed/incompatible targets are retained; unknown registry/version/feature inventory fails without downloads. An old Python or missing pwsh in a stale VS Code terminal does not establish missing software. Open a fresh terminal/reload VS Code after confirmed installs; Verify reports selected executable locations. Select the reported SDK through documented **process-scope** JAVA_HOME/uv/debugger configuration, never delete old runtimes or overwrite global PATH.
+
+Missing targets alone receive streamed progress and elapsed/exit results. Module success is not full Verify acceptance. A timeout/cancellation can leave a vendor installer active: inspect its own evidence, do not retry until state is confirmed. No automatic retry/rollback/upgrade is implemented. `.showcase-setup\module-*.jsonl` retains non-secret state/elapsed events; unknown or stopped states require diagnosis. WSL feature changes use no-restart and pause when restart is needed; Ubuntu actions require ready WSL, keep all existing distro data and do not launch it automatically.
+
+## Cleanup scope retained
 
 Wait for installation/resume and local application/test/restore tasks to finish before updating the clone or selecting **Cleanup preview**. [Scoped cleanup](SETUP.md#cleanup-after-work-is-finished) leaves GHCP/Copilot and every shared tool, extension, runtime, policy, cache, credential, source file and cloud resource alone. Missing receipts or changed reports are expected retention WARNs: historical files, `.venv`, `.tools`, directories and unknown contents are not retrospectively adopted.
 
