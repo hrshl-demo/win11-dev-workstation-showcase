@@ -125,6 +125,19 @@ Describe 'Installed-first module effects' {
         Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
         Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
     }
+    It 'all installed extensions skip source approval, preflight and every installer' {
+        Mock Get-SetupExtension -ModuleName _setup {
+            [pscustomobject]@{ Id = 'ms-python.python'; State = 'Installed'; Compatible = $true; Path = 'synthetic-code.cmd'; Version = '1.0' }
+        }
+        Invoke-SetupModule -Module Extensions -Apply -Confirm:$false | Should -Be 0
+        Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
+    }
+    It 'rejects an out-of-range target budget before inventory or effects' {
+        { Invoke-SetupModule -InstallTimeoutSeconds 14401 -Apply -Confirm:$false } | Should -Throw
+        Should -Invoke Get-LocalInstallation -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
+    }
 }
 
 Describe 'Local installed-target discovery, including stale PATH' {
@@ -156,13 +169,35 @@ Describe 'Local installed-target discovery, including stale PATH' {
         $result.State | Should -Be 'Installed'
         $result.Compatible | Should -BeFalse
     }
+    It 'retains a registered Store Python with a four-component package version' {
+        $global:SetupFixturePackage.Product = (@(Get-SetupPackage Python)[0]).Product
+        Mock Get-SetupExecutable -ModuleName _setup { $null }
+        $result = Get-SetupInventory $global:SetupFixturePackage @(
+            [pscustomobject]@{ Name = 'Python 3.14.1000.0'; Version = '3.14.1000.0'; Location = 'C:\registered-store' })
+        $result.State | Should -Be 'Installed'
+        $result.Compatible | Should -BeFalse
+    }
+    It 'finds already-installed PowerShell 7 despite a stale PATH miss' {
+        $global:SetupFixturePackage.Command = 'pwsh'
+        $global:SetupFixturePackage.Paths = @('C:\existing\PowerShell\7\pwsh.exe')
+        $global:SetupFixturePackage.Required = '^7\.'
+        Mock Get-NativeCommandPath -ModuleName _setup { $null }
+        Mock Test-Path -ModuleName _setup { $true } -ParameterFilter { $LiteralPath -eq 'C:\existing\PowerShell\7\pwsh.exe' }
+        Mock Invoke-NativeCommand -ModuleName _setup { [pscustomobject]@{ ExitCode = 0; TimedOut = $false; Output = '7.5.4' } }
+        $result = Get-SetupInventory $global:SetupFixturePackage @()
+        $result.State | Should -Be 'Installed'
+        $result.Compatible | Should -BeTrue
+        $result.Path | Should -Be 'C:\existing\PowerShell\7\pwsh.exe'
+    }
     It 'a version probe failure is unknown and cannot become missing' {
         Mock Invoke-NativeCommand -ModuleName _setup { [pscustomobject]@{ ExitCode = 5; TimedOut = $false; Output = '' } }
         { Get-SetupInventory $global:SetupFixturePackage @() } | Should -Throw '*unknown*'
     }
     It 'does not treat Windows Store aliases or cached payloads as installations' {
+        $global:SetupFixturePackage.Paths = @()
         Mock Get-NativeCommandPath -ModuleName _setup { 'C:\Users\synthetic\AppData\Local\Microsoft\WindowsApps\python.exe' }
         Mock Test-Path -ModuleName _setup { $false }
+        Mock Test-Path -ModuleName _setup { $true } -ParameterFilter { $LiteralPath -match '\\WindowsApps\\python.exe$' }
         Get-SetupExecutable $global:SetupFixturePackage @() | Should -BeNullOrEmpty
         Should -Invoke Invoke-NativeCommand -ModuleName _setup -Times 0 -Exactly
     }
@@ -202,14 +237,24 @@ Describe 'WSL and distro preservation' {
 }
 
 Describe 'Live progress and entrypoint boundaries' {
-    It 'streams a harmless fixture line and retains its genuine exit code' {
+    It 'streams before completion, drains final stdout/stderr and retains the genuine exit' {
         $global:SetupFixtureOutput = @()
-        Mock Write-ShowcaseMessage -ModuleName _setup { $global:SetupFixtureOutput += $Message }
+        $global:SetupFixtureClock = [Diagnostics.Stopwatch]::StartNew()
+        $global:SetupFixtureTimes = @()
+        Mock Write-ShowcaseMessage -ModuleName _setup {
+            $global:SetupFixtureOutput += $Message
+            $global:SetupFixtureTimes += $global:SetupFixtureClock.ElapsedMilliseconds
+        }
         try {
-            $result = Invoke-SetupNative (Get-Process -Id $PID).Path @('-NoProfile', '-Command', "'fixture progress'; exit 7") 'synthetic-fixture' 300
+            $result = Invoke-SetupNative (Get-Process -Id $PID).Path @('-NoProfile', '-Command',
+                "'fixture progress'; Start-Sleep -Milliseconds 1000; [Console]::Error.WriteLine('fixture stderr'); 'fixture final'; exit 7") 'synthetic-fixture' 300
             $result.ExitCode | Should -Be 7
             ($global:SetupFixtureOutput -join "`n") | Should -Match 'fixture progress'
-        } finally { Remove-Variable SetupFixtureOutput -Scope Global }
+            ($global:SetupFixtureOutput -join "`n") | Should -Match 'fixture stderr'
+            ($global:SetupFixtureOutput -join "`n") | Should -Match 'fixture final'
+            $global:SetupFixtureOutput.Count | Should -Be 3
+            ($global:SetupFixtureTimes[-1] - $global:SetupFixtureTimes[0]) | Should -BeGreaterThan 500
+        } finally { Remove-Variable SetupFixtureOutput, SetupFixtureClock, SetupFixtureTimes -Scope Global }
     }
     It 'default bootstrap is a preview and legacy bundle requires explicit opt-in and Apply' {
         $text = Get-Content (Join-Path $script:Repository 'scripts\bootstrap.ps1') -Raw

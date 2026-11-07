@@ -3,7 +3,7 @@
     {"Id":"Microsoft.VisualStudioCode","Command":"code","Args":["--version"],"Product":"(?i)^Microsoft Visual Studio Code","Paths":["%LOCALAPPDATA%\\Programs\\Microsoft VS Code\\bin\\code.cmd","%ProgramFiles%\\Microsoft VS Code\\bin\\code.cmd"],"Required":".+"},
     {"Id":"Git.Git","Command":"git","Args":["--version"],"Product":"(?i)^Git(?: version)?(?: |$)","Paths":["%ProgramFiles%\\Git\\cmd\\git.exe"],"Required":".+"},
     {"Id":"GitHub.cli","Command":"gh","Args":["--version"],"Product":"(?i)^GitHub CLI","Paths":["%ProgramFiles%\\GitHub CLI\\gh.exe"],"Required":".+"},
-    {"Id":"GitHub.Copilot","Command":"copilot","Args":["--version"],"Product":"(?i)^GitHub Copilot","Paths":["%LOCALAPPDATA%\\Microsoft\\WinGet\\Links\\copilot.exe"],"Required":".+"},
+    {"Id":"GitHub.Copilot","Command":"copilot","Args":["--version"],"Product":"(?i)^GitHub Copilot","Paths":["%LOCALAPPDATA%\\Microsoft\\WinGet\\Links\\copilot.exe","%APPDATA%\\npm\\copilot.cmd"],"Required":".+"},
     {"Id":"astral-sh.uv","Command":"uv","Args":["--version"],"Product":"(?i)^(?:uv|astral.*uv)(?: |$)","Paths":["%USERPROFILE%\\.local\\bin\\uv.exe","%USERPROFILE%\\.cargo\\bin\\uv.exe","%LOCALAPPDATA%\\Microsoft\\WinGet\\Links\\uv.exe"],"Required":".+"},
     {"Id":"Microsoft.PowerShell","Command":"pwsh","Args":["-NoProfile","-Command","$PSVersionTable.PSVersion.ToString()"],"Product":"(?i)^PowerShell 7","Paths":["%ProgramFiles%\\PowerShell\\7\\pwsh.exe"],"Required":"^7\\."},
     {"Id":"OpenJS.NodeJS.LTS","Command":"node","Args":["--version"],"Product":"(?i)^Node\\.js","Paths":["%ProgramFiles%\\nodejs\\node.exe"],"Required":"^v(?:22|24|26)\\."},
@@ -12,7 +12,7 @@
     {"Id":"Kubernetes.kubectl","Command":"kubectl","Args":["version","--client"],"Product":"(?i)^Kubernetes(?:.*kubectl)?|^kubectl","Paths":["%LOCALAPPDATA%\\Microsoft\\WinGet\\Links\\kubectl.exe"],"Required":".+"}
   ],
   "Python": [
-    {"Id":"Python.Python.3.14","Command":"python","Args":["--version"],"Product":"(?i)^Python 3\\.[0-9]+\\.[0-9]+(?: \\([^)]+\\))?$","Paths":["%LOCALAPPDATA%\\Programs\\Python\\Python314\\python.exe","%ProgramFiles%\\Python314\\python.exe"],"Required":"\\b3\\.14\\.[0-9]+"}
+    {"Id":"Python.Python.3.14","Command":"python","Args":["--version"],"Product":"(?i)^Python 3\\.[0-9]+\\.[0-9]+(?:\\.[0-9]+)?(?: \\([^)]+\\))?$","Paths":["%LOCALAPPDATA%\\Programs\\Python\\Python314\\python.exe","%ProgramFiles%\\Python314\\python.exe"],"Required":"\\b3\\.14\\.[0-9]+"}
   ],
   "Java": [
     {"Id":"Microsoft.OpenJDK.25","Command":"java","Args":["-version"],"Product":"(?i)(?:OpenJDK|JDK|Java.*Development Kit|Temurin|Zulu|Corretto|Liberica|GraalVM)","Paths":["%JAVA_HOME%\\bin\\java.exe"],"Required":"version\\s+\"25(?:[.\"]|$)"}
