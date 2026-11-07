@@ -85,6 +85,17 @@ function Get-SetupExecutable {
                         if ($values.PSObject.Properties['ExecutablePath']) { $candidates += [string]$values.ExecutablePath }
                     }
                 }
+                if ($Package.Command -eq 'node') {
+                    foreach ($parent in @([Environment]::ExpandEnvironmentVariables('%NVM_HOME%'),
+                        [Environment]::ExpandEnvironmentVariables('%APPDATA%\nvm'))) {
+                        if ($parent -notmatch '%[^%]+%' -and (Test-Path -LiteralPath $parent -PathType Container)) {
+                            foreach ($directory in Get-ChildItem -LiteralPath $parent -Directory -ErrorAction Stop |
+                                Where-Object Name -Match '^v[0-9]+\.[0-9]+\.[0-9]+$') {
+                                $candidates += Join-Path $directory.FullName 'node.exe'
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -97,7 +108,7 @@ function Get-SetupExecutable {
                 # WinGet Links are permitted only when a real local target exists.
                 $item = Get-Item -LiteralPath $path -Force
                 if (-not $item.PSObject.Properties['Target'] -or -not $item.Target -or
-                    -not (Test-Path -LiteralPath ([string]$item.Target[0]) -PathType Leaf)) {
+                    -not (Test-Path -LiteralPath ([string]@($item.Target)[0]) -PathType Leaf)) {
                     throw 'Executable is an unresolved link; inventory unknown.'
                 }
             }
@@ -220,12 +231,18 @@ function Invoke-SetupNative {
         if (-not $process.Start()) { throw 'Installer launcher could not start.' }
         $stdout = $process.StandardOutput.ReadLineAsync()
         $stderr = $process.StandardError.ReadLineAsync()
-        while (-not $process.HasExited -or -not $stdout.IsCompleted -or -not $stderr.IsCompleted) {
+        $stdoutDone = $false
+        $stderrDone = $false
+        while (-not $process.HasExited -or -not $stdoutDone -or -not $stderrDone) {
             foreach ($stream in @('stdout', 'stderr')) {
                 $task = if ($stream -eq 'stdout') { $stdout } else { $stderr }
-                if ($task.IsCompleted) {
+                $done = if ($stream -eq 'stdout') { $stdoutDone } else { $stderrDone }
+                if (-not $done -and $task.IsCompleted) {
                     $line = $task.GetAwaiter().GetResult()
-                    if ($null -ne $line) {
+                    if ($null -eq $line) {
+                        if ($stream -eq 'stdout') { $stdoutDone = $true }
+                        else { $stderrDone = $true }
+                    } else {
                         Write-ShowcaseMessage "[INFO] ${Target}: $line"
                         if ($stream -eq 'stdout') { $stdout = $process.StandardOutput.ReadLineAsync() }
                         else { $stderr = $process.StandardError.ReadLineAsync() }
@@ -237,7 +254,6 @@ function Invoke-SetupNative {
                 if (-not $process.HasExited) { $process.Kill() }
                 throw "Wait timed out after ${TimeoutSeconds}s for $Target. Only this launcher was stopped; vendor/elevated installer state is unknown. Do not retry until its completion/failure is confirmed."
             }
-            if ($process.HasExited -and $stdout.IsCompleted -and $stderr.IsCompleted) { break }
             Start-Sleep -Milliseconds 100
         }
         return [pscustomobject]@{ ExitCode = $process.ExitCode; ElapsedSeconds = [int]$clock.Elapsed.TotalSeconds }

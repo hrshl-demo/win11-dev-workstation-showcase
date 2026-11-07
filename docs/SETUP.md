@@ -188,7 +188,7 @@ If the approved enterprise profile/source cannot be honored by this resource, **
 
 ## Phase 3: post-setup verification
 
-After the selected modules/any user restart, open a **fresh terminal** (reload VS Code if its inherited PATH is stale), then choose **Verify**:
+After the selected modules/any user restart, open a **fresh terminal**, then choose **Verify**. If VS Code was open during installation, a new terminal or Reload Window can still inherit its old process environment: save work, fully exit VS Code and reopen it from Windows when appropriate. Known-path discovery itself never changes global PATH/settings.
 
 ```powershell
 .\scripts\verify.ps1
