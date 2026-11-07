@@ -88,9 +88,11 @@ function Get-PreflightCheck {
     }
     foreach ($hostName in @('github.com', 'raw.githubusercontent.com', 'codeload.github.com',
         'release-assets.githubusercontent.com', 'www.powershellgallery.com', 'cdn.winget.microsoft.com')) {
-        $uri = if ($hostName -eq 'raw.githubusercontent.com') {
-            'https://raw.githubusercontent.com/microsoft/WindowsDeveloperConfig/refs/heads/main/README.md'
-        } else { "https://$hostName/" }
+        $uri = switch ($hostName) {
+            'raw.githubusercontent.com' { 'https://raw.githubusercontent.com/microsoft/WindowsDeveloperConfig/refs/heads/main/README.md' }
+            'codeload.github.com' { 'https://codeload.github.com/microsoft/WindowsDeveloperConfig/zip/refs/heads/main' }
+            default { "https://$hostName/" }
+        }
         $probe = Get-HttpsProbe -Uri $uri -TimeoutSeconds 5
         $status = if ($probe.Reachable) { 'PASS' } else { 'FAIL' }
         $message = "URI: $($probe.Uri); HTTP: $($probe.StatusCode); attempts: $($probe.Attempts)/3; type: $($probe.ErrorType); $($probe.Reason)"

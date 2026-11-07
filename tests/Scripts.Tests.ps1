@@ -161,6 +161,12 @@ Describe 'Actual preflight readiness functions with safe mocks' {
     It 'all required mocked readiness checks pass' {
         Get-CheckExitCode @(Get-PreflightCheck) | Should -Be 0
         Should -Invoke Get-HttpsProbe -Times 6 -Exactly -ParameterFilter { $TimeoutSeconds -eq 5 }
+        Should -Invoke Get-HttpsProbe -Times 1 -Exactly -ParameterFilter {
+            [string]$Uri -eq 'https://codeload.github.com/microsoft/WindowsDeveloperConfig/zip/refs/heads/main'
+        }
+        Should -Invoke Get-HttpsProbe -Times 1 -Exactly -ParameterFilter {
+            [string]$Uri -eq 'https://raw.githubusercontent.com/microsoft/WindowsDeveloperConfig/refs/heads/main/README.md'
+        }
     }
     It 'outputs clean JSON and returns a separate integer status' {
         $output = @(Invoke-Preflight -Json)
