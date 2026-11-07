@@ -1,0 +1,70 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Preflight",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\preflight.ps1"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Verify",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\verify.ps1"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Python",
+      "type": "process",
+      "command": "uv",
+      "args": ["run", "pytest"],
+      "options": { "cwd": "${workspaceFolder}\\samples\\python-emi-api" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Java",
+      "type": "process",
+      "command": "${workspaceFolder}\\samples\\java-ifsc-service\\mvnw.cmd",
+      "args": ["-B", "verify"],
+      "options": { "cwd": "${workspaceFolder}\\samples\\java-ifsc-service" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Go",
+      "type": "process",
+      "command": "go",
+      "args": ["test", "./..."],
+      "options": { "cwd": "${workspaceFolder}\\samples\\go-fx-rates" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Test all samples",
+      "dependsOn": ["Test Python", "Test Java", "Test Go"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
+      "label": "Run EMI API (local)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\run-sample.ps1", "-Name", "python-emi-api", "-Mode", "local"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Run EMI API (container)",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\run-sample.ps1", "-Name", "python-emi-api", "-Mode", "container"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Reset demo",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\demo-reset.ps1"],
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+# yaml-language-server: $schema=https://aka.ms/configuration-dsc-schema/0.2
+properties:
+  configurationVersion: 0.2.0
+  assertions:
+    - resource: Microsoft.Windows.Developer/OsVersion
+      id: windows11
+      directives:
+        description: Windows 11 build 22621 or later
+        allowPrerelease: true
+      settings:
+        MinVersion: '10.0.22621'
+  resources:
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: vscode
+      dependsOn: [windows11]
+      settings:
+        id: Microsoft.VisualStudioCode
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: git
+      dependsOn: [windows11]
+      directives:
+        securityContext: elevated
+      settings:
+        id: Git.Git
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: github-cli
+      dependsOn: [windows11]
+      directives:
+        securityContext: elevated
+      settings:
+        id: GitHub.cli
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: copilot-cli
+      dependsOn: [windows11]
+      settings:
+        id: GitHub.Copilot
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: python
+      dependsOn: [windows11]
+      settings:
+        id: Python.Python.3.14
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: azure-cli
+      dependsOn: [windows11]
+      directives:
+        securityContext: elevated
+      settings:
+        id: Microsoft.AzureCLI
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: java
+      dependsOn: [windows11]
+      directives:
+        securityContext: elevated
+      settings:
+        id: Microsoft.OpenJDK.25
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: go
+      dependsOn: [windows11]
+      directives:
+        securityContext: elevated
+      settings:
+        id: GoLang.Go
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: azd
+      dependsOn: [windows11]
+      settings:
+        id: Microsoft.Azd
+        source: winget
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: kubectl
+      dependsOn: [windows11]
+      settings:
+        id: Kubernetes.kubectl
+        source: winget
+    - resource: PSDscResources/Script
+      id: wsl-containers
+      dependsOn: [windows11]
+      directives:
+        description: Update WSL only when the container CLI is absent
+        securityContext: elevated
+      settings:
+        GetScript: |
+          @{ Result = [string][bool](Get-Command wslc.exe -ErrorAction SilentlyContinue) }
+        TestScript: |
+          [bool](Get-Command wslc.exe -ErrorAction SilentlyContinue)
+        SetScript: |
+          $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          Import-Module '${WinGetConfigRoot}\..\scripts\_common.psm1' -Force
+          Assert-WorkstationPolicy
+          & wsl.exe --update
+          if ($LASTEXITCODE -ne 0) { throw "WSL update failed: exit $LASTEXITCODE. Contact IT for policy or permission failures." }
+          if (-not (Get-Command wslc.exe -ErrorAction SilentlyContinue)) { throw 'WSL updated but wslc is unavailable. Restart if requested, then contact IT; no runtime fallback was applied.' }
+    # Licensed product: only where already licensed. Not applied by default.
+    # - resource: Microsoft.WinGet.DSC/WinGetPackage
+    #   id: optional-docker
+    #   dependsOn: [windows11]
+    #   directives:
+    #     securityContext: elevated
+    #   settings:
+    #     id: Docker.DockerDesktop
+    #     source: winget
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: python-extension
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: ms-python.python
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: java-extension
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: vscjava.vscode-java-pack
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: go-extension
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: golang.go
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: azure-resources
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: ms-azuretools.vscode-azureresourcegroups
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: azure-copilot
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: ms-azuretools.vscode-azure-github-copilot
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: bicep
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: ms-azuretools.vscode-bicep
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: containers
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: ms-azuretools.vscode-containers
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: dev-containers
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: ms-vscode-remote.remote-containers
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: wsl
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: ms-vscode-remote.remote-wsl
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: pull-requests
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: GitHub.vscode-pull-request-github
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: powershell-extension
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: ms-vscode.powershell
+        Exist: true
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: yaml-extension
+      dependsOn: [vscode]
+      directives:
+        allowPrerelease: true
+      settings:
+        Name: redhat.vscode-yaml
+        Exist: true

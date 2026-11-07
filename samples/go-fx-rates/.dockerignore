@@ -1,0 +1,6 @@
+.env
+.env.*
+.scratch
+*.test
+coverage.out
+fx-rates

@@ -1,0 +1,17 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "vscjava.vscode-java-pack",
+    "golang.go",
+    "ms-azuretools.vscode-azureresourcegroups",
+    "ms-azuretools.vscode-azure-github-copilot",
+    "ms-azuretools.vscode-bicep",
+    "ms-azuretools.vscode-containers",
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode-remote.remote-wsl",
+    "GitHub.vscode-pull-request-github",
+    "vscjava.migrate-java-to-azure",
+    "ms-vscode.powershell",
+    "redhat.vscode-yaml"
+  ]
+}

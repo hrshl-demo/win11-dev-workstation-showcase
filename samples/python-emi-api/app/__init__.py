@@ -1,0 +1,1 @@
+"""Synthetic EMI sample application."""

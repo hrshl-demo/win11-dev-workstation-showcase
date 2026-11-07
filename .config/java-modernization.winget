@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=https://aka.ms/configuration-dsc-schema/0.2
+properties:
+  configurationVersion: 0.2.0
+  resources:
+    - resource: Microsoft.WinGet.DSC/WinGetPackage
+      id: java11
+      directives:
+        description: Optional runtime for the deliberately legacy modernization demo
+        securityContext: elevated
+      settings:
+        id: Microsoft.OpenJDK.11
+        source: winget
+    - resource: Microsoft.VSCode.Dsc/VSCodeExtension
+      id: modernizer
+      dependsOn: [java11]
+      directives:
+        description: Optional GitHub Copilot modernization extension; apply standard config first
+        allowPrerelease: true
+      settings:
+        Name: vscjava.migrate-java-to-azure
+        Exist: true

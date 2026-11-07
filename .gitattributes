@@ -1,0 +1,20 @@
+* text=auto
+*.md text eol=lf
+LICENSE text eol=lf
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.psd1 text eol=crlf
+*.cmd text eol=crlf
+*.sh text eol=lf
+**/mvnw text eol=lf
+*.winget text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.java text eol=lf
+*.go text eol=lf
+*.jar binary
+*.png binary
+*.jpg binary
+*.ico binary

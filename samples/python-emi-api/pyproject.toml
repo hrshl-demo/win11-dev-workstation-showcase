@@ -1,0 +1,24 @@
+[project]
+name = "python-emi-api"
+version = "1.0.0"
+description = "Synthetic INR EMI calculations with exact decimal arithmetic"
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "fastapi==0.118.0",
+    "pydantic==2.12.4",
+    "uvicorn==0.37.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx==0.28.1",
+    "pytest==8.3.4",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"

@@ -1,0 +1,42 @@
+# Local credentials and machine state
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+*.p12
+.azure/
+**/.azure/
+devconfig-standard.ps1
+devconfig-full.ps1
+devconfig-uninstall.ps1
+
+# Build and test outputs
+.tools/
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.ruff_cache/
+**/.mypy_cache/
+**/.coverage
+**/htmlcov/
+**/target/
+**/node_modules/
+**/bin/
+**/obj/
+*.test
+coverage.out
+*.log
+*.tmp
+*.bak
+
+# Local editor and OS files
+.idea/
+*.code-workspace
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Keep reviewed project configuration, lockfiles and Maven wrappers tracked.

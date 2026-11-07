@@ -1,0 +1,31 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI EMI",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "cwd": "${workspaceFolder}\\samples\\python-emi-api",
+      "args": ["app.main:app", "--host", "127.0.0.1", "--port", "8080"],
+      "env": { "PORT": "8080" },
+      "justMyCode": true
+    },
+    {
+      "name": "Spring Boot IFSC",
+      "type": "java",
+      "request": "launch",
+      "mainClass": "showcase.ifsc.IfscApplication",
+      "projectName": "java-ifsc-service",
+      "env": { "PORT": "8080" }
+    },
+    {
+      "name": "Go FX",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}\\samples\\go-fx-rates",
+      "env": { "PORT": "8080" }
+    }
+  ]
+}

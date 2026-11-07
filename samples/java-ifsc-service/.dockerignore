@@ -1,0 +1,7 @@
+target
+.scratch
+.maven-user-home
+.git
+.idea
+.vscode
+*.log
