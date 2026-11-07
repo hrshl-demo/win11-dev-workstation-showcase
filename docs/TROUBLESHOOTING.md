@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with `.\scripts\preflight.ps1` and `winget --info` from **VS Code → Terminal → New Terminal → PowerShell**, as the signed-in developer. Record exact output and redact paths, identities and secrets before sharing. State-changing fixes below are **human-operated, IT-approved actions**; agents must not execute them. Already configured devices skip bootstrap; a test failure is not a reason to reinstall the workstation.
+Start with [Phase 0 prerequisites](SETUP.md#phase-0-prerequisites-before-repository-scripts) from **VS Code → Terminal → New Terminal → PowerShell**, as the signed-in developer. Inline `Get-ExecutionPolicy -List` and `Get-ExecutionPolicy` work even before scripts are permitted. Only then run Preflight and `winget --info`. Redact paths, identities and secrets. State-changing fixes are **human-operated, IT-approved**, never agent actions. Partial devices follow automated Phase 2 setup; post-setup package/test failures are not a reason to reinstall everything.
 
 ## WinGet
 
@@ -41,11 +41,15 @@ Repair-WinGetPackageManager -Force -Latest
 
 | Symptom | Action |
 | --- | --- |
+| Verify exit 1 before setup; languages/runtime/extensions absent | Expected optional inventory result, not failed installation or a bootstrap gate. If Preflight has no FAIL and approvals are complete, use **Setup preview → User-run setup** for missing/incomplete base; **Finish setup** only for confirmed complete base/add-on gaps |
 | Repository script blocked before bootstrap/preflight runs, or module import denied | An effective Restricted policy blocks repository scripts; AllSigned requires trusted signatures for scripts and modules. Bootstrap may be blocked before its body or preflight runs, and module imports may also be denied. Obtain an IT-approved script-execution context first. The upstream Microsoft signature does not authorize this repository's scripts. No automatic policy override is permitted. |
 | Base restarted; add-on missing | Wait for `WindowsDevConfigResume` and the base summary, then run `.\scripts\bootstrap.ps1 -SkipBase` in a fresh terminal |
 | Signature invalid / wrong publisher | Stop. Do not run the downloaded wrapper; review network inspection, trust chain and upstream source with IT |
 | Tools missing immediately after install | Open a new terminal; compare PATH and `.\scripts\verify.ps1`. Do not claim success until verification passes |
-| `wslc` unavailable | Check `wsl --version`; CLI requires WSL 2.9.3+. IT/human may approve `wsl --update`; agents must not run it |
+| Default Restricted; all policy scopes Undefined | Read effective policy as well as the list. Only the human with IT permission may follow Phase 0's persistent CurrentUser RemoteSigned route. Undefined does not certify all IT policy is clear; no Bypass/process override |
+| Required extensions missing or disabled after setup; private marketplace shown | The banner alone proves no block. Compare the approved CLI installation/account, intended existing profile, enabled extensions and effective source/allowlist policy. DSC/Verify do not select that profile. Stop acceptance if unsupported; IT supplies compatible **automated** managed delivery, not twelve manual installs or a public-marketplace fallback |
+| WSL/wslc absent before setup | Preflight WARN is expected. Use the full standard-base bootstrap route after approvals, not SkipBase as a missing-WSL repair |
+| `wslc` unavailable after completed setup | Check `wsl --version`, resume/logs and policy; CLI requires WSL 2.9.3+. IT/human may approve the documented configuration update; agents must not run it |
 | Container image pull denied | Check WSL container/registry policies and approved registry availability. Never bypass the allowlist |
 | Dev Containers expects `wslc` on a Docker-standard device | Remove the workspace `dev.containers.dockerPath` override with approval; use the approved runtime |
 | Modernization extension missing | Expected unless opted in; use `-IncludeJavaModernization` only for the optional exercise |
@@ -55,7 +59,7 @@ Repair-WinGetPackageManager -Force -Latest
 
 | Symptom | Safe next step |
 | --- | --- |
-| Test/lint/coverage says a package or runtime is missing | Mark NOT RUN. The developer reviews the explicit Restore task for project packages; IT supplies missing tools. Daily commands/agents do not install or restore. |
+| Test/lint/coverage says a package or runtime is missing | Mark NOT RUN. Missing setup outputs return to the appropriate automated Phase 2 route, not individual manual installs; project packages use explicit Phase 4 Restore. After completed setup, diagnose logs/PATH/policy before reapplying. Daily commands/agents do not install or restore. |
 | RunContainer reports no existing local image | Mark NOT RUN. The developer may separately approve Restore with RestoreTarget ContainerImages and -Confirm; Run itself never builds or pulls and uses --pull=never. |
 | Python/Java tests missing from Testing view | Select the locked `.venv` interpreter/correct Java 25 JDK; check extension discovery. Do not accept automatic helper/tool downloads without approval. |
 | GitHub sign-in works but Publish Branch fails | Sign-in does not grant repository write access. Review remote/organisation access or use an approved fork in the GitHub Pull Requests flow. |

@@ -4,9 +4,20 @@ A VS Code-first developer workflow for synthetic Python EMI, Java IFSC and Go FX
 
 > Community showcase, not an official Microsoft product. The workstation base is [Microsoft Windows Developer Config](https://github.com/microsoft/WindowsDeveloperConfig). This is not a production banking system.
 
-## Start in VS Code
+## End-to-end journey: Phase 0 through Phase 7
 
-Use the organisation-approved VS Code installation. Choose **Source Control → Clone Repository** (or **Ctrl+Shift+P → Git: Clone**), enter:
+**Start with [Phase 0 prerequisites](docs/SETUP.md#phase-0-prerequisites-before-repository-scripts), before executing any script.** IT/humans supply supported Windows, virtualization/disk, elevation/licensing, App Installer/WinGet, network/proxy, repository access, approved Git/VS Code to clone, script execution and extension-source approvals. Python/Java/Go/WSL and extensions are automated setup outputs, not a manual shopping list.
+
+In the integrated PowerShell terminal, the inline prerequisite checks work even when scripts are blocked:
+
+```powershell
+Get-ExecutionPolicy -List
+Get-ExecutionPolicy
+```
+
+Effective Restricted can occur with all scopes Undefined. The guide documents a **human-only, IT-permitted** CurrentUser RemoteSigned route for default restriction, its persistence and the AllSigned/Group Policy stop conditions. No agent or setup script changes policy; no Bypass or blanket unblocking.
+
+After those prerequisites, choose **Source Control → Clone Repository** (or **Ctrl+Shift+P → Git: Clone**) in approved VS Code:
 
 ```text
 https://github.com/hrshl-demo/win11-dev-workstation-showcase
@@ -14,26 +25,22 @@ https://github.com/hrshl-demo/win11-dev-workstation-showcase
 
 Open the cloned folder. Review its source before accepting Workspace Trust. All commands below run in **Terminal → New Terminal → PowerShell** at the repository root; no separate terminal is needed. Browser sign-in, UAC and restart prompts are the unavoidable external interactions.
 
-| Your laptop | What to do |
+| Phase | Exact task / acceptance |
 | --- | --- |
-| **Fresh, IT-approved laptop** | IT first supplies approved VS Code and Git. Read [Setup once](docs/SETUP.md#setup-once-fresh-approved-laptop), run read-only preflight, review setup, then personally run bootstrap. After any restart, reopen VS Code and finish the add-on. Agents never install or change policy. |
-| **Already configured laptop** | Skip bootstrap. Run `.\scripts\verify.ps1`. Resolve missing prerequisites with IT; do not reinstall everything. |
+| **0 — Prerequisites** | [Human/IT checklist and inline policy checks](docs/SETUP.md#phase-0-prerequisites-before-repository-scripts); Git/VS Code required before clone |
+| **1 — Preflight** | **Preflight**: no FAIL, exit 0. WSL/wslc WARN is expected before setup. Optional **Verify** inventory may deliberately exit 1 for missing setup outputs |
+| **2 — Automated laptop setup** | **Setup preview**, then confirmed **User-run setup** for fresh **or partial** devices whose base is incomplete. Standard Microsoft base + add-on installs tools and 12 extensions automatically, not per-extension clicks |
+| **3 — Verify setup** | After base reboot/resume, **Finish setup** only when base is complete, then fresh terminal and **Verify**. Require profile exit 0 and approved/enabled extensions in the intended window |
+| **4 — Restore and test** | Explicit **Restore project dependencies** → **Dependencies**, then **Test all samples**, **Lint all samples**, **Coverage all samples**. `All` excludes legacy; daily checks do not restore |
+| **5 — Run/debug/containers** | **Run EMI API (local)**, first request below; F5 needs existing debugger prerequisites. Container Run needs explicitly prepared images, uses `--pull=never` |
+| **6 — GitHub / CI** | Source Control branch/commit/**Publish Branch**, GitHub PR/checks, **GitHub workflow status** |
+| **7 — Existing AKS** | [Human/IT variables, OIDC/RBAC/network and independent approval](docs/GITHUB-AKS.md), then separately chosen **Deploy AKS (manual main only)**; no push/PR deployment or provisioning |
 
-Then follow these separate stages:
+**Partial laptop:** already having Git/VS Code or some languages does not mean setup is complete. Missing WSL/base means full **User-run setup**; **Finish setup / `-SkipBase`** is only for a confirmed complete base with missing add-on outputs or after base resume. Fully verified devices skip installation, not verification. No forced removal of existing tools or guarantee of unchanged settings.
 
-1. **Restore project packages** — choose **Terminal → Run Task → Restore project dependencies** and its default **Dependencies** target, or explicitly run `.\scripts\developer.ps1 -Action Restore -Sample All` once, and again after dependency changes. The same task's separately confirmed **ContainerImages** target builds local images only when explicitly selected. Restore can download approved packages/base images; it is not workstation setup or permission for an agent to restore.
-2. **Daily test, lint, coverage** — choose **Terminal → Run Task → Test all samples / Lint all samples / Coverage all samples**, or the integrated terminal:
+**Enterprise extension delivery:** automation uses VS Code DSC/CLI, which does not select the active window's profile or expose a marketplace parameter. Before apply, IT must verify approved CLI/account/profile/source compatibility and all required IDs; after apply verify they are enabled in the intended window. A private-marketplace banner alone proves neither a block nor automation compatibility. Unsupported routing is a setup acceptance failure requiring a compatible **managed automated delivery** route, not manual installation of each missing extension or a public-marketplace bypass. See [source/profile acceptance](docs/SETUP.md#extension-source-and-profile-acceptance).
 
-   ```powershell
-   .\scripts\developer.ps1 -Action Test -Sample All
-   .\scripts\developer.ps1 -Action Lint -Sample All
-   .\scripts\developer.ps1 -Action Coverage -Sample All
-   ```
-
-   Daily commands do not install missing prerequisites. `All` excludes the intentionally legacy Java exercise. See [tools and reports](docs/SETUP.md#daily-test-lint-and-coverage).
-3. **GitHub workflow** — sign in from the GitHub view, create a branch from the Status Bar, stage and commit in Source Control, **Publish Branch**, then **GitHub Pull Requests: Create Pull Request**. Inspect CI checks before merging. See [the walkthrough](docs/SETUP.md#github-workflow).
-4. **Run a sample** — choose the local/container task only when you personally want to start it. Run never restores packages or builds/pulls images; container Run requires an existing local image and uses `--pull=never`. Automatic runtime selection uses `wslc` first and `docker` **only if `wslc` is absent**. The shared launcher also accepts an explicitly approved `-Runtime wslc` or `-Runtime docker`, probes only that runtime and never falls back after denial. Do not use selection to bypass policy. Docker Desktop remains a commented, optional licensing choice, not the default.
-5. **Existing AKS + ACR** — [review the GitHub/AKS plan](docs/GITHUB-AKS.md). Deployment is a separate, human-dispatched, main-only workflow with independent environment approval. No push or PR deploys, and no cluster/registry provisioning.
+The default runtime remains `wslc`, Docker only if absent; explicit approved selection never bypasses denial. Docker Desktop stays commented, optional and licence-reviewed. Full laptop provisioning is separate from the 15-minute coding demo; CI is not fresh-device acceptance.
 
 ## Your first request
 

@@ -1,10 +1,10 @@
 # 15-minute VS Code demo
 
-Setup and package restoration happen **before** the presentation. Use synthetic data and a disposable reviewed checkout of safe revised `main`. All work uses VS Code menus, tasks and integrated terminals. Do not approve agent requests to install, authenticate, launch, dispatch, provision or bypass policy.
+Setup and package restoration happen **before** the presentation. Full provisioning is not this 15-minute coding demo; a separate provisioning presentation needs its own download/reboot/enterprise-acceptance window, not recorded CI as fresh-laptop proof. Use synthetic data and a disposable reviewed checkout of safe revised `main`. All work uses VS Code menus, tasks and integrated terminals. Do not approve agent requests to install, authenticate, launch, dispatch, provision or bypass policy.
 
 ## Pre-demo checklist
 
-- Follow [Setup](SETUP.md): fresh approved laptop or already configured laptop, then explicit **user** Restore. Confirm manifest-defined runtimes, test packages, 12 required extensions and approved GitHub/Copilot access.
+- Follow [Setup Phase 0–7](SETUP.md): prerequisites before scripts, Preflight, automated full setup for fresh/partial incomplete-base devices, Finish setup only after base completion/resume, post-setup Verify then explicit **user** Restore. Confirm runtimes, test packages, 12 required extensions enabled in the intended approved profile/source and GitHub/Copilot access.
 - Rehearse daily Test/Lint/Coverage tasks and inspect reports. Before the presentation, explicitly build approved local images through confirmed Restore ContainerImages. RunContainer requires those existing images and uses `--pull=never`, with no build/pull/restoration. Missing prerequisites mean NOT RUN; do not restore packages/images or repair the machine during the demo.
 - Confirm instructions, onboarding agent and skills in the Agent Customizations editor. Tool access does not grant permission.
 - Inspect current `main` and the retained `demo-complete` schedule fallback. The original `demo-baseline` tag is historical unsafe code: **do not launch it, restore running samples from it or deploy it**.
@@ -15,7 +15,7 @@ Setup and package restoration happen **before** the presentation. Use synthetic 
 
 ## 1. Readiness and developer workflow — 00:00–02:00
 
-**Say:** “There are two routes: set up an approved fresh device once, or verify an existing device. Package restore is a separate user action; daily checks never install.”
+**Say:** “Prerequisites come before scripts. Fresh or partially configured devices use approved automated setup; missing tools in pre-install inventory are expected. Fully verified devices skip installation. Package restore is separate; daily checks never install.”
 
 In **Terminal → New Terminal → PowerShell**, repository root:
 
@@ -29,7 +29,7 @@ Show **Terminal → Run Task**, the Testing Activity Bar, Source Control and the
 Paste to **Workstation onboarding**:
 
 ```text
-Read docs\SETUP.md and docs\IT-PREREQUISITES.md. Explain the verification results and the fresh-approved versus already-configured VS Code routes. Separate setup once, explicit human package Restore, daily no-restore tests/lint/coverage, GitHub PR review and existing AKS deployment. You may run only scripts\preflight.ps1 and scripts\verify.ps1 without RunConfigTest. Do not install, repair, change policy, authenticate, launch or deploy. Explain human-operated next steps and checks NOT RUN.
+Read docs\SETUP.md and docs\IT-PREREQUISITES.md. Explain Phase 0 prerequisites before scripts and fresh/partial/fully verified routes. Before setup, optional Verify exit 1 for missing outputs is expected; Preflight no-FAIL gates human bootstrap and absent WSL is advisory. Full setup is for an incomplete base; SkipBase only after confirmed completion/resume. Explain automated extensions and approved source/profile acceptance, not manual per-extension clicks. Separate explicit human Restore, no-restore daily tests, GitHub CI and existing AKS approval. You may run only scripts\preflight.ps1 and scripts\verify.ps1 without RunConfigTest. Do not install, repair, change policy, authenticate, launch or deploy. Explain human next steps and NOT RUN checks.
 ```
 
 **Expected:** Accurate readiness/test output, with optional modernization distinguished. **Fallback:** Label recorded output and explain current failures; no laptop repair.
