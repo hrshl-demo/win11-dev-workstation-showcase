@@ -275,6 +275,9 @@ namespace Showcase {
         [DllImport("kernel32.dll", SetLastError=true)]
         static extern bool SetFileInformationByHandle(SafeFileHandle handle, int kind,
             ref byte delete, uint length);
+        [DllImport("kernel32.dll", CharSet=CharSet.Unicode, SetLastError=true)]
+        static extern uint GetFinalPathNameByHandle(SafeFileHandle handle,
+            System.Text.StringBuilder path, uint length, uint flags);
         public static FileStream Open(string path) {
             var handle = CreateFile(path, 0x80010000, 0, IntPtr.Zero, 3, 0x00200000, IntPtr.Zero);
             if (handle.IsInvalid) { handle.Dispose(); throw new Win32Exception(Marshal.GetLastWin32Error()); }
@@ -285,7 +288,17 @@ namespace Showcase {
             }
             return new FileStream(handle, FileAccess.Read);
         }
-        public static void Delete(FileStream stream) {
+        public static void Delete(FileStream stream, string expectedPath) {
+            var path = new System.Text.StringBuilder(32768);
+            uint length = GetFinalPathNameByHandle(stream.SafeFileHandle, path, 32768, 0);
+            if (length == 0 || length >= 32768) throw new IOException("Cannot verify locked output path.");
+            string finalPath = path.ToString();
+            if (finalPath.StartsWith(@"\\?\UNC\", StringComparison.OrdinalIgnoreCase))
+                finalPath = @"\\" + finalPath.Substring(8);
+            else if (finalPath.StartsWith(@"\\?\", StringComparison.Ordinal))
+                finalPath = finalPath.Substring(4);
+            if (!String.Equals(finalPath, System.IO.Path.GetFullPath(expectedPath), StringComparison.OrdinalIgnoreCase))
+                throw new IOException("Locked output moved; deletion refused.");
             byte delete = 1;
             if (!SetFileInformationByHandle(stream.SafeFileHandle, 4, ref delete, 1))
                 throw new Win32Exception(Marshal.GetLastWin32Error());
@@ -307,7 +320,7 @@ function Remove-OwnedOutput {
     [CmdletBinding(SupportsShouldProcess = $true)]
     param([IO.FileStream]$Handle, [string]$Path)
     if ($PSCmdlet.ShouldProcess($Path, 'Delete the exact locked output file')) {
-        [Showcase.OwnedFile]::Delete($Handle)
+        [Showcase.OwnedFile]::Delete($Handle, $Path)
     }
 }
 
