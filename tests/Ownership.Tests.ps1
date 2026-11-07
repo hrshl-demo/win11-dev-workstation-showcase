@@ -171,6 +171,18 @@ Describe 'Conservative checkout ownership' {
         { Open-OwnedOutput $path } | Should -Throw '*Hardlink*'
         Get-Content -LiteralPath $path | Should -Be 'user data'
     }
+    It 'refuses deletion through a locked handle whose final path is not the approved path' {
+        $artifacts = Join-Path $script:FixtureRoot 'artifacts'
+        $null = New-Item -ItemType Directory -Path $artifacts
+        $path = Join-Path $artifacts 'pester.xml'
+        [IO.File]::WriteAllText($path, 'generated')
+        $handle = Open-OwnedOutput $path
+        try {
+            { Remove-OwnedOutput $handle (Join-Path $artifacts 'another.xml') -Confirm:$false } |
+                Should -Throw '*moved*'
+        } finally { $handle.Dispose() }
+        Get-Content -LiteralPath $path | Should -Be 'generated'
+    }
 }
 
 Describe 'Container identity and cleanup contracts' {
