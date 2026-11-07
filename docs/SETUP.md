@@ -67,7 +67,25 @@ Choose **Terminal → Run Task → Preflight**, or:
 
 **Gate:** no Preflight FAIL and exit 0, plus Phase 0 approvals. WARN is advisory: missing WSL/wslc is expected before setup and does not block the Microsoft base. A policy, disk, virtualization, WinGet or endpoint FAIL must be resolved before bootstrap; a PASS does not certify every enterprise control or payload source.
 
-HTTPS results include URI/status/attempts and safe failure categories. Classified transient timeout/DNS/connect failures get at most three five-second attempts with 250 ms backoff; HTTP denial and certificate failures do not retry. Root 404/405 means reachability only, not artifact access; redirects are not followed. If exhausted, bootstrap stops before setup and reports the failed checks—do not keep retrying full setup blindly or Restore dependencies to unblock the network. Use read-only Preflight diagnostics and [the network guidance](TROUBLESHOOTING.md#intermittent-https-preflight-failures).
+HTTPS results include URI/status/attempts, the actual timeout and safe failure categories. Default timeout remains **5 seconds per attempt**; classified transient timeout/DNS/connect failures get at most three attempts with 250 ms backoff. HTTP denial and certificate failures do not retry. Root 404/405 means reachability only, not artifact access; redirects are not followed. If exhausted, bootstrap stops before setup and reports the failed checks—do not keep retrying full setup blindly or Restore dependencies to unblock the network.
+
+### Explicit slow-network choice
+
+If a permitted endpoint responds too slowly, choose **Terminal → Run Task → Preflight → 30** in the HTTPS timeout picker (choices **5 / 15 / 30**, default **5**). If readiness passes and setup is approved, choose **User-run setup → 30** too; select **30 again** for **Finish setup** after base resume if needed. The selection is passed through the dispatcher and bootstrap to its own child Preflight; a separate successful 30-second Preflight is not cached and does not change a later default-5 setup. Setup preview also shows the chosen context; no Test/Run task gets this picker.
+
+Direct equivalent user-operated commands:
+
+```powershell
+.\scripts\preflight.ps1 -HttpsTimeoutSeconds 30
+# HUMAN ONLY after readiness/approvals; not executed by an agent:
+.\scripts\bootstrap.ps1 -HttpsTimeoutSeconds 30
+# Only after the Microsoft base is confirmed complete/resumed:
+.\scripts\bootstrap.ps1 -SkipBase -HttpsTimeoutSeconds 30
+```
+
+`HttpsTimeoutSeconds` accepts **1–30** and affects only HTTPS readiness requests, not installer download/health/configuration timeouts or proxy/TLS policy. Three attempts across six hosts plus backoff allow **93 seconds of HTTPS budget at 5**, **273 at 15**, **543 at 30**; child Preflight additionally has a fixed 120-second platform allowance, giving bounded outer budgets **213 / 393 / 663 seconds**. Actual HTTP/DNS implementation timing may reach that outer timeout; a slow option can take about 11 minutes before a full six-host failure, not wait forever. Denials/certificate errors still stop without retry, and failed checks still gate setup.
+
+A read-only operator observation of the same official README HEAD request returned HTTP 200 in **21.74 seconds** with a 30-second timeout after exhausting default-5 attempts. That demonstrates a usable slower setting for that observation, not that every failure is latency or all artifacts/enterprise sources are permitted. See [diagnostics](TROUBLESHOOTING.md#intermittent-https-preflight-failures).
 
 Optionally choose **Verify** (`.\scripts\verify.ps1`) to inventory existing tools. Before setup, missing/wrong Python, Java, Go, runtime or extensions deliberately produce **exit 1**. This is an expected inventory failure, **not installation failure** and not the Preflight gate. Do not require all Verify checks to pass before installing their outputs.
 

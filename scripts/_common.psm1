@@ -346,12 +346,24 @@ function Get-HttpsProbe {
             return [pscustomobject]@{
                 Uri = $Uri.AbsoluteUri; Reachable = $reachable; StatusCode = $statusCode
                 Attempts = $attempt; ErrorType = $errorType; Reason = $reason
+                TimeoutSeconds = $TimeoutSeconds
                 RetryReasons = @($failures)
             }
         }
     } finally {
         [Net.ServicePointManager]::SecurityProtocol = $originalTls
     }
+}
+
+function Get-PreflightTimeout {
+    <#
+    .SYNOPSIS
+    Budget six hosts, three HTTPS attempts, backoff and platform checks.
+    #>
+    [CmdletBinding()]
+    [OutputType([int])]
+    param([ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
+    return (6 * 3 * $HttpsTimeoutSeconds + 3 + 120)
 }
 
 function Test-HttpsEndpoint {
@@ -513,6 +525,6 @@ function Read-MicrosoftSignedScript {
 Export-ModuleMember -Function Get-ShowcaseRoot, Get-CheckResult, Write-CheckReport, Write-ShowcaseMessage,
     Get-CheckExitCode, Get-WinGetPolicy, Assert-WinGetPolicy, Assert-WorkstationPolicy, Get-NativeCommandPath,
     ConvertTo-NativeArgument, Invoke-NativeCommand, Assert-NativeSuccess,
-    Get-ContainerRuntime, Get-HttpsProbe, Test-HttpsEndpoint, Wait-SampleHealth, Test-IsAdministrator,
+    Get-ContainerRuntime, Get-HttpsProbe, Get-PreflightTimeout, Test-HttpsEndpoint, Wait-SampleHealth, Test-IsAdministrator,
     Test-BaseResumePending, Assert-SafeDirectory, Get-RequiredExtension,
     Read-MicrosoftSignedScript, Assert-SafeSampleTree

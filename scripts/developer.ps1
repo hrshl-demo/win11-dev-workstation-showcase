@@ -28,6 +28,8 @@ Dependencies (default) or ContainerImages. ContainerImages builds the selected
 sample image explicitly; All includes modern images only, never legacy.
 .PARAMETER Port
 Loopback application/container/port-forward port.
+.PARAMETER HttpsTimeoutSeconds
+HTTPS-only preflight timeout, 1-30 seconds, default 5. Passed through setup/finish.
 .PARAMETER SourceSha
 Required forty-character lowercase SHA of current remote main for DeployDispatch.
 .PARAMETER Namespace
@@ -56,6 +58,7 @@ param(
     [ValidateSet('auto', 'docker', 'wslc')][string]$Runtime = 'auto',
     [ValidateSet('Dependencies', 'ContainerImages')][string]$RestoreTarget = 'Dependencies',
     [ValidateRange(1, 65535)][int]$Port = 8080,
+    [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5,
     [ValidatePattern('^([0-9a-f]{40})?$')][string]$SourceSha = '',
     [string]$Namespace = $env:AKS_NAMESPACE
 )
@@ -93,9 +96,10 @@ function Get-DeveloperTool {
 
 function Invoke-DeveloperNative {
     [CmdletBinding()]
-    param([string]$Path, [string[]]$Arguments, [string]$Directory = (Get-ShowcaseRoot))
+    param([string]$Path, [string[]]$Arguments, [string]$Directory = (Get-ShowcaseRoot),
+        [ValidateRange(1, 7200)][int]$TimeoutSeconds = 1800)
     $result = Invoke-NativeCommand -FilePath $Path -ArgumentList $Arguments `
-        -WorkingDirectory $Directory -TimeoutSeconds 1800
+        -WorkingDirectory $Directory -TimeoutSeconds $TimeoutSeconds
     if ($result.Output) { Write-ShowcaseMessage $result.Output }
     if ($result.ExitCode -ne 0 -or $result.TimedOut) {
         throw "Developer task failed (exit $($result.ExitCode), timeout $($result.TimedOut)); see the diagnostics above."
@@ -406,7 +410,8 @@ function Invoke-Developer {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Medium')]
     param([string]$Action, [string]$Sample = 'All', [string]$Runtime = 'auto',
         [ValidateSet('Dependencies', 'ContainerImages')][string]$RestoreTarget = 'Dependencies',
-        [int]$Port = 8080, [string]$SourceSha = '', [AllowNull()][string]$Namespace)
+        [int]$Port = 8080, [string]$SourceSha = '', [AllowNull()][string]$Namespace,
+        [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
     $environment = @{}
     foreach ($key in @('UV_OFFLINE', 'UV_NO_SYNC', 'UV_PYTHON_DOWNLOADS', 'GOTOOLCHAIN',
         'GOPROXY', 'GOSUMDB', 'PORT')) {
@@ -427,10 +432,12 @@ function Invoke-Developer {
         switch ($Action) {
             'Preflight' {
                 $shell = (Get-Process -Id $PID).Path
-                $null = Invoke-DeveloperNative $shell @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'preflight.ps1'))
+                $null = Invoke-DeveloperNative $shell @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'preflight.ps1'),
+                    '-HttpsTimeoutSeconds', [string]$HttpsTimeoutSeconds) -TimeoutSeconds (Get-PreflightTimeout $HttpsTimeoutSeconds)
             }
             'SetupPreview' {
                 Write-ShowcaseMessage 'Read-only source/config preview; bootstrap is NOT invoked (not even with WhatIf).'
+                Write-ShowcaseMessage "Selected HTTPS timeout: $HttpsTimeoutSeconds seconds/attempt; preflight budget: $(Get-PreflightTimeout $HttpsTimeoutSeconds) seconds."
                 foreach ($file in @('.config\configuration.winget', '.config\java-modernization.winget', 'scripts\bootstrap.ps1')) {
                     Write-ShowcaseMessage "----- $file -----"
                     Get-Content -LiteralPath (Join-Path (Get-ShowcaseRoot) $file) | Out-Host
@@ -439,7 +446,8 @@ function Invoke-Developer {
             { $_ -in @('Setup', 'FinishSetup') } {
                 if ($PSCmdlet.ShouldProcess('Workstation', 'User-run approved setup; may elevate/restart; confirm in the child terminal')) {
                     $shell = (Get-Process -Id $PID).Path
-                    $arguments = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'bootstrap.ps1'), '-Confirm')
+                    $arguments = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'bootstrap.ps1'),
+                        '-HttpsTimeoutSeconds', [string]$HttpsTimeoutSeconds, '-Confirm')
                     if ($Action -eq 'FinishSetup') { $arguments += '-SkipBase' }
                     & $shell @arguments | Out-Host
                     if ($LASTEXITCODE -ne 0) { throw 'User-run setup failed.' }

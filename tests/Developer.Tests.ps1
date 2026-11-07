@@ -25,6 +25,16 @@ BeforeAll {
 }
 
 Describe 'Developer script and VS Code contracts' {
+    It 'offers HTTPS timeout choices only for readiness/setup tasks with a five-second default' {
+        $timeoutInput = $script:Tasks.inputs | Where-Object id -eq httpsTimeoutSeconds
+        $timeoutInput.default | Should -Be '5'
+        @($timeoutInput.options) | Should -Be @('5', '15', '30')
+        foreach ($task in $script:Tasks.tasks) {
+            $hasChoice = $task.args -contains '${input:httpsTimeoutSeconds}'
+            $hasChoice | Should -Be ($task.label -in @('Preflight', 'Setup preview', 'User-run setup', 'Finish setup'))
+            if ($hasChoice) { $task.args | Should -Contain '-HttpsTimeoutSeconds' }
+        }
+    }
     It 'parses in Windows PowerShell with approved function verbs' {
         $script:ParseErrors.Count | Should -Be 0
         $approved = (Get-Verb).Verb
@@ -95,6 +105,32 @@ Describe 'Developer safe execution and failure paths' {
         Mock Get-NativeCommandPath { throw 'Unexpected tool lookup in safe test.' }
         Mock Get-DeveloperDirectory { $script:Repository }
         Mock New-Item { throw 'Unexpected filesystem mutation in safe test.' }
+    }
+    It 'propagates slow-network timeout and bounded budget to read-only child preflight' {
+        Mock Invoke-DeveloperNative { [pscustomobject]@{ ExitCode = 0 } }
+        Invoke-Developer -Action Preflight -HttpsTimeoutSeconds 30 | Should -Be 0
+        Should -Invoke Invoke-DeveloperNative -Times 1 -Exactly -ParameterFilter {
+            $TimeoutSeconds -eq 663 -and $Arguments[-2] -eq '-HttpsTimeoutSeconds' -and $Arguments[-1] -eq '30'
+        }
+    }
+    It 'propagates the timeout through setup and finish using a harmless in-memory child fixture' -TestCases @(
+        @{ SelectedAction = 'Setup' }, @{ SelectedAction = 'FinishSetup' }
+    ) {
+        param($SelectedAction)
+        function Invoke-SetupFixture {
+            $script:CapturedSetupArguments = @($args)
+            $global:LASTEXITCODE = 0
+        }
+        Mock Get-Process { [pscustomobject]@{ Path = 'Invoke-SetupFixture' } }
+        Invoke-Developer -Action $SelectedAction -HttpsTimeoutSeconds 30 -Confirm:$false | Should -Be 0
+        $script:CapturedSetupArguments | Should -Contain '-HttpsTimeoutSeconds'
+        $script:CapturedSetupArguments | Should -Contain '30'
+        ($script:CapturedSetupArguments -contains '-SkipBase') | Should -Be ($SelectedAction -eq 'FinishSetup')
+        Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
+    }
+    It 'rejects out-of-range HTTPS timeout without dispatching any native task' {
+        { Invoke-Developer -Action Preflight -HttpsTimeoutSeconds 31 } | Should -Throw
+        Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
     }
 
     It 'reports native readiness failure once without a dependency Restore hint' {

@@ -5,14 +5,14 @@
       "label": "Preflight",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Preflight"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Preflight", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}"],
       "problemMatcher": []
     },
     {
       "label": "Setup preview",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "SetupPreview"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "SetupPreview", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}"],
       "problemMatcher": []
     },
     {
@@ -20,7 +20,7 @@
       "detail": "HUMAN ONLY: approved setup may elevate/restart; confirmation in terminal, no policy bypass.",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-Confirm"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "Setup", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-Confirm"],
       "problemMatcher": []
     },
     {
@@ -28,7 +28,7 @@
       "detail": "HUMAN ONLY: finish approved setup after restart; confirmation required.",
       "type": "process",
       "command": "powershell.exe",
-      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "FinishSetup", "-Confirm"],
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\developer.ps1", "-Action", "FinishSetup", "-HttpsTimeoutSeconds", "${input:httpsTimeoutSeconds}", "-Confirm"],
       "problemMatcher": []
     },
     {
@@ -295,6 +295,7 @@
     }
   ],
   "inputs": [
+    { "id": "httpsTimeoutSeconds", "type": "pickString", "description": "HTTPS seconds per attempt: 5 normal (default), 15 intermediate, 30 slow approved network; select again for setup/finish", "options": ["5", "15", "30"], "default": "5" },
     { "id": "restoreTarget", "type": "pickString", "description": "Dependencies or explicit container image build/restore (Run never builds/pulls)", "options": ["Dependencies", "ContainerImages"], "default": "Dependencies" },
     { "id": "restoreSample", "type": "pickString", "description": "Explicit user-run restore (Legacy separately requires Java 11)", "options": ["Python", "Java", "Go", "PowerShell", "All", "Legacy"], "default": "All" },
     { "id": "containerRuntime", "type": "pickString", "description": "Already-approved runtime; auto prefers wslc, no fallback after denial", "options": ["auto", "wslc", "docker"], "default": "auto" },
