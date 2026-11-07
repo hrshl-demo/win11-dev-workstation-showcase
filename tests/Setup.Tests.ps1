@@ -20,6 +20,7 @@ Describe 'Installed-first module effects' {
         $null = New-Item -ItemType Directory -Path $global:SetupFixtureRoot
         $global:SetupFixtureState = 'Installed'
         $global:SetupFixtureCompatible = $true
+        $global:SetupFixtureRebootCode = 0
         Mock Get-ShowcaseRoot -ModuleName _setup { $global:SetupFixtureRoot }
         Mock Get-LocalInstallation -ModuleName _setup { @() }
         Mock Get-SetupPackage -ModuleName _setup {
@@ -36,7 +37,7 @@ Describe 'Installed-first module effects' {
         Mock Write-ShowcaseMessage -ModuleName _setup {}
     }
     AfterEach {
-        Remove-Variable SetupFixtureRoot, SetupFixtureState, SetupFixtureCompatible -Scope Global
+        Remove-Variable SetupFixtureRoot, SetupFixtureState, SetupFixtureCompatible, SetupFixtureRebootCode -Scope Global
     }
     It 'installed target skips all download/installer/preflight activity before sources' {
         Invoke-SetupModule -Module Python -Apply -Confirm:$false | Should -Be 0
@@ -126,6 +127,24 @@ Describe 'Installed-first module effects' {
         $records[-1].State | Should -Be 'ModuleReturned'
         $records[-1].PSObject.Properties.Name | Should -Not -Contain 'Output'
         $records[-1].ElapsedSeconds | Should -BeGreaterOrEqual 0
+    }
+    It 'pauses on a vendor reboot outcome before the next missing target' -TestCases @(
+        @{ Code = 3010 }, @{ Code = 1641 }) {
+        param($Code)
+        $global:SetupFixtureRebootCode = $Code
+        $global:SetupFixtureState = 'Missing'
+        Mock Get-SetupPackage -ModuleName _setup {
+            @([pscustomobject]@{ Id = 'Synthetic.First' }, [pscustomobject]@{ Id = 'Synthetic.Next' })
+        }
+        Mock Invoke-SetupNative -ModuleName _setup { [pscustomobject]@{ ExitCode = $global:SetupFixtureRebootCode; ElapsedSeconds = 1 } }
+        Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 0
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 1 -Exactly -ParameterFilter {
+            $Arguments -contains 'Synthetic.First' -and $Arguments -notcontains 'Synthetic.Next'
+        }
+        $log = Get-ChildItem (Join-Path $global:SetupFixtureRoot '.showcase-setup') -File
+        $states = @(Get-Content $log.FullName | ForEach-Object { ($_ | ConvertFrom-Json).State })
+        $states[-1] | Should -Be 'RestartRequired'
+        $states | Should -Not -Contain 'ModuleReturned'
     }
     It 'missing extensions require source approval before preflight or download' {
         Mock Get-SetupExtension -ModuleName _setup {

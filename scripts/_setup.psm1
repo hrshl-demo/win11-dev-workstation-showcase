@@ -365,7 +365,6 @@ function Invoke-SetupModule {
         $logPath = Join-Path $logDirectory ("module-{0}-{1}.jsonl" -f $Module, [guid]::NewGuid().ToString('N'))
         Write-SetupEvent $logPath $Module 'Started'
         Write-ShowcaseMessage "[INFO] Module event log: $logPath (states only, no installer output/credentials)."
-        $restart = $false
         foreach ($item in $missing) {
             if (-not $PSCmdlet.ShouldProcess($item.Id, "Install locally proven missing target only; $Module module; no upgrades; Docker requires licence approval")) {
                 Write-ShowcaseMessage "[WARN] Target declined; still missing/unverified: $($item.Id)."
@@ -415,12 +414,15 @@ function Invoke-SetupModule {
                 if ($Module -eq 'Go' -and $package.PSObject.Properties['Version']) { $installArguments += @('--version', [string]$package.Version) }
                 $result = Invoke-SetupNative $winget $installArguments $item.Id $InstallTimeoutSeconds
             }
-            if ($result.ExitCode -in @(3010, 1641)) { $restart = $true }
-            elseif ($result.ExitCode -ne 0) { throw "Target $($item.Id) installer exit $($result.ExitCode). Stop and diagnose; no automatic retry." }
+            if ($result.ExitCode -notin @(0, 3010, 1641)) { throw "Target $($item.Id) installer exit $($result.ExitCode). Stop and diagnose; no automatic retry." }
             Write-ShowcaseMessage "[PASS] Installer returned for $($item.Id); exit $($result.ExitCode); elapsed $($result.ElapsedSeconds)s. Fresh-terminal inventory/Verify still required."
             Write-SetupEvent $logPath $Module 'InstallerReturned' $item.Id ([int]$clock.Elapsed.TotalSeconds)
+            if ($result.ExitCode -in @(3010, 1641)) {
+                Write-ShowcaseMessage "[WARN] Installer reported reboot/resume state (exit $($result.ExitCode)). Module paused before any other target. Confirm vendor completion and actual restart state; save work and choose any needed restart yourself."
+                Write-SetupEvent $logPath $Module 'RestartRequired' $item.Id ([int]$clock.Elapsed.TotalSeconds)
+                return 0
+            }
         }
-        if ($restart) { Write-ShowcaseMessage '[WARN] Restart required: save work and restart yourself before subsequent modules. No automatic reboot.' }
         Write-ShowcaseMessage "[PASS] Module $Module completed in $([int]$clock.Elapsed.TotalSeconds)s; not full workstation verification. Run inventory/Verify in a fresh terminal."
         Write-SetupEvent $logPath $Module 'ModuleReturned' '' ([int]$clock.Elapsed.TotalSeconds)
         return 0
