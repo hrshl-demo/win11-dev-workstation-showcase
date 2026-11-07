@@ -325,7 +325,29 @@ The [official VS Code walkthrough](https://code.visualstudio.com/docs/sourcecont
 
 [GITHUB-AKS.md](GITHUB-AKS.md) describes IT-owned prerequisites and the separate manual deployment. Use the Kubernetes check/status/logs/port-forward tasks only in the documented context. Static checks do not authenticate or provision; live checks require a previously approved user context and network path. Dispatch is explicit, main-only, and requires the current main `source_sha` plus a different environment reviewer.
 
-## Support and logs
+## Cleanup after work is finished
+
+**Wait until laptop setup/reboot/resume has finished and stop local app, test and Restore tasks. Do not update this working clone or run cleanup while setup is running.** Later, use **Terminal -> Run Task -> Cleanup preview**. **Cleanup generated resources** requires explicit `-Apply` and per-target confirmation. Nothing runs automatically.
+
+```powershell
+# HUMAN, later: nonmutating plan
+.\scripts\cleanup.ps1
+# HUMAN, after reviewing the plan and stopping tasks
+.\scripts\cleanup.ps1 -Apply -Confirm
+# Optional exact owned containers, never images/volumes/networks
+.\scripts\cleanup.ps1 -IncludeContainers
+.\scripts\cleanup.ps1 -Apply -IncludeContainers -Confirm
+```
+
+Future developer tasks record only newly absent, exact report files they create: Python JUnit/coverage reports, Go JSON/coverage reports, PowerShell NUnit/coverage reports and the current Java JaCoCo data/XML. The ignored `.showcase-owned.json` is bound to this checkout's Git-local hash anchor and random workspace ID. Existing reports are never adopted; files changed or replaced after recording are retained. Repeated checks that overwrite reports may therefore make them ineligible. Missing historical ownership is an expected WARN, not permission to delete by filename. User notes and all unknown files remain, even inside output directories; empty directories remain too.
+
+This conservative version **does not remove `.venv`, `.tools`, `target`/HTML/cache trees or local restored packages**, even if a developer task created them. It does not recursively inventory a directory and assume everything inside belongs to the showcase. Unknown ownership is retained rather than guessed. Do not modify, move or delete the receipt/anchor to authorize cleanup. Corruption, copied checkout metadata, tracked files, nested repositories, reparse/hardlink targets, busy files or an active developer-operation lock fail closed. Stop the task holding a lock normally; never kill shared processes or delete locks to force progress. The receipt/hash mechanism protects against accidental edits, not a privileged user deliberately rewriting both records.
+
+Container cleanup is separately opt-in: only future Run tasks' recorded immutable ID, exact name, workspace labels and original `wslc`/Docker runtime may match. Historical generic showcase labels, another clone's containers and named replacements are not adopted. Runtime denial is a failure, not a Docker fallback. No images, volumes, networks or build cache are pruned.
+
+**Always retained:** GitHub Copilot/GHCP and its settings/accounts, Git/gh/VS Code/extensions, Python/Java/Go/PowerShell/SDKs, WSL distributions/data, Docker Desktop, Azure tools, policies/proxy/registry/PATH, Git configuration/credentials, global/user package caches, all source and uncommitted files, bootstrap/base logs/resume tasks outside this checkout, and all GitHub/AKS/ACR/Azure resources. Cleanup is not an undo of workstation setup. **Reset demo** is a different, explicitly destructive exercise operation that restores sample changes; cleanup never invokes it. Shared-tool uninstallation cannot be promised harmless and is not provided here.
+
+## Troubleshooting and logs
 
 Use only the explicit human/IT-approved Phase 0 policy route; never change policy or run repairs automatically to make a check pass. Use Phase 2 for incomplete laptop setup, Phase 4 for missing project packages, and [Troubleshooting](TROUBLESHOOTING.md) for post-setup failures.
 

@@ -69,6 +69,8 @@ The required profile has **12 extensions**, with an optional 13th for Java moder
 
 ## Documentation
 
+**Cleanup later, not during installation:** [scoped cleanup](docs/SETUP.md#cleanup-after-work-is-finished) previews and removes only newly recorded, unchanged checkout outputs and optionally exact owned containers. It is **not** a laptop uninstaller or demo reset. GitHub Copilot/GHCP, shared tools, extensions, environments, caches, source and cloud resources remain untouched.
+
 - [VS Code setup, packages, daily work and GitHub](docs/SETUP.md)
 - [Existing AKS deployment and approval prerequisites](docs/GITHUB-AKS.md)
 - [15-minute demo and safe fallback](docs/DEMO-SCRIPT.md)

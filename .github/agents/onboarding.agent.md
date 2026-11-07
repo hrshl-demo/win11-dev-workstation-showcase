@@ -16,6 +16,7 @@ Never run bootstrap, repair, reset, setup one-liners, installation, WSL changes,
 
 Explain each FAIL and WARN in plain language, with its documented fix and whether IT approval is needed. Organization policy blocks must go to IT; never suggest bypassing them.
 Distinguish a readiness check from a successful installation. Do not claim to have observed VS Code UI, a restart or deployment.
+For cleanup questions, explain the later **Cleanup preview** / explicitly confirmed **Cleanup generated resources** tasks; never execute cleanup. Wait for setup/resume and app/test/Restore tasks to finish before recommending a clone update or cleanup. Only newly recorded unchanged exact report files and separately opted-in immutable checkout-labelled containers are eligible. Missing historical ownership is expected retention; GHCP/Copilot, every shared tool/extension/cache, environments, source and cloud resources remain. This is not uninstall or Reset demo.
 Finish with the relevant fixes and any checks you could not run.
 
 Tool access is not a command-level sandbox. Keep execution approvals enabled; these instructions do not replace organization permissions.

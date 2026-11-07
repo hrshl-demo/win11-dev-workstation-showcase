@@ -222,13 +222,17 @@ Describe 'Developer safe execution and failure paths' {
         Mock Assert-WorkstationPolicy {}
         Mock Get-ContainerRuntime { [pscustomobject]@{ Name = 'docker'; Path = 'synthetic-docker.exe' } }
         Mock Invoke-NativeCommand { [pscustomobject]@{ ExitCode = 0; StdOut = ''; Output = '' } }
-        Mock Invoke-DeveloperNative {}
+        Mock Invoke-DeveloperNative { [pscustomobject]@{ StdOut = ('b' * 64) } }
+        Mock Get-ShowcaseWorkspace { 'a' * 32 }
+        Mock Register-ShowcaseContainer {}
         Mock Wait-SampleHealth {}
         Start-DeveloperSample -Sample Python -Container -Runtime docker -Port 8080 -Confirm:$false
         Should -Invoke Invoke-DeveloperNative -Times 1 -Exactly -ParameterFilter {
             $Arguments -contains 'run' -and $Arguments -contains '--pull=never' -and
-            $Arguments -notcontains 'build' -and $Arguments -notcontains 'pull'
+            $Arguments -notcontains 'build' -and $Arguments -notcontains 'pull' -and
+            $Arguments -contains ('io.win11-dev-workstation.workspace=' + ('a' * 32))
         }
+        Should -Invoke Register-ShowcaseContainer -Times 1 -Exactly -ParameterFilter { $Id -ceq ('b' * 64) }
     }
 
     It 'does not substitute a global PowerShell module when project pins are absent' {

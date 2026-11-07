@@ -37,6 +37,7 @@ The commands above and in setup documentation are user-run instructions, not per
 - Add focused tests, keep dependencies pinned in manifests/lockfiles, and prefer Microsoft and established open-source libraries.
 - PowerShell must support Windows PowerShell 5.1 and PowerShell 7, use strict mode and approved verbs, and gate state changes with ShouldProcess and appropriate confirmation.
 - Preserve unrelated staged, unstaged and untracked work. Never use repository-wide destructive cleanup as a demo shortcut.
+- `cleanup.ps1` is a human-operated, default nonmutating ownership plan, never a workstation uninstaller or demo-reset wrapper. Do not execute it against a real checkout. Validate only isolated fixtures/mocks. It may remove only newly recorded exact unchanged file identities/fingerprints and explicitly opted-in immutable workspace-labelled containers. Shared tools/GHCP/extensions, environments/module trees/caches, source, logs outside the checkout and cloud resources are always retained. Missing/ambiguous ownership is not permission to adopt. Wait for setup and app/test/restore tasks to finish before suggesting a user clone update or cleanup.
 
 ## Narrow baseline exceptions
 

@@ -33,6 +33,7 @@ coverage.html
 test-results.xml
 test-results.json
 artifacts/
+.showcase-owned.json
 *.log
 *.tmp
 *.bak

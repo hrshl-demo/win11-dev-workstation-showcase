@@ -33,6 +33,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
+Import-Module (Join-Path $PSScriptRoot '_ownership.psm1')
 
 function Get-LocalSampleCommand {
     [CmdletBinding()]
@@ -85,6 +86,7 @@ function Invoke-Sample {
         [ValidateSet('Auto', 'wslc', 'docker')][string]$Runtime = 'Auto')
     $containerRuntime = $null
     $started = $false
+    $containerId = ''
     $containerName = "win11-demo-$Name"
     try {
         $directory = Join-Path (Get-ShowcaseRoot) "samples\$Name"
@@ -100,14 +102,18 @@ function Invoke-Sample {
         $existing = Invoke-NativeCommand $containerRuntime.Path @('ps', '-a', '--filter', "name=$containerName", '--format', '{{.Names}}')
         Assert-NativeSuccess $existing "List $($containerRuntime.Name) containers (no runtime fallback on denial)"
         if (@($existing.StdOut -split '[\r\n]+' | Where-Object { $_.Trim() -eq $containerName }).Count -gt 0) {
-            throw "Container $containerName already exists. Use demo-reset.ps1 after reviewing its confirmation."
+            throw "Container $containerName already exists. Review scoped cleanup later; historical or another checkout's containers are retained."
         }
         $image = "win11-demo/${Name}:latest"
         $inspection = Invoke-NativeCommand $containerRuntime.Path @('image', 'inspect', $image) -TimeoutSeconds 60
         Assert-NativeSuccess $inspection 'Locate existing image; use Restore project dependencies / ContainerImages explicitly before Run'
+        $workspace = Get-ShowcaseWorkspace
         $run = Invoke-NativeCommand $containerRuntime.Path @('run', '--pull=never', '-d', '-p', "127.0.0.1:${Port}:8080",
-            '--name', $containerName, '--label', 'io.win11-dev-workstation.showcase=true', $image) -TimeoutSeconds 120
+            '--name', $containerName, '--label', 'io.win11-dev-workstation.showcase=true',
+            '--label', "io.win11-dev-workstation.workspace=$workspace", $image) -TimeoutSeconds 120
         Assert-NativeSuccess $run 'Start sample container'
+        $containerId = $run.StdOut.Trim()
+        Register-ShowcaseContainer -Id $containerId -Name $containerName -Runtime $containerRuntime.Name
         $started = $true
         $health = Wait-SampleHealth -Port $Port -TimeoutSeconds $HealthTimeoutSeconds
         Write-ShowcaseMessage "[PASS] Health ready: $health"
@@ -115,11 +121,13 @@ function Invoke-Sample {
         return 0
     } catch {
         Write-ShowcaseMessage "[FAIL] Sample: $($_.Exception.Message)"
-        if ($started -and $null -ne $containerRuntime -and $PSCmdlet.ShouldProcess($containerName, 'Stop and remove the container created by this failed run')) {
+        if ($started -and $null -ne $containerRuntime -and $PSCmdlet.ShouldProcess($containerId, 'Stop and remove the exact container created by this failed run')) {
             try {
-                $stop = Invoke-NativeCommand $containerRuntime.Path @('stop', $containerName)
+                $receipt = [pscustomobject]@{ Id = $containerId; Name = $containerName; Runtime = $containerRuntime.Name }
+                if (-not (Test-OwnedContainer $receipt $workspace $containerRuntime)) { throw 'Failed-run identity changed; retained.' }
+                $stop = Invoke-NativeCommand $containerRuntime.Path @('stop', $containerId)
                 Assert-NativeSuccess $stop 'Stop failed demo container'
-                $remove = Invoke-NativeCommand $containerRuntime.Path @('rm', $containerName)
+                $remove = Invoke-NativeCommand $containerRuntime.Path @('rm', $containerId)
                 Assert-NativeSuccess $remove 'Remove failed demo container'
             } catch { Write-ShowcaseMessage "[WARN] Failed-run cleanup: $($_.Exception.Message)" }
         }
@@ -127,4 +135,18 @@ function Invoke-Sample {
     }
 }
 
-if ($MyInvocation.InvocationName -ne '.') { exit (Invoke-Sample @PSBoundParameters) }
+if ($MyInvocation.InvocationName -ne '.') {
+    $ownership = $null
+    $code = 1
+    try {
+        if ($Mode -eq 'container' -and -not $WhatIfPreference) { $ownership = Enter-ShowcaseOperation }
+        $code = Invoke-Sample @PSBoundParameters
+    } catch { Write-ShowcaseMessage "[FAIL] Checkout operation: $($_.Exception.Message)" }
+    finally {
+        if ($null -ne $ownership) {
+            try { Exit-ShowcaseOperation $ownership -Record:($code -eq 0) }
+            catch { Write-ShowcaseMessage "[FAIL] Ownership recording: $($_.Exception.Message)"; $code = 1 }
+        }
+    }
+    exit ($code)
+}

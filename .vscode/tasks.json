@@ -2,6 +2,22 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Cleanup preview",
+      "detail": "After setup/app/test tasks finish: read-only ownership plan; no uninstalls or reset.",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\cleanup.ps1"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Cleanup generated resources",
+      "detail": "HUMAN ONLY, after all tasks finish: exact owned files only, per-target confirmation. Containers remain unless separately opted in.",
+      "type": "process",
+      "command": "powershell.exe",
+      "args": ["-NoProfile", "-File", "${workspaceFolder}\\scripts\\cleanup.ps1", "-Apply", "-Confirm"],
+      "problemMatcher": []
+    },
+    {
       "label": "Preflight",
       "type": "process",
       "command": "powershell.exe",

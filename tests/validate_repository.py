@@ -52,6 +52,7 @@ REQUIRED = (
     ".github/workflows/deploy-aks.yml", "docs/GITHUB-AKS.md", "k8s/workloads.json",
     "scripts/check_deployment.py", "scripts/render_kubernetes.py", "scripts/smoke_aks.py",
     "tests/check_kubernetes.py", "tests/test_deployment.py",
+    "scripts/cleanup.ps1", "scripts/_ownership.psm1", "tests/Ownership.Tests.ps1",
 )
 
 
@@ -144,6 +145,12 @@ def check_workspace() -> None:
     )
     tasks = documents["tasks"]["tasks"]
     labels = [task["label"] for task in tasks]
+    require("Cleanup preview" in labels and "Cleanup generated resources" in labels,
+            "missing explicit cleanup lifecycle tasks")
+    cleanup = {task["label"]: task for task in tasks if task["label"].startswith("Cleanup")}
+    require("-Apply" not in cleanup["Cleanup preview"]["args"], "cleanup preview must be nonmutating")
+    require({"-Apply", "-Confirm"}.issubset(cleanup["Cleanup generated resources"]["args"]),
+            "cleanup apply requires explicit confirmation")
     require(len(labels) == len(set(labels)), "duplicate task")
     for task in tasks:
         require(set(task.get("dependsOn", [])).issubset(labels), "unresolved task")

@@ -15,6 +15,7 @@ BeforeAll {
     $script:Repository = Split-Path -Parent $PSScriptRoot
     $script:ScriptsDirectory = Join-Path $script:Repository 'scripts'
     Import-Module (Join-Path $script:ScriptsDirectory '_common.psm1') -Force
+    Import-Module (Join-Path $script:ScriptsDirectory '_ownership.psm1')
     $script:Ast = @{}
     foreach ($file in Get-ChildItem -LiteralPath $script:ScriptsDirectory -File) {
         $tokens = $null
@@ -296,7 +297,10 @@ Describe 'Actual sample launch planning and mocked container execution' {
         Mock Get-ContainerRuntime { [pscustomobject]@{ Name = 'wslc'; Path = 'C:\wslc.exe' } }
         Mock Write-ShowcaseMessage {}
         Mock Wait-SampleHealth { "http://127.0.0.1:$Port/health" }
-        Mock Invoke-NativeCommand { [pscustomobject]@{ ExitCode = 0; Output = ''; StdOut = ''; StdErr = ''; TimedOut = $false } }
+        Mock Get-ShowcaseWorkspace { 'a' * 32 }
+        Mock Register-ShowcaseContainer {}
+        Mock Test-OwnedContainer { $true }
+        Mock Invoke-NativeCommand { [pscustomobject]@{ ExitCode = 0; Output = ''; StdOut = ('b' * 64); StdErr = ''; TimedOut = $false } }
     }
     It 'respects the Python local port argument' {
         $command = Get-LocalSampleCommand python-emi-api 'C:\sample' 8181
@@ -365,8 +369,9 @@ Describe 'Actual sample launch planning and mocked container execution' {
     It 'cleans up only its newly started container when health fails' {
         Mock Wait-SampleHealth { throw 'Health timed out.' }
         Invoke-Sample python-emi-api container 8181 5 -Confirm:$false | Should -Be 1
-        Should -Invoke Invoke-NativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList[0] -eq 'stop' -and $ArgumentList[1] -eq 'win11-demo-python-emi-api' }
-        Should -Invoke Invoke-NativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList[0] -eq 'rm' -and $ArgumentList[1] -eq 'win11-demo-python-emi-api' }
+        Should -Invoke Test-OwnedContainer -Times 1 -Exactly
+        Should -Invoke Invoke-NativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList[0] -eq 'stop' -and $ArgumentList[1] -eq ('b' * 64) }
+        Should -Invoke Invoke-NativeCommand -Times 1 -Exactly -ParameterFilter { $ArgumentList[0] -eq 'rm' -and $ArgumentList[1] -eq ('b' * 64) }
     }
     It 'WhatIf does not build, start, or probe a health endpoint' {
         Invoke-Sample python-emi-api container 8181 5 -WhatIf | Should -Be 0
