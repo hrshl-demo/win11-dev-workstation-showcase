@@ -155,11 +155,11 @@ function Get-DeveloperMaven {
         throw 'NOT RUN: checked-in Maven wrapper files are missing.'
     }
     if (-not $Restore) {
-        $home = $env:MAVEN_USER_HOME
-        if (-not $home) { $home = Join-Path $HOME '.m2' }
+        $mavenHome = $env:MAVEN_USER_HOME
+        if (-not $mavenHome) { $mavenHome = Join-Path $HOME '.m2' }
         # Wrapper 3.3.4 keys this exact distribution URI using Java URI.hashCode.
         # Both the ZIP and unpacked directory are needed to avoid wrapper restore.
-        $cache = Join-Path $home 'wrapper\dists\apache-maven-3.9.16-bin\4200fbc6'
+        $cache = Join-Path $mavenHome 'wrapper\dists\apache-maven-3.9.16-bin\4200fbc6'
         Assert-SafeDirectory $cache
         $distribution = Join-Path $cache 'apache-maven-3.9.16'
         $zip = Join-Path $cache 'apache-maven-3.9.16-bin.zip'
@@ -376,7 +376,7 @@ function Start-DeveloperSample {
     } finally { Pop-Location }
 }
 
-function Invoke-DeveloperKubernetes {
+function Invoke-DeveloperCluster {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     param([string]$Action, [string]$Sample, [string]$Namespace, [int]$Port)
     if ($Namespace.Length -gt 63 -or $Namespace -notmatch '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$') {
@@ -480,7 +480,7 @@ function Invoke-Developer {
                 $null = Invoke-DeveloperNative $python @('tests/check_kubernetes.py')
             }
             { $_ -in @('KubernetesStatus', 'KubernetesLogs', 'KubernetesPortForward') } {
-                Invoke-DeveloperKubernetes $Action $Sample $Namespace $Port -WhatIf:$WhatIfPreference
+                Invoke-DeveloperCluster $Action $Sample $Namespace $Port -WhatIf:$WhatIfPreference
             }
             default { throw 'Unsupported developer action.' }
         }
