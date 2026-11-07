@@ -167,24 +167,24 @@ Describe 'Actual preflight readiness functions with safe mocks' {
         Should -Invoke Get-HttpsProbe -Times 1 -Exactly -ParameterFilter {
             [string]$Uri -eq 'https://codeload.github.com/microsoft/WindowsDeveloperConfig/zip/refs/heads/main'
         }
-        It 'passes an explicit slow-network timeout to all six hosts and clean JSON' {
-            $output = @(Invoke-Preflight -Json -HttpsTimeoutSeconds 30)
-            $output[-1] | Should -Be 0
-            $parsed = $output[0] | ConvertFrom-Json
-            @($parsed | Where-Object Name -like 'HTTPS *').Count | Should -Be 6
-            foreach ($check in $parsed | Where-Object Name -like 'HTTPS *') {
-                $check.Probe.TimeoutSeconds | Should -Be 30
-            }
-            Should -Invoke Get-HttpsProbe -Times 6 -Exactly -ParameterFilter { $TimeoutSeconds -eq 30 }
-        }
-        It 'rejects out-of-range HTTPS timeout before any probe' -TestCases @(@{ Timeout = 0 }, @{ Timeout = 31 }) {
-            param($Timeout)
-            { Invoke-Preflight -HttpsTimeoutSeconds $Timeout } | Should -Throw
-            Should -Invoke Get-HttpsProbe -Times 0 -Exactly
-        }
         Should -Invoke Get-HttpsProbe -Times 1 -Exactly -ParameterFilter {
             [string]$Uri -eq 'https://raw.githubusercontent.com/microsoft/WindowsDeveloperConfig/refs/heads/main/README.md'
         }
+    }
+    It 'passes an explicit slow-network timeout to all six hosts and clean JSON' {
+        $output = @(Invoke-Preflight -Json -HttpsTimeoutSeconds 30)
+        $output[-1] | Should -Be 0
+        $parsed = $output[0] | ConvertFrom-Json
+        @($parsed | Where-Object Name -like 'HTTPS *').Count | Should -Be 6
+        foreach ($check in $parsed | Where-Object Name -like 'HTTPS *') {
+            $check.Probe.TimeoutSeconds | Should -Be 30
+        }
+        Should -Invoke Get-HttpsProbe -Times 6 -Exactly -ParameterFilter { $TimeoutSeconds -eq 30 }
+    }
+    It 'rejects out-of-range HTTPS timeout before any probe' -TestCases @(@{ Timeout = 0 }, @{ Timeout = 31 }) {
+        param($Timeout)
+        { Invoke-Preflight -HttpsTimeoutSeconds $Timeout } | Should -Throw
+        Should -Invoke Get-HttpsProbe -Times 0 -Exactly
     }
     It 'outputs clean JSON and returns a separate integer status' {
         $output = @(Invoke-Preflight -Json)
