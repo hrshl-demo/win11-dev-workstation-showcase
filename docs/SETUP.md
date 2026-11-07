@@ -107,6 +107,18 @@ Review `.config\configuration.winget` and the Microsoft standard base. Choose ex
 
 Preview describes the plan; it does not install or prove sources will work. Full bootstrap reruns Preflight, validates the downloaded Microsoft wrapper's Authenticode signature before execution, and asks consent before base/configuration changes. Invalid/unverifiable signatures stop setup. Agents never execute preview or setup.
 
+### Microsoft base launcher wait and slow full setup
+
+The **Setup preview** and **User-run setup** tasks also offer a separate base-only wait picker: **7200 = 2 hours**, **14400 = 4 hours (default)**, **28800 = 8 hours** for slow full provisioning. This is independent of the HTTPS picker. Four hours replaces the old one-hour watchdog because large downloads, retries, UAC, package installation and reboot preparation can exceed an hour; eight hours is an explicit bounded slow-network option, not a guarantee setup will finish. **Finish setup** does not run the base and therefore has no base-wait picker. Direct bootstrap/developer calls accept `-BaseSetupTimeoutSeconds` in **7200–28800**, default **14400**; preview shows the value, and full setup passes it to the signed base launcher. HTTPS Preflight, installer-wrapper download (60 seconds), add-on configuration (3600 seconds), health checks and final Verify (600 seconds) retain their own budgets.
+
+For a future new approved setup, after confirming no earlier base is active:
+
+```powershell
+.\scripts\bootstrap.ps1 -HttpsTimeoutSeconds 30 -BaseSetupTimeoutSeconds 28800
+```
+
+**A launcher timeout is not an installer/UAC failure.** The watchdog stops only its own child launcher; elevated Microsoft setup may still be running. Timeout reports the selected wait and unknown elevated-base state, fails closed, and never starts the add-on/Verify or retries. Initial UAC informational text is not treated as the cause. Keep an existing base running and follow its safe progress/completion evidence in `%ProgramData%\CalmOS\devconfig-log.txt`; do not kill it, start a second setup, update its working clone or use SkipBase to escape the timeout. **Finish setup is safe only after the base and every required reboot/resume are confirmed complete**, using a fresh terminal. If completion/failure is uncertain, stop for human/IT diagnosis rather than rerunning automatically. See [watchdog recovery](TROUBLESHOOTING.md#microsoft-base-launcher-timeout).
+
 | Automated layer | What it supplies / changes |
 | --- | --- |
 | Microsoft **standard** base | Upstream developer tools/settings, PowerShell, uv, Node and WSL; may elevate/restart. Review the current [base definition](https://github.com/microsoft/WindowsDeveloperConfig); full setup/uninstall is not selected |

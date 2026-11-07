@@ -14,6 +14,9 @@ Apply this add-on without running the Microsoft base (also used after reboot).
 Also apply the Java 11 and Copilot modernization add-on and verify its extension.
 .PARAMETER HttpsTimeoutSeconds
 Pass an operator-selected 1-30 second HTTPS timeout to child preflight; default 5.
+.PARAMETER BaseSetupTimeoutSeconds
+Bound only the Microsoft base launcher wait: 7200-28800 seconds, default 14400
+(4 hours). A timeout does not prove elevated setup stopped; never retry blindly.
 .EXAMPLE
 .\scripts\bootstrap.ps1 -WhatIf
 .EXAMPLE
@@ -21,7 +24,8 @@ Pass an operator-selected 1-30 second HTTPS timeout to child preflight; default 
 #>
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param([switch]$SkipBase, [switch]$IncludeJavaModernization,
-    [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
+    [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5,
+    [ValidateRange(7200, 28800)][int]$BaseSetupTimeoutSeconds = 14400)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
@@ -30,7 +34,8 @@ function Invoke-Bootstrap {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     [OutputType([int])]
     param([switch]$SkipBase, [switch]$IncludeJavaModernization,
-        [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
+        [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5,
+        [ValidateRange(7200, 28800)][int]$BaseSetupTimeoutSeconds = 14400)
     $transcript = $false
     $downloadDirectory = $null
     $downloadPath = $null
@@ -39,6 +44,7 @@ function Invoke-Bootstrap {
         $root = Get-ShowcaseRoot
         if ($WhatIfPreference) {
             Write-ShowcaseMessage "[PASS] Plan: child preflight HTTPS timeout $HttpsTimeoutSeconds seconds/attempt; overall budget $(Get-PreflightTimeout $HttpsTimeoutSeconds) seconds."
+            Write-ShowcaseMessage "[PASS] Plan: Microsoft base-only launcher budget $BaseSetupTimeoutSeconds seconds ($($BaseSetupTimeoutSeconds / 3600) hours); unused with SkipBase."
             Write-ShowcaseMessage '[PASS] Plan only: run read-only preflight; stop on any FAIL or organisation policy block.'
             if (-not $SkipBase) {
                 Write-ShowcaseMessage '[WARN] Plan: download https://aka.ms/devconfig/standard/setup.ps1 to a private TEMP directory; verify Valid Microsoft Corporation Authenticode signature; execute verified text. Base may restart and resumes itself.'
@@ -94,13 +100,14 @@ function Invoke-Bootstrap {
             # Stdin avoids Windows' command-line length limit for signed scripts.
             $expression = '$ErrorActionPreference="Stop"; $ProgressPreference="SilentlyContinue"; $setup=[Console]::In.ReadToEnd(); try { & ([scriptblock]::Create($setup)) } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }'
             $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($expression))
-            $base = Invoke-NativeCommand $shell @('-NoProfile', '-EncodedCommand', $encoded) -InputText $setupText -TimeoutSeconds 3600
+            Write-ShowcaseMessage "[WARN] Waiting up to $BaseSetupTimeoutSeconds seconds ($($BaseSetupTimeoutSeconds / 3600) hours) for the Microsoft base launcher. Elevated setup may continue if this wait times out; do not start another setup."
+            $base = Invoke-NativeCommand $shell @('-NoProfile', '-EncodedCommand', $encoded) -InputText $setupText -TimeoutSeconds $BaseSetupTimeoutSeconds
+            $baseOutcome = Get-BaseSetupOutcome -Result $base -BaseSetupTimeoutSeconds $BaseSetupTimeoutSeconds
             if ($base.Output) { Write-ShowcaseMessage $base.Output }
-            if ($base.ExitCode -in @(3010, 1641) -or ($base.ExitCode -eq 0 -and (Test-BaseResumePending))) {
+            if ($baseOutcome -eq 'ResumePending') {
                 Write-ShowcaseMessage '[WARN] Microsoft base needs restart/resume. After it finishes, run .\scripts\bootstrap.ps1 -SkipBase. Add-on not applied yet.'
                 return 0
             }
-            Assert-NativeSuccess $base 'Microsoft base setup'
         }
         $winget = Get-NativeCommandPath winget
         if (-not $winget) { throw 'WinGet is not on PATH. Open a new terminal after the base, then run bootstrap.ps1 -SkipBase.' }

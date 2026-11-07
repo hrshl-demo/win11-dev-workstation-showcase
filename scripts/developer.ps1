@@ -30,6 +30,8 @@ sample image explicitly; All includes modern images only, never legacy.
 Loopback application/container/port-forward port.
 .PARAMETER HttpsTimeoutSeconds
 HTTPS-only preflight timeout, 1-30 seconds, default 5. Passed through setup/finish.
+.PARAMETER BaseSetupTimeoutSeconds
+Microsoft base-only launcher budget, 7200-28800 seconds; default 14400 (4 hours).
 .PARAMETER SourceSha
 Required forty-character lowercase SHA of current remote main for DeployDispatch.
 .PARAMETER Namespace
@@ -59,6 +61,7 @@ param(
     [ValidateSet('Dependencies', 'ContainerImages')][string]$RestoreTarget = 'Dependencies',
     [ValidateRange(1, 65535)][int]$Port = 8080,
     [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5,
+    [ValidateRange(7200, 28800)][int]$BaseSetupTimeoutSeconds = 14400,
     [ValidatePattern('^([0-9a-f]{40})?$')][string]$SourceSha = '',
     [string]$Namespace = $env:AKS_NAMESPACE
 )
@@ -443,7 +446,8 @@ function Invoke-Developer {
     param([string]$Action, [string]$Sample = 'All', [string]$Runtime = 'auto',
         [ValidateSet('Dependencies', 'ContainerImages')][string]$RestoreTarget = 'Dependencies',
         [int]$Port = 8080, [string]$SourceSha = '', [AllowNull()][string]$Namespace,
-        [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
+        [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5,
+        [ValidateRange(7200, 28800)][int]$BaseSetupTimeoutSeconds = 14400)
     $environment = @{}
     foreach ($key in @('UV_OFFLINE', 'UV_NO_SYNC', 'UV_PYTHON_DOWNLOADS', 'GOTOOLCHAIN',
         'GOPROXY', 'GOSUMDB', 'PORT')) {
@@ -470,6 +474,7 @@ function Invoke-Developer {
             'SetupPreview' {
                 Write-ShowcaseMessage 'Read-only source/config preview; bootstrap is NOT invoked (not even with WhatIf).'
                 Write-ShowcaseMessage "Selected HTTPS timeout: $HttpsTimeoutSeconds seconds/attempt; preflight budget: $(Get-PreflightTimeout $HttpsTimeoutSeconds) seconds."
+                Write-ShowcaseMessage "Selected Microsoft base-only wait: $BaseSetupTimeoutSeconds seconds ($($BaseSetupTimeoutSeconds / 3600) hours); unused by Finish setup."
                 foreach ($file in @('.config\configuration.winget', '.config\java-modernization.winget', 'scripts\bootstrap.ps1')) {
                     Write-ShowcaseMessage "----- $file -----"
                     Get-Content -LiteralPath (Join-Path (Get-ShowcaseRoot) $file) | Out-Host
@@ -479,7 +484,8 @@ function Invoke-Developer {
                 if ($PSCmdlet.ShouldProcess('Workstation', 'User-run approved setup; may elevate/restart; confirm in the child terminal')) {
                     $shell = (Get-Process -Id $PID).Path
                     $arguments = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'bootstrap.ps1'),
-                        '-HttpsTimeoutSeconds', [string]$HttpsTimeoutSeconds, '-Confirm')
+                        '-HttpsTimeoutSeconds', [string]$HttpsTimeoutSeconds,
+                        '-BaseSetupTimeoutSeconds', [string]$BaseSetupTimeoutSeconds, '-Confirm')
                     if ($Action -eq 'FinishSetup') { $arguments += '-SkipBase' }
                     & $shell @arguments | Out-Host
                     if ($LASTEXITCODE -ne 0) { throw 'User-run setup failed.' }

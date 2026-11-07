@@ -53,6 +53,7 @@ REQUIRED = (
     "scripts/check_deployment.py", "scripts/render_kubernetes.py", "scripts/smoke_aks.py",
     "tests/check_kubernetes.py", "tests/test_deployment.py",
     "scripts/cleanup.ps1", "scripts/_ownership.psm1", "tests/Ownership.Tests.ps1",
+    "tests/BaseSetup.Tests.ps1",
 )
 
 
@@ -152,6 +153,12 @@ def check_workspace() -> None:
     require({"-Apply", "-Confirm"}.issubset(cleanup["Cleanup generated resources"]["args"]),
             "cleanup apply requires explicit confirmation")
     require(len(labels) == len(set(labels)), "duplicate task")
+    base_picker = [item for item in documents["tasks"]["inputs"] if item["id"] == "baseSetupTimeoutSeconds"]
+    require(len(base_picker) == 1 and base_picker[0]["default"] == "14400"
+            and base_picker[0]["options"] == ["7200", "14400", "28800"], "bounded base-only wait picker")
+    for task in tasks:
+        require(("${input:baseSetupTimeoutSeconds}" in task["args"])
+                == (task["label"] in {"Setup preview", "User-run setup"}), "base wait picker scope")
     for task in tasks:
         require(set(task.get("dependsOn", [])).issubset(labels), "unresolved task")
     require({"Preflight", "Verify", "Test all samples", "Run EMI API (local)",

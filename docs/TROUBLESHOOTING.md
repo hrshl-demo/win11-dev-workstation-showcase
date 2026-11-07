@@ -84,7 +84,15 @@ After a failure, use the recorded diagnostics and the read-only **Preflight** ta
 
 See [Setup](SETUP.md) for VS Code tasks/reports and [GitHub/AKS](GITHUB-AKS.md) for the approval plan. Agents do not dispatch or launch to troubleshoot.
 
-## Cleanup is not uninstall or reset
+## Microsoft base launcher timeout
+
+The former one-hour wrapper watchdog could return synthetic exit **124** while elevated Microsoft setup continued. Its initial “Administrator rights / UAC prompt” output does **not** establish UAC denial. Large downloads and retries on a slow network can exceed that wait. Updated bootstrap distinguishes `TimedOut` before ordinary exit handling, reports the actual budget and **unknown, possibly still-running elevated-base state**, and never proceeds to add-on/Verify.
+
+The future **Setup preview / User-run setup** base-only picker is **7200 / 14400 / 28800 seconds (2 / default 4 / 8 hours)**; direct `-BaseSetupTimeoutSeconds` is bounded to that range. HTTPS readiness and other command budgets are independent; waits are not unlimited, and termination remains restricted to the owned launcher, never a broad process tree or elevated installer.
+
+**Leave an existing base running.** Do not start another setup, interrupt it, change the working clone or use SkipBase just because the wrapper timed out. Inspect retained base completion/progress evidence and resolve genuine errors with IT; log activity alone is not completion. Only choose **Finish setup** after Microsoft base completion and any required reboot/resume are confirmed, in a fresh terminal. Unknown state requires diagnosis, not an automatic retry. Genuine non-timeout failures and reboot/resume outcomes remain separately reported.
+
+## Project cleanup is not uninstall or reset
 
 Wait for installation/resume and local application/test/restore tasks to finish before updating the clone or selecting **Cleanup preview**. [Scoped cleanup](SETUP.md#cleanup-after-work-is-finished) leaves GHCP/Copilot and every shared tool, extension, runtime, policy, cache, credential, source file and cloud resource alone. Missing receipts or changed reports are expected retention WARNs: historical files, `.venv`, `.tools`, directories and unknown contents are not retrospectively adopted.
 
