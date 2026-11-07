@@ -61,6 +61,11 @@ Describe 'Conservative checkout ownership' {
         Get-Content -LiteralPath (Join-Path $artifacts 'powershell-coverage.xml') | Should -Be 'pre-existing'
         Get-Content -LiteralPath (Join-Path $artifacts 'my-notes.txt') | Should -Be 'user notes'
         Test-Path -LiteralPath $artifacts | Should -BeTrue
+        $context = Enter-ShowcaseOperation -OutputPaths @('artifacts\pester.xml')
+        [IO.File]::WriteAllText((Join-Path $artifacts 'pester.xml'), 'next generated report')
+        Exit-ShowcaseOperation $context -Record
+        Invoke-ShowcaseCleanup -Apply -Confirm:$false | Should -Be 0
+        Test-Path -LiteralPath (Join-Path $artifacts 'pester.xml') | Should -BeFalse
     }
 
     It 'retains changed and replaced reports, including an identical replacement' {
@@ -101,12 +106,28 @@ Describe 'Conservative checkout ownership' {
         [IO.File]::AppendAllText($script:Location.Ledger, ' ')
         { Get-OwnershipReceipt $script:Location } | Should -Throw '*metadata changed*'
     }
+    It 'does not overwrite metadata tampered during an active operation' {
+        $context = Enter-ShowcaseOperation
+        [IO.File]::AppendAllText($script:Location.Ledger, ' ')
+        try { { Save-OwnershipReceipt $context } | Should -Throw '*metadata changed*' }
+        finally { Exit-ShowcaseOperation $context }
+    }
+    It 'records explicit legacy containers without making legacy a default workflow' {
+        $context = Enter-ShowcaseOperation
+        try { Register-ShowcaseContainer -Id ('b' * 64) -Name 'win11-demo-java-legacy-upgrade' -Runtime docker }
+        finally { Exit-ShowcaseOperation $context }
+        (Get-OwnershipReceipt $script:Location).Containers[0].Name | Should -Be 'win11-demo-java-legacy-upgrade'
+    }
 
     It 'rejects a relocated receipt even when its anchor hash matches' {
         $context = Enter-ShowcaseOperation
-        $context.Receipt.Root = 'C:\another-checkout'
-        Save-OwnershipReceipt $context
         Exit-ShowcaseOperation $context
+        $receipt = Get-Content -LiteralPath $script:Location.Ledger -Raw | ConvertFrom-Json
+        $receipt.Root = 'C:\another-checkout'
+        [IO.File]::WriteAllText($script:Location.Ledger, (ConvertTo-Json $receipt))
+        $anchor = Get-Content -LiteralPath $script:Location.Anchor -Raw | ConvertFrom-Json
+        $anchor.Hash = (Get-FileHash -LiteralPath $script:Location.Ledger).Hash
+        [IO.File]::WriteAllText($script:Location.Anchor, (ConvertTo-Json $anchor))
         { Get-OwnershipReceipt $script:Location } | Should -Throw '*different checkout*'
     }
 
@@ -189,6 +210,7 @@ Describe 'Container identity and cleanup contracts' {
             [pscustomobject]@{ Receipt = @{ Files = @(); Containers = @($script:Container); Workspace = ('a' * 32) }; Handle = $null }
         }
         Mock Exit-ShowcaseOperation {}
+        Mock Save-OwnershipReceipt {}
         Mock Get-ContainerRuntime { throw 'Default cleanup must not select a runtime.' }
         Invoke-ShowcaseCleanup -Apply -Confirm:$false | Should -Be 0
         Should -Invoke Get-ContainerRuntime -Times 0 -Exactly
@@ -198,6 +220,7 @@ Describe 'Container identity and cleanup contracts' {
             [pscustomobject]@{ Receipt = @{ Files = @(); Containers = @($script:Container); Workspace = ('a' * 32) }; Handle = $null }
         }
         Mock Exit-ShowcaseOperation {}
+        Mock Save-OwnershipReceipt {}
         Mock Write-ShowcaseMessage {}
         Mock Get-ContainerRuntime { [pscustomobject]@{ Name = 'docker'; Path = 'synthetic-runtime.exe' } }
         Mock Test-OwnedContainer { $false }

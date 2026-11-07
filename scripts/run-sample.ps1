@@ -129,6 +129,7 @@ function Invoke-Sample {
                 Assert-NativeSuccess $stop 'Stop failed demo container'
                 $remove = Invoke-NativeCommand $containerRuntime.Path @('rm', $containerId)
                 Assert-NativeSuccess $remove 'Remove failed demo container'
+                Unregister-ShowcaseContainer $containerId
             } catch { Write-ShowcaseMessage "[WARN] Failed-run cleanup: $($_.Exception.Message)" }
         }
         return 1

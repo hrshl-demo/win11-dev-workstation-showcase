@@ -14,7 +14,7 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '_common.psm1')
 $script:ActiveOwnership = $null
 
-function Get-OwnedOutputPaths {
+function Get-OwnedOutputPath {
     [CmdletBinding()]
     [OutputType([string[]])]
     param()
@@ -29,7 +29,7 @@ function Get-OwnedOutputPaths {
 function Assert-OwnedPath {
     [CmdletBinding()]
     param([string]$Root, [string]$RelativePath, [switch]$Metadata)
-    $allowed = if ($Metadata) { @('.showcase-owned.json') } else { @(Get-OwnedOutputPaths) }
+    $allowed = if ($Metadata) { @('.showcase-owned.json') } else { @(Get-OwnedOutputPath) }
     if ($RelativePath -cnotin $allowed) { throw 'Path is not an exact allowed checkout output.' }
     $rootPath = [IO.Path]::GetFullPath($Root).TrimEnd('\')
     $path = [IO.Path]::GetFullPath((Join-Path $rootPath $RelativePath))
@@ -75,6 +75,11 @@ function Get-OwnershipLocation {
 function Save-OwnershipReceipt {
     [CmdletBinding()]
     param([object]$Context)
+    if ($Context.Receipt.Root -cne $Context.Location.Root) { throw 'Wrong checkout receipt cannot be saved.' }
+    if ((Test-Path -LiteralPath $Context.Location.Ledger) -or (Test-Path -LiteralPath $Context.Location.Anchor)) {
+        $existing = Get-OwnershipReceipt $Context.Location
+        if ($existing.Workspace -cne $Context.Receipt.Workspace) { throw 'Workspace ownership changed; save refused.' }
+    }
     $null = Assert-OwnedPath $Context.Location.Root '.showcase-owned.json' -Metadata
     foreach ($path in @($Context.Location.Ledger, $Context.Location.Anchor)) {
         if (Test-Path -LiteralPath $path) {
@@ -125,7 +130,8 @@ function Get-OwnershipReceipt {
     }
     foreach ($container in @($receipt.Containers)) {
         if ($container.Id -notmatch '^[a-f0-9]{64}$' -or $container.Runtime -cnotin @('docker', 'wslc') -or
-            $container.Name -cnotin @('win11-demo-python-emi-api', 'win11-demo-java-ifsc-service', 'win11-demo-go-fx-rates')) {
+            $container.Name -cnotin @('win11-demo-python-emi-api', 'win11-demo-java-ifsc-service',
+                'win11-demo-go-fx-rates', 'win11-demo-java-legacy-upgrade')) {
             throw 'Invalid container receipt.'
         }
     }
@@ -211,10 +217,19 @@ function Register-ShowcaseContainer {
     param([string]$Id, [string]$Name, [string]$Runtime)
     $null = Get-ShowcaseWorkspace
     if ($Id -notmatch '^[a-f0-9]{64}$' -or $Runtime -cnotin @('docker', 'wslc') -or
-        $Name -cnotin @('win11-demo-python-emi-api', 'win11-demo-java-ifsc-service', 'win11-demo-go-fx-rates')) {
+        $Name -cnotin @('win11-demo-python-emi-api', 'win11-demo-java-ifsc-service',
+            'win11-demo-go-fx-rates', 'win11-demo-java-legacy-upgrade')) {
         throw 'Container did not return an immutable expected identity; not adopted.'
     }
     $script:ActiveOwnership.Receipt.Containers += [pscustomobject]@{ Id = $Id; Name = $Name; Runtime = $Runtime }
+    Save-OwnershipReceipt $script:ActiveOwnership
+}
+
+function Unregister-ShowcaseContainer {
+    [CmdletBinding()]
+    param([ValidatePattern('^[a-f0-9]{64}$')][string]$Id)
+    $null = Get-ShowcaseWorkspace
+    $script:ActiveOwnership.Receipt.Containers = @($script:ActiveOwnership.Receipt.Containers | Where-Object Id -cne $Id)
     Save-OwnershipReceipt $script:ActiveOwnership
 }
 
@@ -296,6 +311,7 @@ function Remove-OwnedOutput {
     }
 }
 
-Export-ModuleMember -Function Get-OwnedOutputPaths, Assert-OwnedPath, Get-OwnershipLocation,
+Export-ModuleMember -Function Get-OwnedOutputPath, Assert-OwnedPath, Get-OwnershipLocation,
     Save-OwnershipReceipt, Get-OwnershipReceipt, Enter-ShowcaseOperation, Exit-ShowcaseOperation,
-    Get-ShowcaseWorkspace, Register-ShowcaseContainer, Test-OwnedContainer, Open-OwnedOutput, Remove-OwnedOutput
+    Get-ShowcaseWorkspace, Register-ShowcaseContainer, Unregister-ShowcaseContainer,
+    Test-OwnedContainer, Open-OwnedOutput, Remove-OwnedOutput
