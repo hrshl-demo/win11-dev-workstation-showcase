@@ -90,6 +90,16 @@ Describe 'Installed-first module effects' {
         Should -Invoke Get-SetupPackage -ModuleName _setup -Times 2 -Exactly -ParameterFilter { $Module -eq 'Go' }
         Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 1 -Exactly
     }
+    It 'new missing Go is pinned to the reviewed manifest version, never latest by accident' {
+        $global:SetupFixtureState = 'Missing'
+        Mock Get-SetupPackage -ModuleName _setup {
+            [pscustomobject]@{ Id = 'GoLang.Go'; Version = '1.27.3' }
+        }
+        Invoke-SetupModule -Module Go -Apply -Confirm:$false | Should -Be 0
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 1 -Exactly -ParameterFilter {
+            $Arguments -contains '--version' -and $Arguments -contains '1.27.3'
+        }
+    }
     It 'stops on genuine failure or uncertain timeout without retrying or claiming Verify' -TestCases @(
         @{ Timeout = $false }, @{ Timeout = $true }) {
         param($Timeout)
@@ -237,6 +247,12 @@ Describe 'WSL and distro preservation' {
 }
 
 Describe 'Live progress and entrypoint boundaries' {
+    It 'derives Go install and compatibility versions from the sample manifest' {
+        $package = @(Get-SetupPackage Go)[0]
+        $manifest = Get-Content (Join-Path $script:Repository 'samples\go-fx-rates\go.mod') -Raw
+        $manifest | Should -Match ('(?m)^go ' + [regex]::Escape($package.Version) + '\s*$')
+        ('go version go' + $package.Version + ' windows/amd64') | Should -Match $package.Required
+    }
     It 'streams before completion, drains final stdout/stderr and retains the genuine exit' {
         $global:SetupFixtureOutput = @()
         $global:SetupFixtureClock = [Diagnostics.Stopwatch]::StartNew()
