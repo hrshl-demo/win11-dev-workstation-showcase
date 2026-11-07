@@ -1,0 +1,397 @@
+{
+  "repository": "https://github.com/hrshl-demo/win11-dev-workstation-showcase",
+  "underlying_source_commit": "73cd348c198da748c77d8a22c4d8314abdc66d36",
+  "as_of": "2026-11-08",
+  "comparison": "Copyable text matches current checkout and immutable pin; no commands executed.",
+  "blocks": {
+    "policy-read": {
+      "sha256": "939899bbf8578421e1c0cca5375f60370c7e87688750c4ecbaabd2829fcbad38",
+      "text": "Get-ExecutionPolicy -List\nGet-ExecutionPolicy",
+      "source": [
+        {
+          "path": "docs\\SETUP.md"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "git-status": {
+      "sha256": "c96885f0a85f64c61b0d76510ca80e4a19be674e163a73b68a0a3d57f4dc15b6",
+      "text": "git status --short",
+      "source": [
+        {
+          "path": "docs\\DEMO-SCRIPT.md"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "preflight": {
+      "sha256": "006c62098a151dc1255d485a496b190c59a35faca8e65838db28d73308c3ee1f",
+      "text": ".\\scripts\\developer.ps1 -Action Preflight -HttpsTimeoutSeconds 5",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "preflight-slow": {
+      "sha256": "1e8af9d13af3a9fd50b3266b20796fd729eda2899ac3c00bb9f6213291c957e8",
+      "text": ".\\scripts\\developer.ps1 -Action Preflight -HttpsTimeoutSeconds 30",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "preview-python": {
+      "sha256": "0b9c11345b660d93031fc5e384c326c64abb6c3f97e0e038aae2f83f50026c24",
+      "text": ".\\scripts\\developer.ps1 -Action SetupPreview -SetupModule Python -HttpsTimeoutSeconds 5",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-core": {
+      "sha256": "5b83c8e3f6b9307727495d661e9ef8a9dab310f53c0ab35aeefee6ac37db8474",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Core -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-python": {
+      "sha256": "8d6ac7cd04976084f476bf9b8b941097bf7afd1ec5018717e860423c4bee9565",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Python -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-java": {
+      "sha256": "7a0919870b78f7708ff707107dbe003bba5a698f2d79acf399d1962e580ef9cb",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Java -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-go": {
+      "sha256": "af8ce974eda5056c98056ebd003058ecf12b685cb22a983084dee687dcd5b5e2",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Go -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-extensions": {
+      "sha256": "c2724e1aeda69a3ec35ca540da39ff3a9870cfd444a3ff16455c3f6616ca22b9",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Extensions -ExtensionSourceApproved -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-wsl": {
+      "sha256": "474930f63a22c712516d93116fcb19bb5fad582fa9bed4ad3a83a1eccf5d9cc9",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule WSL -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-ubuntu": {
+      "sha256": "02c0b02578bf3520a81d20fdf1542406c7c11cb19258417ba1b4a791edeb8810",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Ubuntu -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-docker": {
+      "sha256": "7c31f9280203106c4c70f0fc43b358f184175b5be092abec6af045fd8067bfc0",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Docker -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-modernization": {
+      "sha256": "4f9f56eb441012766067f30e739d2d2fba930568aec1d863276f17552c29e51c",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Modernization -ExtensionSourceApproved -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "verify": {
+      "sha256": "0ce9577c7a859e6a8a2f396b9fad5302d931c50f4d76bf73d4bbb917f3123949",
+      "text": ".\\scripts\\verify.ps1",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "verify-json": {
+      "sha256": "5b204e5a6a18a579944e16c1114f79530e4f267096c2b128da61303d052cef00",
+      "text": ".\\scripts\\verify.ps1 -Json",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        },
+        {
+          "path": "scripts\\verify.ps1"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "restore-python": {
+      "sha256": "b5ae065775d2f32caecbe9061a186d44ce9c9a255d6d372ce5d9da8c7fbf1d64",
+      "text": ".\\scripts\\developer.ps1 -Action Restore -Sample Python -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "restore-java": {
+      "sha256": "8a5c9f5078b5a1c02378cbf56cd77ca9a8d1fe59c608fe814d21d7505836ecd5",
+      "text": ".\\scripts\\developer.ps1 -Action Restore -Sample Java -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "restore-go": {
+      "sha256": "ca4775b5c8d589ae64f06084b0842181f6dd3fa458c66432b3dfd5c7723f4ead",
+      "text": ".\\scripts\\developer.ps1 -Action Restore -Sample Go -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "restore-powershell": {
+      "sha256": "20d218c312f9c3ec047da6ef880affe8a1486e9e4f10d667c12ef618875027cf",
+      "text": ".\\scripts\\developer.ps1 -Action Restore -Sample PowerShell -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "test-all": {
+      "sha256": "1386bbb578d5b739c483b0d342c1206244b440b1dd03a15bd1bacd5363515c9c",
+      "text": ".\\scripts\\developer.ps1 -Action Test -Sample All",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "lint-all": {
+      "sha256": "99e126aea6e635dc7e51d9b5ba50f7c131808c46302ffd9347d4d577ea30bedb",
+      "text": ".\\scripts\\developer.ps1 -Action Lint -Sample All",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "coverage-all": {
+      "sha256": "55f8ee197c102969173d80a9b4a6e0ba317307f027eecdbacde229aa6f701b40",
+      "text": ".\\scripts\\developer.ps1 -Action Coverage -Sample All",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "request-python": {
+      "sha256": "31d15477ee7448aeb0abb9af81f3cd37ddf50a13b9946738c1b0c23c82d779fe",
+      "text": "Invoke-RestMethod -Uri 'http://localhost:8080/health'\nInvoke-RestMethod -Method Post -Uri 'http://localhost:8080/emi' -ContentType 'application/json' -Body '{\"principal\":\"2500000.00\",\"annual_rate_percent\":\"8.5\",\"tenure_months\":240}'",
+      "source": [
+        {
+          "path": "docs\\DEMO-SCRIPT.md"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "run-python-container": {
+      "sha256": "3f9956c9180c0beaeaaaad0523320f98dea37479873ec55e87aa97e7433e978e",
+      "text": ".\\scripts\\developer.ps1 -Action RunContainer -Sample Python",
+      "source": [
+        {
+          "path": "docs\\DEMO-SCRIPT.md"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "run-python-local": {
+      "sha256": "b4308f8386493cbdea9a29ef29ef701d8e4b23c9b7d27af1d3e5129cd019eeff",
+      "text": ".\\scripts\\developer.ps1 -Action RunLocal -Sample Python -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "run-java-local": {
+      "sha256": "a9f3d8eba3093055a4ec7655cbc4cc760c5ed84389a250d34f80b8efbba3b5e7",
+      "text": ".\\scripts\\developer.ps1 -Action RunLocal -Sample Java -Port 8081 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "run-go-local": {
+      "sha256": "df840e33323ccdbf061ac8f6b8b85e17b84b5ef37b5ea915aa95b4347a413cee",
+      "text": ".\\scripts\\developer.ps1 -Action RunLocal -Sample Go -Port 8082 -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "restore-python-image": {
+      "sha256": "607f54e96537198cea57579e608b1ff2225cb4bf9b31ec37f3b70e08b2defb17",
+      "text": ".\\scripts\\developer.ps1 -Action Restore -RestoreTarget ContainerImages -Sample Python -Runtime auto -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "deploy-dispatch": {
+      "sha256": "a0b85584085c4d2786334bce2459df6e81c10d04dfba0cd6400f41ee7cfaa1d7",
+      "text": ".\\scripts\\developer.ps1 -Action DeployDispatch -SourceSha {{ph:reviewed-main-sha}} -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "workflow-status": {
+      "sha256": "d3e41f521fbc88aef633b6bc68b24e7dc6f7257b056b413b2ce363f9aa502a3a",
+      "text": ".\\scripts\\developer.ps1 -Action WorkflowStatus",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "kubernetes-check": {
+      "sha256": "9169143a9adaae62e1dfd05e7241102fcc871e0b1e4decf925ec4d9606cda9e0",
+      "text": ".\\scripts\\developer.ps1 -Action KubernetesCheck",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "cleanup-preview": {
+      "sha256": "b0b55bf0c045a8919e72892a19aa52a0a3412bdc1e0983fcc1f7c411ead11d28",
+      "text": ".\\scripts\\cleanup.ps1",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "cleanup-apply": {
+      "sha256": "51ee3bffd5124fdbd41902abd5f306336d1247eb5844d28bfadf4584eedf1d56",
+      "text": ".\\scripts\\cleanup.ps1 -Apply -Confirm",
+      "source": [
+        {
+          "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "prompt-onboarding": {
+      "sha256": "fe3cfac50fb6ca2a73e4cfbfe1d19197d19b0fff7be1f690dee261e094771ae2",
+      "text": "Read docs\\SETUP.md and docs\\IT-PREREQUISITES.md. Explain prerequisites, installed-first module preview and independent Core/SDK/Extensions/WSL installs chosen by the human. Existing tools skip download/upgrade; incompatible/unknown inventory fails without download, including stale PATH discovery. Missing pre-setup outputs can cause expected optional Verify exit 1. Normal setup never invokes Microsoft bundle or global tweaks; a stopped partial base is not completed. Legacy bundle/SkipBase is optional only after confirmed successful base/resume. Explain automated missing extensions and approved source/profile acceptance. Separate human Restore, no-restore tests, GitHub CI and AKS approval. You may run only preflight.ps1 and verify.ps1 without RunConfigTest. Do not run module setup, repair, policy/auth/launch/deployment actions.",
+      "source": [
+        {
+          "path": "docs\\DEMO-SCRIPT.md"
+        }
+      ],
+      "actor": "copilot"
+    },
+    "prompt-schedule": {
+      "sha256": "89d177fc91ac519dbf3aebc9aef0d78477b7180cb0213ee6b54636bff99a2c40",
+      "text": "Use the extend-emi-api skill and repository instructions to add POST /emi/schedule only in samples\\python-emi-api. Use Decimal and ROUND_HALF_UP; fixed two-decimal monetary strings and Indian INR grouping. Preserve existing rounded EMI and POST /emi total_payment. Accept optional paired prepayment_amount/prepayment_month. Each month round interest, apply regular installment, then one-time prepayment to remaining principal after that month's payment. Shorten tenure without lowering EMI. Reject invalid/unpaired inputs and prepayment above remaining principal. Final installment is exactly remaining principal plus rounded interest; never create a negative balance. Add no-prepayment, valid/invalid prepayment, shortened-tenure, settlement and rounding tests. Run only no-download/no-restore checks with the existing pinned environment. If unavailable, report NOT RUN; do not install, launch or change another sample.",
+      "source": [
+        {
+          "path": "docs\\DEMO-SCRIPT.md"
+        }
+      ],
+      "actor": "copilot"
+    },
+    "prompt-aks": {
+      "sha256": "918b0dc8a1f35850a586a827fc8630b641ad25beeaedc4b493e43d7a7f69b564",
+      "text": "Use prepare-for-azure to review application-only Kubernetes manifests and docs\\GITHUB-AKS.md for existing AKS/ACR. Require real namespace/image inputs; do not invent values, placeholders or latest tags. Keep non-root Deployments, health probes, limits and ClusterIP Services. Explain main-only workflow_dispatch with required current source_sha, modern-service test gates, separate OIDC build/deploy identities, same-run image digests and independent aks-demo approval. Explain precreated namespace, kubelet pulls, ABAC/non-ABAC permissions and private API runner connectivity. Verify official documentation only; validate static files using existing dependencies. Do not authenticate, fetch tools, provision, create namespace/RBAC/registry/ingress, build/push images, get kubeconfig, dispatch Actions or deploy. Report missing inputs and distinguish static from unobserved live checks.",
+      "source": [
+        {
+          "path": "docs\\DEMO-SCRIPT.md"
+        }
+      ],
+      "actor": "copilot"
+    },
+    "prompt-review": {
+      "sha256": "7ea139714ba8a868fc2565d7c4e7296290d5c34fd77146e8dd6299d598ed42d9",
+      "text": "Read .github\\copilot-instructions.md and .github\\instructions\\go.instructions.md. Review tests\\fixtures\\go-review-example.txt as non-serving training text. Identify the two actionable findings with fixture line references and impact, and describe safe logging/stable client-error alternatives and regression assertions. Do not apply either defect to live samples, modify the fixture into executable code, launch services or install tools. Contrast with the safe samples\\go-fx-rates regression tests; do not claim checks ran unless observed.",
+      "source": [
+        {
+          "path": "docs\\DEMO-SCRIPT.md"
+        }
+      ],
+      "actor": "copilot"
+    }
+  },
+  "pinned_source_files": {
+    ".vscode\\tasks.json": "1adbea2de95df8b1655b2ee2d998828c8a0d677c9209d3b1b1d6c0e991def9b9",
+    "docs\\DEMO-SCRIPT.md": "2a44f4fd0179d4f1862703e00e4962f7f47d5164941c5ec610b94c6b50a40f18",
+    "docs\\SETUP.md": "216e1ea6ca3321d54793cd4bfa2f15f927a8f687dc41784450a2f858c1f0433b",
+    "scripts\\verify.ps1": "28da6e5d825cd67da29cf4afaff4b9a28a367d5c5a045ec1f9b59a11ca4b91b2"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "reviewed": "2026-11-08",
+  "scope": "Addresses documented in the source repository. No automated HTTP check or browser sign-in is claimed.",
+  "links": {
+    "repo": {"kind": "repo", "label": "Private workstation repository", "href": "https://github.com/hrshl-demo/win11-dev-workstation-showcase"},
+    "actions": {"kind": "repo", "label": "CI and manual workflow runs", "href": "https://github.com/hrshl-demo/win11-dev-workstation-showcase/actions"},
+    "wsl-docs": {"kind": "learn", "label": "Microsoft WSL documentation", "href": "https://learn.microsoft.com/windows/wsl/"},
+    "aks-docs": {"kind": "learn", "label": "Microsoft AKS documentation", "href": "https://learn.microsoft.com/azure/aks/"},
+    "execution-policy": {"kind": "learn", "label": "PowerShell execution policies", "href": "https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies"}
+  }
+}

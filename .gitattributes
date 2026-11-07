@@ -1,5 +1,6 @@
 * text=auto
 *.md text eol=lf
+demo-companion/** text=auto eol=lf
 LICENSE text eol=lf
 *.ps1 text eol=crlf
 *.psm1 text eol=crlf

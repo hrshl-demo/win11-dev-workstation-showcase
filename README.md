@@ -6,6 +6,8 @@ A VS Code-first developer workflow for synthetic Python EMI, Java IFSC and Go FX
 
 ## End-to-end journey: Phase 0 through Phase 7
 
+**Prefer a guided companion?** [Open the offline demo companion instructions](demo-companion/README.md). Keep the complete `demo-companion` folder and double-click `index.html` for quick steps, detailed activities and slide navigation. Commands are copy-only and progress is manual; the companion never runs setup or verifies your laptop.
+
 **Start with [Phase 0 prerequisites](docs/SETUP.md#phase-0-prerequisites-before-repository-scripts), before executing any script.** IT/humans supply supported Windows, virtualization/disk, elevation/licensing, App Installer/WinGet, network/proxy, repository access, approved Git/VS Code to clone, script execution and extension-source approvals. Python/Java/Go/WSL and extensions are automated setup outputs, not a manual shopping list.
 
 In the integrated PowerShell terminal, the inline prerequisite checks work even when scripts are blocked:
@@ -74,6 +76,7 @@ The required profile has **12 extensions**, with an optional 13th for Java moder
 **Cleanup later, not during installation:** [scoped cleanup](docs/SETUP.md#cleanup-after-work-is-finished) previews and removes only newly recorded, unchanged checkout outputs and optionally exact owned containers. It is **not** a laptop uninstaller or demo reset. GitHub Copilot/GHCP, shared tools, extensions, environments, caches, source and cloud resources remain untouched.
 
 - [VS Code setup, packages, daily work and GitHub](docs/SETUP.md)
+- [Offline multi-page demo companion](demo-companion/README.md) (complete folder; open `index.html`, no automatic actions)
 - [Existing AKS deployment and approval prerequisites](docs/GITHUB-AKS.md)
 - [15-minute demo and safe fallback](docs/DEMO-SCRIPT.md)
 - [Architecture and lifecycle](docs/ARCHITECTURE.md)

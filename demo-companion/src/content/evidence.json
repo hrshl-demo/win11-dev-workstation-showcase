@@ -1,0 +1,46 @@
+{
+  "scope": "Read-only GitHub observations at 03:25 IST on 2026-11-08 for the underlying installer/application revisions. These are recorded repository results, not a continuously polled state or a claim that this laptop journey ran.",
+  "historical_baseline": "d5e28863f07fee2f80d3a021eccd8f9bd45962f1",
+  "runs": [
+    {
+      "branch": "main",
+      "sha": "73cd348c198da748c77d8a22c4d8314abdc66d36",
+      "id": 42416258448,
+      "url": "https://github.com/hrshl-demo/win11-dev-workstation-showcase/actions/runs/42416258448",
+      "status": "completed",
+      "conclusion": "success",
+      "observed_at": "2026-11-08 03:25 IST; run updated 2026-11-07T21:34:24Z",
+      "jobs": [
+        {"name": "python", "status": "completed", "conclusion": "success"},
+        {"name": "java", "status": "completed", "conclusion": "success"},
+        {"name": "go", "status": "completed", "conclusion": "success"},
+        {"name": "powershell (powershell)", "status": "completed", "conclusion": "success"},
+        {"name": "powershell (pwsh)", "status": "completed", "conclusion": "success"},
+        {"name": "config", "status": "completed", "conclusion": "success"},
+        {"name": "containers (python-emi-api)", "status": "completed", "conclusion": "success"},
+        {"name": "containers (java-ifsc-service)", "status": "completed", "conclusion": "success"},
+        {"name": "containers (go-fx-rates)", "status": "completed", "conclusion": "success"}
+      ]
+    },
+    {
+      "branch": "demo-complete",
+      "sha": "89c7582fe8f74e148066cc6e1dc662e12e76b70a",
+      "id": 42416262736,
+      "url": "https://github.com/hrshl-demo/win11-dev-workstation-showcase/actions/runs/42416262736",
+      "status": "completed",
+      "conclusion": "success",
+      "observed_at": "2026-11-08 03:25 IST; run updated 2026-11-07T21:34:17Z",
+      "jobs": [
+        {"name": "python", "status": "completed", "conclusion": "success"},
+        {"name": "java", "status": "completed", "conclusion": "success"},
+        {"name": "go", "status": "completed", "conclusion": "success"},
+        {"name": "powershell (powershell)", "status": "completed", "conclusion": "success"},
+        {"name": "powershell (pwsh)", "status": "completed", "conclusion": "success"},
+        {"name": "config", "status": "completed", "conclusion": "success"},
+        {"name": "containers (python-emi-api)", "status": "completed", "conclusion": "success"},
+        {"name": "containers (java-ifsc-service)", "status": "completed", "conclusion": "success"},
+        {"name": "containers (go-fx-rates)", "status": "completed", "conclusion": "success"}
+      ]
+    }
+  ]
+}

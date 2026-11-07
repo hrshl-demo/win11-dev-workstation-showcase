@@ -1,0 +1,25 @@
+{
+  "id": "setup-preflight", "status": "documented", "duration": "HTTPS outer budgets: 213 / 393 / 663 seconds", "cost": "Read-only network probes after approvals",
+  "summary": "Phase 1: actual prerequisite results before a human selects setup. Preflight does not install, repair, authenticate or verify all application readiness.",
+  "purpose": [{"p": "Expose missing prerequisites, policy and reachability before individually approved module actions."}, {"p": "A failed or skipped read-only gate stays failed/NOT RUN; no installation is performed to make the check pass."}],
+  "starting_state": [{"p": "Phase 0 approved; supported effective script policy, reviewed root checkout and approved endpoint/network routing."}],
+  "steps": [
+    {"no": "2", "actor": "terminal", "title": "Run the real Preflight task", "where": "Terminal \u203a Run Task \u203a Preflight", "body": [{"code": {"ref": "preflight"}}, {"p": "Require no FAIL and exit 0 plus the Phase 0 human approvals. Missing WSL/wslc before setup can be an expected WARN; read the actual messages."}], "expect": "Observed read-only prerequisite results, not installed tools, approved extension state or authentication."},
+    {"no": "2a", "actor": "manual", "title": "Understand timeout selection and outer budgets", "where": "Preflight task \u203a HTTPS timeout picker", "body": [{"table": {"head": ["Per-request selection", "Six-host outer child budget", "Meaning"], "rows": [["5 seconds (default)", "213 seconds", "Normal request setting, not setup completion time"], ["15 seconds", "393 seconds", "Approved slower route; select it again for setup"], ["30 seconds", "663 seconds", "Up to about 11 minutes for the outer probe budget"]]}}, {"code": {"ref": "preflight-slow"}}, {"p": "Transient timeout/DNS/connect errors may retry at most three attempts with 250 ms backoff. Denial/certificate errors do not get those retries; redirects are not followed. Root 404/405 establishes reachability only, not package/source success."}, {"p": "A standalone Preflight selection is not cached. Choose the same reviewed slow value for the following named setup if needed; installer waits are a different budget."}], "expect": "A truthful timeout/reachability result without interpreting a root response as installation permission."},
+    {"no": "2b", "actor": "terminal", "title": "Optional pre-setup Verify is inventory, not acceptance", "where": "Terminal \u203a Verify results", "body": [{"code": {"ref": "verify"}}, {"p": "Before setup, missing expected outputs may yield exit 1. This optional inventory is not the Preflight installation gate. After intended setup, a required FAIL/exit 1 means not accepted."}], "expect": "Missing pre-setup outputs correctly labelled as inventory gaps, never hidden or confused with post-setup success."}
+  ],
+  "copyable": [], "expected": [{"p": "Approved prerequisites plus observed Preflight outcomes. Continue only to a reviewed human module inventory/confirmation, not a broad automatic setup run."}],
+  "verify": {
+    "success": [{"p": "Record actual exit code and messages. No FAIL/exit 0 is necessary but does not establish source/profile licensing or a working app."}],
+    "failures": [
+      {"symptom": "HTTPS timeout on a slow approved route", "cause": "Transient DNS/connect/request delay", "fix": "Human may choose documented 15/30-second selection for both Preflight and the following named module. Retain policy and inspect the real result.", "repeat_safe": "careful"},
+      {"symptom": "Certificate/proxy/source denial", "cause": "Untrusted certificate or imposed network/source policy", "fix": "Stop and use IT-approved routing; do not disable validation, follow redirects, switch sources or bypass proxy policy.", "repeat_safe": "no"},
+      {"symptom": "Optional Verify reports missing WSL/runtime before setup", "cause": "Expected pre-setup outputs are absent", "fix": "Keep the gap explicit and review the necessary named module only after prerequisites and approvals.", "repeat_safe": "yes"}
+    ],
+    "recovery": [{"p": "Use source/mocks for blocked scripts; preserve all installed state. A retry is read-only only if the command is actually Preflight/Verify, not module preview or configuration testing."}],
+    "limitations": [{"p": "Preflight does not prove vendor installer state, extension enablement/profile routing, package restore, user sign-in, WSL runtime health or Azure approval."}]
+  },
+  "say": ["Preflight probes prerequisites; it never installs.", "Timeout budgets are limits, not completion promises.", "A pre-setup inventory gap is not post-setup acceptance."],
+  "sources": [{"repo": "poc", "path": "scripts\\preflight.ps1"}, {"repo": "poc", "path": "scripts\\developer.ps1"}, {"repo": "poc", "path": "docs\\SETUP.md"}, {"repo": "poc", "path": ".vscode\\tasks.json"}],
+  "evidence_gaps": ["No read-only Preflight or live laptop policy/network acceptance is claimed here."]
+}
