@@ -10,7 +10,7 @@ Complete this checklist **before running any repository script**, including Pref
 | --- | --- |
 | Supported Windows 11 | Serviced Windows 11 release, build 22621+; approved device image |
 | Elevation and changes | Permission for administrator/UAC, Windows/WSL changes, reboot and package licences; save work |
-| Hardware and storage | Approved virtualization/nested virtualization enabled; at least 15 GB free for the base, plus SDK/cache/image budget |
+| Hardware and storage | Approved virtualization/nested virtualization enabled; at least 15 GB free for the readiness gate, plus selected SDK/cache/image budget |
 | App Installer / WinGet | Registered for the signed-in developer, executable and configuration capability allowed; not SYSTEM |
 | Network / proxy / trust | Approved WinHTTP and WinGet proxy, payload/module/image endpoints and TLS/AuthentiCode validation paths |
 | Minimum clone tools | Approved Git and VS Code available **before cloning**; repository access and permission to trust reviewed source |
@@ -19,7 +19,7 @@ Complete this checklist **before running any repository script**, including Pref
 
 Python 3.14, Java 25, Go, WSL/wslc and the 12 required extensions are **setup outputs**, not things you must manually install first. See [IT prerequisites](IT-PREREQUISITES.md) for approvals outside this repository's checks.
 
-This VS Code-first route genuinely requires Git/VS Code first. IT can supply an approved image or software distribution for that minimum; the later add-on also declares Git/VS Code but cannot install them before you have cloned it. If they are absent, use the [official Microsoft base entrypoint guidance](https://github.com/microsoft/WindowsDeveloperConfig) through IT first, reviewing source/signatures/changes and its resume instructions. That base-only alternative is not this add-on and is not permission to paste an unchecked download-and-execute command.
+This VS Code-first route genuinely requires Git/VS Code first. IT can supply an approved image or software distribution for that minimum; Core also inventories them but cannot install them before you have cloned/opened it. Missing minimum clone tools are an IT prerequisite, not an automatic fallback to the broad Microsoft preset. That preset is only the separately reviewed explicit legacy option described below.
 
 ### Script execution before Preflight
 
@@ -65,13 +65,13 @@ Choose **Terminal → Run Task → Preflight**, or:
 .\scripts\preflight.ps1
 ```
 
-**Gate:** no Preflight FAIL and exit 0, plus Phase 0 approvals. WARN is advisory: missing WSL/wslc is expected before setup and does not block the Microsoft base. A policy, disk, virtualization, WinGet or endpoint FAIL must be resolved before bootstrap; a PASS does not certify every enterprise control or payload source.
+**Gate:** no Preflight FAIL and exit 0, plus Phase 0 approvals. WARN is advisory: missing WSL/wslc is expected before its module and does not block unrelated modules. A policy, disk, virtualization, WinGet or endpoint FAIL must be resolved before apply; a PASS does not certify every enterprise control or payload source.
 
 HTTPS results include URI/status/attempts, the actual timeout and safe failure categories. Default timeout remains **5 seconds per attempt**; classified transient timeout/DNS/connect failures get at most three attempts with 250 ms backoff. HTTP denial and certificate failures do not retry. Root 404/405 means reachability only, not artifact access; redirects are not followed. If exhausted, bootstrap stops before setup and reports the failed checks—do not keep retrying full setup blindly or Restore dependencies to unblock the network.
 
 ### Explicit slow-network choice
 
-If a permitted endpoint responds too slowly, choose **Terminal → Run Task → Preflight → 30** in the HTTPS timeout picker (choices **5 / 15 / 30**, default **5**). If readiness passes and setup is approved, choose **User-run setup → 30** too; select **30 again** for **Finish setup** after base resume if needed. The selection is passed through the dispatcher and bootstrap to its own child Preflight; a separate successful 30-second Preflight is not cached and does not change a later default-5 setup. Setup preview also shows the chosen context; no Test/Run task gets this picker.
+If a permitted endpoint responds too slowly, choose **Terminal → Run Task → Preflight → 30** in the HTTPS timeout picker (choices **5 / 15 / 30**, default **5**). If readiness passes and setup is approved, choose **30** in the named module task or **User-run setup** too; only if opting into the legacy bundle/confirmed Finish setup choose **30** there as well. The selection is passed through the dispatcher and bootstrap to its own child Preflight; a separate successful 30-second Preflight is not cached and does not change a later default-5 setup. Setup preview shows its selected context without network requests; no Test/Run task gets this picker.
 
 Direct equivalent user-operated commands:
 
@@ -115,7 +115,7 @@ Discovery checks local uninstall registration, Python registration/Store package
 | **Install core tools** / Core | Git, VS Code, gh, Copilot CLI, uv, PowerShell 7, Node LTS, Azure CLI, azd, kubectl. No fonts, PowerToys, NVM, Explorer/taskbar/profile or global Copilot tweaks |
 | **Install Python SDK** / Python | Python 3.14, separately retryable |
 | **Install Java SDK** / Java | Microsoft OpenJDK 25, separately retryable |
-| **Install Go SDK** / Go | Go, separately retryable; sample requires manifest-defined 1.27.3 |
+| **Install Go SDK** / Go | Go, separately retryable; missing-target install is pinned to the sample's `go.mod` version (1.27.3), not an accidental newer release |
 | **Install extensions (approved source)** / Extensions | Missing members of the 12 required set only, after CLI/default-profile source approval |
 | **Install WSL components** / WSL | Read-only runtime/features/distro inventory first; only disabled features or absent runtime. Approved Administrator terminal needed for feature inventory/actions |
 | **Install Ubuntu (optional)** / Ubuntu | Explicit distro opt-in after WSL/features/restart ready. Existing package/distro skips download; no reset/unregister/default changes or automatic launch |

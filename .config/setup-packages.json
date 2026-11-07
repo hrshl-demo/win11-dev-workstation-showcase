@@ -18,7 +18,7 @@
     {"Id":"Microsoft.OpenJDK.25","Command":"java","Args":["-version"],"Product":"(?i)(?:OpenJDK|JDK|Java.*Development Kit|Temurin|Zulu|Corretto|Liberica|GraalVM)","Paths":["%JAVA_HOME%\\bin\\java.exe"],"Required":"version\\s+\"25(?:[.\"]|$)"}
   ],
   "Go": [
-    {"Id":"GoLang.Go","Command":"go","Args":["version"],"Product":"(?i)^Go Programming Language|^Go version","Paths":["%ProgramFiles%\\Go\\bin\\go.exe"],"Required":"^go version go1\\.27\\.3\\s"}
+    {"Id":"GoLang.Go","Command":"go","Args":["version"],"Product":"(?i)^Go Programming Language|^Go version","Paths":["%ProgramFiles%\\Go\\bin\\go.exe"]}
   ],
   "Docker": [
     {"Id":"Docker.DockerDesktop","Command":"docker","Args":["--version"],"Product":"(?i)^Docker Desktop","Paths":["%ProgramFiles%\\Docker\\Docker\\resources\\bin\\docker.exe"],"Required":".+"}

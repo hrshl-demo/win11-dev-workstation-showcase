@@ -18,6 +18,13 @@ function Get-SetupPackage {
     $catalog = Get-Content (Join-Path (Get-ShowcaseRoot) '.config\setup-packages.json') -Raw | ConvertFrom-Json
     $property = $catalog.PSObject.Properties[$Module]
     if ($null -eq $property) { return @() }
+    if ($Module -eq 'Go') {
+        $manifest = Get-Content (Join-Path (Get-ShowcaseRoot) 'samples\go-fx-rates\go.mod') -Raw
+        if ($manifest -notmatch '(?m)^go ([0-9]+\.[0-9]+\.[0-9]+)\s*$') { throw 'Go manifest version is unknown; no installer can run.' }
+        $version = $Matches[1]
+        $property.Value[0] | Add-Member -NotePropertyName Version -NotePropertyValue $version
+        $property.Value[0] | Add-Member -NotePropertyName Required -NotePropertyValue ('^go version go' + [regex]::Escape($version) + '\s')
+    }
     return @($property.Value)
 }
 
@@ -403,8 +410,10 @@ function Invoke-SetupModule {
                 }
                 $winget = Get-NativeCommandPath winget
                 if (-not $winget) { throw 'WinGet prerequisite unavailable; no provider/source restore or installer download.' }
-                $result = Invoke-SetupNative $winget @('install', '--id', $item.Id, '--exact', '--source', 'winget',
-                    '--silent', '--disable-interactivity', '--accept-package-agreements') $item.Id $InstallTimeoutSeconds
+                $installArguments = @('install', '--id', $item.Id, '--exact', '--source', 'winget',
+                    '--silent', '--disable-interactivity', '--accept-package-agreements')
+                if ($Module -eq 'Go' -and $package.PSObject.Properties['Version']) { $installArguments += @('--version', [string]$package.Version) }
+                $result = Invoke-SetupNative $winget $installArguments $item.Id $InstallTimeoutSeconds
             }
             if ($result.ExitCode -in @(3010, 1641)) { $restart = $true }
             elseif ($result.ExitCode -ne 0) { throw "Target $($item.Id) installer exit $($result.ExitCode). Stop and diagnose; no automatic retry." }
