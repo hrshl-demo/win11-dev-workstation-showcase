@@ -258,6 +258,7 @@ Describe 'Actual tool and extension verification with safe mocks' {
                     'C:\java.exe' { 'openjdk version "25.0.1"' }
                     'C:\go.exe' { 'go version go1.27.3 windows/amd64' }
                     'C:\node.exe' { 'v24.0.0' }
+                    'C:\pwsh.exe' { '7.6.9' }
                     'C:\wsl.exe' { 'WSL version: 2.9.3' }
                     default { 'Installed tool 1.0' }
                 }
@@ -265,15 +266,15 @@ Describe 'Actual tool and extension verification with safe mocks' {
             [pscustomobject]@{ ExitCode = 0; Output = $text; StdOut = $text; StdErr = ''; TimedOut = $false }
         }
     }
-    It 'verifies 15 tools and the 12-extension default profile' {
+    It 'verifies 16 tools and the 12-extension default profile' {
         $checks = @(Get-VerificationCheck)
-        $checks.Count | Should -Be 28
+        $checks.Count | Should -Be 29
         Get-CheckExitCode $checks | Should -Be 0
         $checks.Name | Should -Not -Contain 'vscjava.migrate-java-to-azure'
     }
     It 'checks the 13th extension only when modernization is included' {
         $checks = @(Get-VerificationCheck -IncludeJavaModernization)
-        $checks.Count | Should -Be 29
+        $checks.Count | Should -Be 30
         $checks.Name | Should -Contain 'vscjava.migrate-java-to-azure'
     }
     It 'fails Python outside the prescribed 3.14 line' {
@@ -281,6 +282,18 @@ Describe 'Actual tool and extension verification with safe mocks' {
             [pscustomobject]@{ ExitCode = 0; Output = 'Python 3.12.0'; StdOut = 'Python 3.12.0'; StdErr = ''; TimedOut = $false }
         } -ParameterFilter { $FilePath -eq 'C:\python.exe' }
         (Get-VerificationCheck | Where-Object Name -eq python).Status | Should -Be 'FAIL'
+    }
+    It 'requires the actual PowerShell 7 runtime, not package metadata' {
+        Mock Invoke-NativeCommand {
+            [pscustomobject]@{ ExitCode = 0; Output = '6.2.7'; StdOut = '6.2.7'; StdErr = ''; TimedOut = $false }
+        } -ParameterFilter { $FilePath -eq 'C:\pwsh.exe' }
+        (Get-VerificationCheck | Where-Object Name -eq pwsh).Status | Should -Be 'FAIL'
+    }
+    It 'reports packaged PowerShell unknown discovery without losing other checks' {
+        Mock Get-SetupExecutable { throw 'Inventory unknown for Microsoft.PowerShell: unreadable registered runtime; no downloads.' } -ParameterFilter { $Package.Command -eq 'pwsh' }
+        $checks = @(Get-VerificationCheck)
+        ($checks | Where-Object Name -eq pwsh).Status | Should -Be 'FAIL'
+        ($checks | Where-Object Name -eq python).Status | Should -Be 'PASS'
     }
     It 'recognises the Java version emitted on stderr' {
         Mock Invoke-NativeCommand {

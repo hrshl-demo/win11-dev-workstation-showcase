@@ -38,6 +38,7 @@ function Get-VerificationCheck {
         @{ Name = 'code'; Args = @('--version'); Expected = 'Installed' },
         @{ Name = 'python'; Args = @('--version'); Expected = '3.14.x'; Pattern = '\b3\.14\.\d+' },
         @{ Name = 'uv'; Args = @('--version'); Expected = 'Installed' },
+        @{ Name = 'pwsh'; Args = @('-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()'); Expected = '7.x'; Pattern = '^7\.' },
         @{ Name = 'java'; Args = @('-version'); Expected = '25.x'; Pattern = 'version\s+"25(?:[."]|$)' },
         @{ Name = 'go'; Args = @('version'); Expected = 'Go 1.27.3'; Pattern = '^go version go1\.27\.3\s' },
         @{ Name = 'az'; Args = @('version'); Expected = 'Installed' },
@@ -60,7 +61,12 @@ function Get-VerificationCheck {
         }
         $path = Get-NativeCommandPath $name
         $package = @($packages | Where-Object Command -eq $name)
-        if ($package.Count -eq 1) { $path = Get-SetupExecutable $package[0] @($local | Where-Object { $_.Name -match $package[0].Product }) }
+        try {
+            if ($package.Count -eq 1) { $path = Get-SetupExecutable $package[0] @($local | Where-Object { $_.Name -match $package[0].Product }) }
+        } catch {
+            Get-CheckResult $name FAIL $_.Exception.Message -Expected $definition.Expected -Found 'Inventory unknown; retained'
+            continue
+        }
         if (-not $path) {
             Get-CheckResult $name FAIL 'No usable installed location found. Preview the matching module; unknown inventory is not permission to install. Use a fresh terminal after confirmed installation.' -Expected $definition.Expected -Found 'Missing/unusable'
             continue

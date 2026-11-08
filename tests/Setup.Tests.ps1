@@ -353,6 +353,94 @@ Describe 'Local installed-target discovery, including stale PATH' {
     }
 }
 
+Describe 'Current-user packaged PowerShell installed-first discovery' {
+    BeforeEach {
+        $global:PackagedPowerShellFixture = [pscustomobject]@{ Name = 'Microsoft.PowerShell'; Version = '7.6.9.0'
+            InstallLocation = 'C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.9.0_x64__8wekyb3d8bbwe' }
+        $global:PackagedPowerShellExecutable = $global:PackagedPowerShellFixture.InstallLocation + '\pwsh.exe'
+        Mock Test-Path -ModuleName _setup { $false }
+        Mock Test-Path -ModuleName _setup { $true } -ParameterFilter {
+            $LiteralPath -eq $global:PackagedPowerShellExecutable
+        }
+        Mock Get-AppxPackage -ModuleName _setup { @() }
+        Mock Get-AppxPackage -ModuleName _setup { $global:PackagedPowerShellFixture } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
+        Mock Get-NativeCommandPath -ModuleName _setup { 'C:\Users\synthetic\AppData\Local\Microsoft\WindowsApps\pwsh.exe' }
+        Mock Get-Item -ModuleName _setup { [pscustomobject]@{ Attributes = [IO.FileAttributes]::Normal } }
+        Mock Invoke-NativeCommand -ModuleName _setup {
+            [pscustomobject]@{ ExitCode = 0; TimedOut = $false; Output = '7.6.9' }
+        }
+        Mock Invoke-SetupNative -ModuleName _setup {}
+        Mock Invoke-SetupReadiness -ModuleName _setup {}
+        Mock Get-SetupPackage -ModuleName _setup {
+            [pscustomobject]@{ Id = 'Microsoft.PowerShell'; Command = 'pwsh'; Args = @('-NoProfile', '-Command', '$PSVersionTable.PSVersion.ToString()')
+                Product = '^PowerShell 7'; Required = '^7\.'; Paths = @('C:\Program Files\PowerShell\7\pwsh.exe') }
+        }
+    }
+    AfterEach { Remove-Variable PackagedPowerShellFixture, PackagedPowerShellExecutable -Scope Global }
+    It 'discovers the exact registered MSIX and probes real package content, never an alias' {
+        $package = @(Get-SetupPackage Core)[0]
+        $local = @(Get-LocalInstallation)
+        $result = Get-SetupInventory $package $local
+        $result.State | Should -Be 'Installed'
+        $result.Version | Should -Be '7.6.9'
+        $result.Path | Should -Be $global:PackagedPowerShellExecutable
+        $result.Compatible | Should -BeTrue
+        Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 0
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Invoke-NativeCommand -ModuleName _setup -Times 0 -Exactly -ParameterFilter {
+            $FilePath -match '\\AppData\\Local\\Microsoft\\WindowsApps\\'
+        }
+        Should -Invoke Get-AppxPackage -ModuleName _setup -ParameterFilter {
+            $Name -eq 'Microsoft.PowerShell' -and -not $AllUsers
+        }
+    }
+    It 'keeps a package whose executable is absent installed/unverified with no download' {
+        Mock Test-Path -ModuleName _setup { $false } -ParameterFilter { $LiteralPath -eq $global:PackagedPowerShellExecutable }
+        $result = Get-SetupInventory (@(Get-SetupPackage Core)[0]) @(Get-LocalInstallation)
+        $result.State | Should -Be 'Installed'
+        $result.Compatible | Should -BeFalse
+        Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 1
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
+    }
+    It 'fails package inventory query before downloads' {
+        Mock Get-AppxPackage -ModuleName _setup { throw 'Synthetic query denied' } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
+        { Get-LocalInstallation } | Should -Throw '*Microsoft.PowerShell*current-user*no downloads*'
+        Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 1
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
+    }
+    It 'retains unknown, unreadable and incompatible packaged runtimes without installers' -TestCases @(
+        @{ Mode = 'InvalidLocation' }, @{ Mode = 'ProbeDenied' }, @{ Mode = 'Incompatible' }) {
+        param($Mode)
+        if ($Mode -eq 'InvalidLocation') { $global:PackagedPowerShellFixture.InstallLocation = 'C:\bad"package' }
+        elseif ($Mode -eq 'ProbeDenied') {
+            Mock Invoke-NativeCommand -ModuleName _setup {
+                [pscustomobject]@{ ExitCode = 5; TimedOut = $false; Output = '' }
+            }
+        } else {
+            Mock Invoke-NativeCommand -ModuleName _setup {
+                [pscustomobject]@{ ExitCode = 0; TimedOut = $false; Output = '6.2.7' }
+            }
+        }
+        Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 1
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
+    }
+    It 'preserves normal MSI discovery and truly absent classification independently of aliases' {
+        Mock Get-AppxPackage -ModuleName _setup { @() } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
+        $package = @(Get-SetupPackage Core)[0]
+        (Get-SetupInventory $package @(Get-LocalInstallation)).State | Should -Be 'Missing'
+        Mock Test-Path -ModuleName _setup { $true } -ParameterFilter { $LiteralPath -eq 'C:\Program Files\PowerShell\7\pwsh.exe' }
+        $result = Get-SetupInventory $package @(
+            [pscustomobject]@{ Name = 'PowerShell 7.6.9'; Version = '7.6.9'; Location = 'C:\Program Files\PowerShell\7' })
+        $result.State | Should -Be 'Installed'
+        $result.Compatible | Should -BeTrue
+        $result.Path | Should -Be 'C:\Program Files\PowerShell\7\pwsh.exe'
+    }
+}
+
 Describe 'WSL and distro preservation' {
     BeforeEach {
         $global:SetupFixtureWsl = [pscustomobject]@{ Installed = $true; Version = '2.9.3'
