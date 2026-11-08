@@ -104,6 +104,11 @@ Existing task/help labels such as **human-operated** and **user-run** include
 this named human-invoked route with real approvals; they do not authorize
 implementation/build agents or remove any script confirmation.
 
+Troubleshooting's generic agent restrictions still cover coding/read-only
+troubleshooting roles and all daily checks. The named workflow may only return
+to the separately approved stages above; it never repairs, launches to
+troubleshoot, or hides acquisition inside a daily check.
+
 After a known stopped/completed task, or after **you** save work and perform an
 approved restart/full VS Code reopen, select the same agent and send:
 
