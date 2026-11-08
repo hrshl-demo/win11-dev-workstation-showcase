@@ -183,8 +183,8 @@ function Get-SetupExecutable {
             }
             if (-not $firstInstalled -and $Package.Command -ne 'java11') { $firstInstalled = $path }
         }
-        if ($invalid.Count) { throw "Inventory unknown for $($Package.Id): $($invalid -join '; '). Existing software retained; no downloads." }
     }
+    if ($invalid.Count) { throw "Inventory unknown for $($Package.Id): $($invalid -join '; '). Existing software retained; no downloads." }
     return $firstInstalled
 }
 
