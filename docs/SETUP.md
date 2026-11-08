@@ -1,6 +1,6 @@
 # End-to-end VS Code setup
 
-Follow **Phase 0 prerequisites → Phase 1 preflight → Phase 2 automated laptop setup → Phase 3 verification → Phase 4 project restore and checks → Phase 5 run/debug → Phase 6 GitHub CI → Phase 7 existing AKS**. Humans approve/run setup; agents explain and inspect, never install or change policy. Missing languages/extensions on a fresh or partially configured device belong to automated setup, not individual manual installation.
+Follow **Phase 0 prerequisites → Phase 1 preflight → Phase 2 automated laptop setup → Phase 3 verification → Phase 4 project restore and checks → Phase 5 run/debug → Phase 6 GitHub CI → Phase 7 existing AKS**. Humans may run the tasks directly or select the narrowly approved local **Workstation setup** agent below. All other agents explain/inspect and never install; no agent changes policy. Missing languages/extensions on a fresh or partially configured device belong to automated setup, not individual manual installation.
 
 For quick steps, detailed activities and one-screen slides, keep the complete [offline demo companion](../demo-companion/README.md) folder and double-click its `index.html`. Instructions and local assets work offline; source links need network/repository access. Checkmarks record only manual progress, not machine verification. Its README lists standard-library-only content/source checks; no viewer build or server is needed.
 
@@ -59,6 +59,73 @@ Select an approved local folder and open the clone. Read the source before grant
 
 Browser authentication, UAC and reboot remain external OS/service interactions. Setup duration depends on downloads, device and restart; full provisioning is **not the 15-minute coding demo**, and hosted CI does not prove fresh-laptop acceptance.
 
+### Select Workstation setup in VS Code
+
+Open the reviewed clone as the workspace, with approved Copilot access and
+Workspace Trust. In Copilot Chat choose a session target running **locally on
+this Windows device** (Local, or Copilot running locally), not remote/cloud.
+Choose **Workstation setup** in the **Agent** dropdown. It is discovered natively
+from `.github\agents\workstation-setup.agent.md`; no plugin, MCP server, cloud
+environment or setup Actions job is needed. Send one kickoff:
+
+```text
+Start the local setup and demo journey. Inventory first, retain installed versions/settings, and ask for my approval before installations, dependency Restore and local launches. Keep WSL changes and optional scopes separate.
+```
+
+The agent reads the scripts/catalog/tasks, checks safe workspace/vendor state,
+runs **local installed-software inventory before network Preflight**, reports
+missing/retained/unknown scope, and invokes only needed independently approved
+modules through existing terminal tools. It re-inventories actual versions,
+checks enabled intended-profile acceptance with you, explicitly Restores
+approved dependencies, then runs no-hidden-restore Test/Lint/Coverage and the
+separately approved local startup/health/synthetic requests. You do **not** need
+to copy each command or pick Run Task for every module.
+
+Selection or `start` is **not blanket approval**. Review scoped tool commands,
+package/licence/download implications and individual native confirmations in
+the exposed terminal. Only **you** answer PowerShell/vendor prompts; the agent
+must not type Y/A/Yes-to-All or disable tool/native approval. Administrator/UAC,
+restart, script signing and private-marketplace compatibility can require a
+human pause. If the harness cannot expose an interactive prompt, the operation
+is **NOT RUN/blocked**, not silently rerun unconfirmed.
+
+Default scope is local Python/current Java/Go. Missing WSL/wslc, full-profile
+tools or unapproved extension/runtime state remain visible: a narrower local
+demo is **not full-workstation readiness**. WSL changes, Ubuntu, licensed
+Docker, modernization, PowerShell test-module Restore, image builds and
+container launches have separate approvals. Broad legacy bundle/Finish/SkipBase,
+repair, upgrades, policy/source/account/profile changes, automatic elevation/
+reboot, cleanup/reset, Git publication and cloud execution are outside the
+agent. [AGENTS.md](../AGENTS.md#human-invoked-vs-code-exception) documents the
+exception; generic coding/build/desktop/cloud/remote/subagents, including
+workflow implementers, still cannot execute setup/preview/WhatIf/Restore/apps.
+**Workstation onboarding** remains the read-only explanation alternative.
+Existing task/help labels such as **human-operated** and **user-run** include
+this named human-invoked route with real approvals; they do not authorize
+implementation/build agents or remove any script confirmation.
+
+After a known stopped/completed task, or after **you** save work and perform an
+approved restart/full VS Code reopen, select the same agent and send:
+
+```text
+Resume the local setup and demo journey. Recheck installer/reboot safety and fresh installed-software inventory; do not blindly retry. Ask for new approvals for any remaining changes.
+```
+
+The agent does not interpret launcher exit 0, a declined target, an installer
+log, cancellation or a progress checkmark as acceptance. Uncertain vendor state
+or a pending reboot stops the next install. Live VS Code selection, tool use,
+native confirmations and successful laptop execution require a human rehearsal;
+schema/static/mocked checks and hosted CI do not establish them.
+
+If the agent is missing, use **Chat: Open Customizations → Agents**, confirm its
+workspace source and file diagnostics, and verify the reviewed clone contains
+the file. Check the selected local harness's actual read/search/execute tool
+inventory: unavailable tools can be ignored by a client. Do not add `*`, change
+autoapprove settings or assume that `target` switches execution/security; that
+frontmatter field only changes editor interpretation. Use the manual task
+fallback below if tools or human-accessible prompts are unavailable, or stop for
+IT if policy/signing/source approval is blocked.
+
 ## Phase 1: preflight and optional inventory
 
 Choose **Terminal → Run Task → Preflight**, or:
@@ -79,7 +146,7 @@ Direct equivalent user-operated commands:
 
 ```powershell
 .\scripts\preflight.ps1 -HttpsTimeoutSeconds 30
-# HUMAN ONLY after readiness/approvals; not executed by an agent:
+# Human or specifically approved Workstation setup workflow; native confirmation:
 .\scripts\bootstrap.ps1 -Module Python -Apply -HttpsTimeoutSeconds 30 -Confirm
 # Optional legacy finish ONLY after successful base/reboot/resume:
 .\scripts\bootstrap.ps1 -LegacyMicrosoftBundle -Apply -SkipBase -HttpsTimeoutSeconds 30 -Confirm
@@ -104,7 +171,7 @@ Optionally choose **Verify** (`.\scripts\verify.ps1`) to inventory existing tool
 ```powershell
 .\scripts\bootstrap.ps1 -Module Python
 .\scripts\bootstrap.ps1 -Module Python -Apply -WhatIf
-# HUMAN only after review and IT approval:
+# Human or specifically approved Workstation setup workflow after review/approval:
 .\scripts\bootstrap.ps1 -Module Python -Apply -Confirm
 ```
 
@@ -299,7 +366,9 @@ Sample READMEs retain direct commands for the named sample directory. Developer 
 
 ## Phase 5: run, debug and containers
 
-Only the developer launches services, from **Terminal → Run Task** or:
+The developer launches services directly, or through the separately approved
+**Workstation setup** local launch stage. The manual **Terminal → Run Task**
+fallback is:
 
 ```powershell
 .\scripts\developer.ps1 -Action RunLocal -Sample Python

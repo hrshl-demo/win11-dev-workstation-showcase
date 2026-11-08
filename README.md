@@ -6,6 +6,8 @@ A VS Code-first developer workflow for synthetic Python EMI, Java IFSC and Go FX
 
 ## End-to-end journey: Phase 0 through Phase 7
 
+**Want Copilot to drive the local journey?** Open the reviewed clone in VS Code, choose a chat session running **locally on Windows** (not remote/cloud), select **Workstation setup** in the Agent dropdown, and send **Start the local setup and demo journey; inventory first and ask for my approvals.** The [repository agent](.github/agents/workstation-setup.agent.md) runs the existing terminal surfaces rather than asking you to copy commands or pick every module. Installations, dependency Restore and local launches still need scoped approvals and your native confirmations; UAC, IT decisions and restarts remain human pauses. [Selection, resume and tool troubleshooting](docs/SETUP.md#select-workstation-setup-in-vs-code) explain the narrow exception. Coding/build/desktop/cloud agents still cannot execute setup.
+
 **Prefer a guided companion?** [Open the offline demo companion instructions](demo-companion/README.md). Keep the complete `demo-companion` folder and double-click `index.html` for quick steps, detailed activities and slide navigation. Commands are copy-only and progress is manual; the companion never runs setup or verifies your laptop.
 
 **Start with [Phase 0 prerequisites](docs/SETUP.md#phase-0-prerequisites-before-repository-scripts), before executing any script.** IT/humans supply supported Windows, virtualization/disk, elevation/licensing, App Installer/WinGet, network/proxy, repository access, approved Git/VS Code to clone, script execution and extension-source approvals. Python/Java/Go/WSL and extensions are automated setup outputs, not a manual shopping list.
@@ -31,7 +33,7 @@ Open the cloned folder. Review its source before accepting Workspace Trust. All 
 | --- | --- |
 | **0 — Prerequisites** | [Human/IT checklist and inline policy checks](docs/SETUP.md#phase-0-prerequisites-before-repository-scripts); Git/VS Code required before clone |
 | **1 — Preflight** | **Preflight**: no FAIL, exit 0. WSL/wslc WARN is expected before setup. Optional **Verify** inventory may deliberately exit 1 for missing setup outputs |
-| **2 — Modular laptop setup** | **Setup preview** → one module, then **Install core tools**, **Install Python SDK**, **Install Java SDK**, **Install Go SDK**, **Install extensions (approved source)** and **Install WSL components** as needed. **User-run setup** is a one-module selector, not a bundle |
+| **2 — Modular laptop setup** | **Workstation setup** inventories and invokes needed modules after approvals. Manual fallback: **Setup preview** → **Install core tools**, **Install Python SDK**, **Install Java SDK**, **Install Go SDK**, **Install extensions (approved source)** and **Install WSL components** as needed. **User-run setup** is a one-module selector, not a bundle; WSL changes remain separately approved |
 | **3 — Verify setup** | Fresh terminal and **Verify** after modules/restart; full profile acceptance is separate. **Finish setup** is LEGACY-only after confirmed successful optional bundle/reboot/resume, never for a stopped partial base |
 | **4 — Restore and test** | Explicit **Restore project dependencies** → **Dependencies**, then **Test all samples**, **Lint all samples**, **Coverage all samples**. `All` excludes legacy; daily checks do not restore |
 | **5 — Run/debug/containers** | **Run EMI API (local)**, first request below; F5 needs existing debugger prerequisites. Container Run needs explicitly prepared images, uses `--pull=never` |
@@ -48,7 +50,7 @@ The default runtime remains `wslc`, Docker only if absent; explicit approved sel
 
 ## Your first request
 
-After the explicit package restore above, choose **Terminal → Run Task → Run EMI API (local)** and confirm the launch. Keep that task terminal open. Choose **Terminal → New Terminal** (or **+**) for a second integrated PowerShell terminal, then paste:
+With **Workstation setup**, approve the separate local launch stage and let the agent observe health and synthetic requests. For the manual fallback, after explicit package Restore choose **Terminal → Run Task → Run EMI API (local)** and confirm the launch. Keep that task terminal open. Choose **Terminal → New Terminal** (or **+**) for a second integrated PowerShell terminal, then paste:
 
 ```powershell
 Invoke-RestMethod http://localhost:8080/health
@@ -67,7 +69,7 @@ Expect health `status: ok` and EMI `"21695.58"` (display `"₹21,695.58"`). Stop
 | GitHub | Built-in Git authentication; official `GitHub.vscode-pull-request-github` extension for PRs/issues; CI with test/coverage artifacts |
 | Unit testing / lint | pytest + pytest-cov and Ruff; JUnit 5 + JaCoCo and Checkstyle; Go built-in tests/coverage + vet; Pester 5.7.1 + PSScriptAnalyzer 1.24.0 |
 | Azure | OIDC identities, immutable ACR images and namespace-scoped deployment to an existing AKS cluster; ClusterIP services and user port-forward |
-| Copilot customization | Bank standards, onboarding agent, EMI extension, container review, preparation-only AKS and standards review skills |
+| Copilot customization | Approved local **Workstation setup** agent, read-only onboarding, bank standards, EMI extension, container review, preparation-only AKS and standards review skills |
 
 The required profile has **12 extensions**, with an optional 13th for Java modernization. IDs are recorded in `.vscode\extensions.json`; recommendations are not enterprise policy. Runtime/dependency pins belong in manifests and configurations.
 

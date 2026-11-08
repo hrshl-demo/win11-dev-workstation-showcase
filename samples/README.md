@@ -9,6 +9,12 @@ fresh-approved versus already-configured routes, then choose the explicit
 **Restore project dependencies** user task. Daily Test/Lint/Coverage tasks do
 not install or restore missing prerequisites.
 
+For orchestration instead of command copying, the human may select
+**Workstation setup** in local VS Code Chat and approve its separate setup,
+dependency Restore and local launch stages; see [selection and resume](../docs/SETUP.md#select-workstation-setup-in-vs-code).
+This exception does not let coding/build/desktop/cloud agents acquire tools or
+launch samples. The manual tasks and all no-restore daily guards are unchanged.
+
 | Sample | Runtime | Focused developer tasks |
 | --- | --- | --- |
 | [EMI API](python-emi-api/README.md) | Python 3.14, FastAPI, uv | Test/Lint/Coverage Python: pytest, pytest-cov, Ruff |
@@ -22,7 +28,8 @@ Reports and direct sample-directory commands are in the individual READMEs.
 Historical provenance/test evidence is revision-specific, not current CI or
 cloud acceptance.
 
-Only the developer launches applications/containers. The shared launcher uses
+Only the developer launches applications/containers, directly or through the
+separately approved named local workflow. The shared launcher uses
 `-Runtime Auto|wslc|docker`: Auto is WSL-first, Docker only when `wslc` is absent;
 explicit selection probes only the approved runtime and never falls back on
 denial. Docker Desktop remains a commented optional licensing choice. No sample

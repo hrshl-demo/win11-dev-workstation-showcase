@@ -19,6 +19,10 @@ the integrated PowerShell terminal:
 .\scripts\developer.ps1 -Action Coverage -Sample Java
 ```
 
+The human may select [Workstation setup](../../docs/SETUP.md#select-workstation-setup-in-vs-code)
+to orchestrate these separate approved stages in local VS Code. Other agents
+still cannot Restore or launch; daily checks never acquire prerequisites.
+
 JUnit 5/Surefire writes `target\surefire-reports\`; JaCoCo writes
 `target\site\jacoco\index.html` and `jacoco.xml`. Maven Checkstyle provides the
 configured lint rules. The Java pack's Test Runner supports Testing-view
@@ -95,7 +99,8 @@ performed by the sample itself.
 The Docker health check runs `java -jar app.jar --healthcheck`: a two-second
 standard-library HTTP probe of `/health`, not another Spring server.
 
-From the repository root, only the developer restores images/runs using an already-approved
+From the repository root, only the developer restores images/runs, directly or
+through the named local workflow after separate approvals, using an already-approved
 runtime (automatic `wslc` first, `docker` only if `wslc` is absent; never switch after
 a WSL failure/policy denial). Docker Desktop remains optional and licence-reviewed:
 

@@ -5,6 +5,8 @@ tools: ['read', 'search', 'execute']
 ---
 # Workstation onboarding
 
+This agent remains read-only. For the separately approved human-invoked local execution journey, the human selects **Workstation setup** instead; do not invoke it as a subagent or inherit its execution exception here.
+
 Read [SETUP](../../docs/SETUP.md), [troubleshooting](../../docs/TROUBLESHOOTING.md) and [IT prerequisites](../../docs/IT-PREREQUISITES.md) before advising. Explain Phase 0 prerequisites before scripts, Phase 1 Preflight, Phase 2 automated setup, Phase 3 verification, Phase 4 project restore/checks, Phase 5 run/debug, Phase 6 GitHub CI and Phase 7 existing AKS. Distinguish fresh, partial and fully verified devices.
 
 Missing outputs before setup are expected optional Verify failures. Explain **Setup preview** and independently human-run Core, Python, Java, Go, Extensions and WSL module tasks. Locally installed versions are discovered before downloading; installed/incompatible/unknown never triggers upgrades/downloads. Stale PATH is not proof a SDK is absent. **User-run setup** selects one module, never a hidden all-in-one bundle. Stopped partial setup retains software/settings; it is not a successful base. **Legacy Microsoft bundle (optional)** is explicitly different; **Finish setup / SkipBase** only after confirmed successful legacy base plus reboot/resume. Required extensions are automated as one missing-ID module, not manual per-ID installs.

@@ -11,13 +11,17 @@ integrated PowerShell terminal. Tool installation, package restoration and daily
 checks are separate [quickstart](../../docs/SETUP.md) stages:
 
 ```powershell
-# Explicit user-approved package restore, not an agent or daily test:
+# Explicit user-approved package restore, never hidden in a daily test:
 .\scripts\developer.ps1 -Action Restore -Sample Python
 # Daily checks require the restored pinned environment:
 .\scripts\developer.ps1 -Action Test -Sample Python
 .\scripts\developer.ps1 -Action Lint -Sample Python
 .\scripts\developer.ps1 -Action Coverage -Sample Python
 ```
+
+The human may select [Workstation setup](../../docs/SETUP.md#select-workstation-setup-in-vs-code)
+to orchestrate these separate approved stages in local VS Code. Other agents
+still cannot Restore or launch; daily checks never acquire prerequisites.
 
 pytest/pytest-cov produces `test-results.xml`, `coverage.xml` and
 `htmlcov\index.html` in this sample; Ruff supplies lint checks. Use the Testing
@@ -103,7 +107,8 @@ only fabricated placeholders, not actual identifiers.
 
 ## Container and VS Code
 
-Only the developer builds/launches containers. Use your already-approved
+Only the developer builds/launches containers, directly or through the named
+local workflow after separate image/runtime/launch approvals. Use your already-approved
 runtime; automatic selection uses `wslc` first and `docker` only if `wslc` is absent. A failing
 or policy-blocked `wslc` is not permission to switch. Docker Desktop is a
 commented, optional licensing choice, not installed by default:

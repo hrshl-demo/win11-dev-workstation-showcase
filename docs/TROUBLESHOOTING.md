@@ -1,6 +1,6 @@
 # Troubleshooting
 
-Start with [Phase 0 prerequisites](SETUP.md#phase-0-prerequisites-before-repository-scripts) from **VS Code → Terminal → New Terminal → PowerShell**, as the signed-in developer. Inline `Get-ExecutionPolicy -List` and `Get-ExecutionPolicy` work even before scripts are permitted. Only then run Preflight and `winget --info`. Redact paths, identities and secrets. State-changing fixes are **human-operated, IT-approved**, never agent actions. Partial devices follow automated Phase 2 setup; post-setup package/test failures are not a reason to reinstall everything.
+Start with [Phase 0 prerequisites](SETUP.md#phase-0-prerequisites-before-repository-scripts) from **VS Code → Terminal → New Terminal → PowerShell**, as the signed-in developer. Inline `Get-ExecutionPolicy -List` and `Get-ExecutionPolicy` work even before scripts are permitted. Only then run Preflight and `winget --info`. Redact paths, identities and secrets. State-changing fixes are **human-operated, IT-approved**. Only the named [Workstation setup](SETUP.md#select-workstation-setup-in-vs-code) workflow can execute separately approved local setup/Restore/launch stages; repair and policy/source/account/profile changes remain human/IT-only, never agent actions. Partial devices follow automated Phase 2 setup; post-setup package/test failures are not a reason to reinstall everything.
 
 ## WinGet
 
@@ -71,7 +71,7 @@ After a failure, use the recorded diagnostics and the read-only **Preflight** ta
 
 | Symptom | Safe next step |
 | --- | --- |
-| Test/lint/coverage says a package or runtime is missing | Mark NOT RUN. Missing setup outputs return to the appropriate automated Phase 2 route, not individual manual installs; project packages use explicit Phase 4 Restore. After completed setup, diagnose logs/PATH/policy before reapplying. Daily commands/agents do not install or restore. |
+| Test/lint/coverage says a package or runtime is missing | Mark NOT RUN. Missing setup outputs return to Phase 2; project packages use a separate Phase 4 Restore approval. After completed setup, diagnose logs/PATH/policy before reapplying. Daily commands never install/restore; only the named human-invoked workflow can return to a separately approved acquisition stage. |
 | RunContainer reports no existing local image | Mark NOT RUN. The developer may separately approve Restore with RestoreTarget ContainerImages and -Confirm; Run itself never builds or pulls and uses --pull=never. |
 | Python/Java tests missing from Testing view | Select the locked `.venv` interpreter/correct Java 25 JDK; check extension discovery. Do not accept automatic helper/tool downloads without approval. |
 | GitHub sign-in works but Publish Branch fails | Sign-in does not grant repository write access. Review remote/organisation access or use an approved fork in the GitHub Pull Requests flow. |
@@ -82,7 +82,7 @@ After a failure, use the recorded diagnostics and the read-only **Preflight** ta
 | Private AKS API unreachable | Check approved network-connected runner labels, DNS/TLS/network path with IT. Do not make the API public, disable TLS verification or fetch admin kubeconfig. |
 | Namespace absent or rollout fails | Namespace is an IT prerequisite. Stop, inspect safe rollout evidence; do not create namespace/RBAC or disable admission policy. |
 
-See [Setup](SETUP.md) for VS Code tasks/reports and [GitHub/AKS](GITHUB-AKS.md) for the approval plan. Agents do not dispatch or launch to troubleshoot.
+See [Setup](SETUP.md) for agent selection, manual tasks and reports, and [GitHub/AKS](GITHUB-AKS.md) for the approval plan. Agents never dispatch; only the named human-invoked workflow may execute its separately approved local launch stage, not launch/retry blindly to troubleshoot.
 
 ## Microsoft base launcher timeout
 

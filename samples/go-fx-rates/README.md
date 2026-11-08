@@ -15,6 +15,10 @@ run in its integrated PowerShell terminal:
 .\scripts\developer.ps1 -Action Coverage -Sample Go
 ```
 
+The human may select [Workstation setup](../../docs/SETUP.md#select-workstation-setup-in-vs-code)
+to orchestrate separate approved stages in local VS Code. Other agents still
+cannot Restore or launch; daily checks never acquire prerequisites.
+
 Go built-in tests/coverage and vet need no external module; require the installed
 manifest-defined Go version, with no automatic toolchain download.
 Reports: `test-results.json`, `coverage.out`, `coverage.html` in this sample.
@@ -82,7 +86,8 @@ code, not a runnable/deployable fallback.
 
 ## Container
 
-Only the developer builds/runs with an approved runtime: automatic `wslc` first, `docker`
+Only the developer builds/runs, directly or through the named local workflow
+after separate approvals, with an approved runtime: automatic `wslc` first, `docker`
 only if `wslc` is absent, never after a failing or policy-blocked WSL operation.
 Docker Desktop is a commented optional, licence-reviewed choice:
 

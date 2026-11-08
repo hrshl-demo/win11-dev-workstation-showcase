@@ -56,6 +56,8 @@ REQUIRED = (
     "tests/BaseSetup.Tests.ps1",
     "scripts/_setup.psm1", "scripts/legacy-bootstrap.ps1", ".config/setup-packages.json",
     "tests/Setup.Tests.ps1",
+    ".github/agents/workstation-setup.agent.md", "tests/test_workstation_agent.py",
+    "tests/WorkstationAgent.Tests.ps1",
 )
 
 
@@ -192,6 +194,16 @@ def check_customizations() -> None:
     metadata, body = frontmatter(ROOT / ".github" / "agents" / "onboarding.agent.md")
     require(metadata.get("tools") == ["read", "search", "execute"], "onboarding tools")
     require("ONLY commands" in body and "Never run bootstrap" in body, "agent boundary")
+    metadata, body = frontmatter(ROOT / ".github" / "agents" / "workstation-setup.agent.md")
+    require(set(metadata) == {"name", "description", "tools", "user-invocable",
+                              "disable-model-invocation"}, "shared setup-agent fields only")
+    require(metadata["name"] == "Workstation setup" and bool(metadata["description"]),
+            "selectable setup-agent identity")
+    require(metadata["tools"] == ["read", "search", "execute"], "setup-agent least privilege")
+    require(metadata["user-invocable"] is True and metadata["disable-model-invocation"] is True,
+            "setup agent is human-selected, not delegated")
+    require("not a security boundary" in body and "human-invoked VS Code workflow" in body,
+            "setup-agent execution boundary")
 
 
 def check_workflow() -> None:
