@@ -2,8 +2,9 @@
 .SYNOPSIS
 Parse local VS Code agent recipes without invoking a workstation action.
 .DESCRIPTION
-Runs under both hosted PowerShell engines. Reading and AST parsing only;
-the existing setup/developer fixtures test their real gates with mocks.
+Runs under both hosted PowerShell engines. Recipes are never invoked.
+The child fixture extracts only function definitions and substitutes every
+workstation/runtime/provider/application operation with synthetic functions.
 #>
 [CmdletBinding()]
 param()
@@ -15,6 +16,8 @@ BeforeAll {
     $text = Get-Content -LiteralPath (Join-Path $repository '.github\agents\workstation-setup.agent.md') -Raw
     $script:RecipeAsts = @()
     $script:RecipeErrors = @()
+    $script:NativeFixture = Join-Path $repository 'tests\fixtures\native-readiness.ps1'
+    $script:RepositoryRoot = $repository
     foreach ($match in [regex]::Matches($text, '(?s)```powershell\r?\n(.*?)\r?\n```')) {
         $tokens = $null
         $errors = $null
@@ -28,6 +31,18 @@ Describe 'Workstation setup agent recipe syntax' {
     It 'parses every recipe under the selected PowerShell engine without execution' {
         $script:RecipeAsts.Count | Should -Be 8
         $script:RecipeErrors.Count | Should -Be 0
+    }
+
+    Describe 'Source-backed Native continuation with no workstation queries' {
+        It 'rejects malformed/incomplete/required-runtime reports and binds Native recipes using only synthetic functions' {
+            $engine = (Get-Process -Id $PID).Path
+            $output = @(& $engine -NoProfile -File $script:NativeFixture -RepositoryRoot $script:RepositoryRoot)
+            $LASTEXITCODE | Should -Be 0
+            ($output -join "`n") | Should -Match 'rejects malformed JSON'
+            ($output -join "`n") | Should -Match 'incompatible-native-java retains JSON/exit 1'
+            ($output -join "`n") | Should -Match 'positive inventory/profile/safety and exact exit 1'
+            ($output -join "`n") | Should -Match 'RunLocal Go/8082 binds Container=false'
+        }
     }
 
     It 'contains only existing dispatcher, readiness and loopback request commands' {

@@ -121,6 +121,24 @@ Describe 'Developer safe execution and failure paths' {
             $TimeoutSeconds -eq 663 -and $Arguments[-2] -eq '-HttpsTimeoutSeconds' -and $Arguments[-1] -eq '30'
         }
     }
+    It 'binds the local <SelectedSample> recipe without selecting WSL or container execution' -TestCases @(
+        @{ SelectedSample = 'Python'; SelectedPort = 8080 },
+        @{ SelectedSample = 'Java'; SelectedPort = 8081 },
+        @{ SelectedSample = 'Go'; SelectedPort = 8082 }
+    ) {
+        param($SelectedSample, $SelectedPort)
+        Mock Start-DeveloperSample {}
+        Mock Get-ContainerRuntime { throw 'Native recipes must not select a container runtime.' }
+        Mock Invoke-SetupModule { throw 'Native launch must not install WSL or any module.' }
+        Invoke-Developer -Action RunLocal -Sample $SelectedSample -Port $SelectedPort -Confirm:$false |
+            Should -Be 0
+        Should -Invoke Start-DeveloperSample -Times 1 -Exactly -ParameterFilter {
+            $Sample -eq $SelectedSample -and $Port -eq $SelectedPort -and -not $Container -and $Runtime -eq 'auto'
+        }
+        Should -Invoke Get-ContainerRuntime -Times 0 -Exactly
+        Should -Invoke Invoke-SetupModule -Times 0 -Exactly
+        Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
+    }
     It 'propagates the timeout through setup and finish using a harmless in-memory child fixture' -TestCases @(
         @{ SelectedAction = 'Setup' }, @{ SelectedAction = 'LegacySetup' }, @{ SelectedAction = 'FinishSetup' }
     ) {

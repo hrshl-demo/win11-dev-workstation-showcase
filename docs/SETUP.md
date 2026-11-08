@@ -91,7 +91,18 @@ is **NOT RUN/blocked**, not silently rerun unconfirmed.
 
 Default scope is local Python/current Java/Go. Missing WSL/wslc, full-profile
 tools or unapproved extension/runtime state remain visible: a narrower local
-demo is **not full-workstation readiness**. WSL changes, Ubuntu, licensed
+demo is **not full-workstation readiness**. The existing `verify.ps1 -Json`
+has no Native switch: absent WSL/wslc still emits required `FAIL` rows and exit
+**1**. The agent reports the full failure, not a green Verify. Only exact
+`wsl`/`wslc` failures with `Found = Missing/unusable`, every other default
+Verify row positively PASS, fresh Native runtime inventory and the approved
+enabled extension profile qualify for the WSL-only continuation request.
+It can then ask to continue the narrower Native demo, then separately
+request Dependencies Restore and launch approval. Invalid/incomplete results or
+missing/duplicate/unexpected rows, any other failure or Native/profile/policy
+uncertainty block that continuation. `RunLocal` is
+the existing native action; it does not select a WSL/container runtime.
+WSL changes, Ubuntu, licensed
 Docker, modernization, PowerShell test-module Restore, image builds and
 container launches have separate approvals. Broad legacy bundle/Finish/SkipBase,
 repair, upgrades, policy/source/account/profile changes, automatic elevation/

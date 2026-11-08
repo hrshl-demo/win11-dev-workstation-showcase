@@ -277,6 +277,55 @@ Describe 'Actual tool and extension verification with safe mocks' {
         $checks.Count | Should -Be 30
         $checks.Name | Should -Contain 'vscjava.migrate-java-to-azure'
     }
+    It 'keeps missing WSL visible as full Verify failure while Native prerequisite rows pass' {
+        Mock Get-NativeCommandPath {
+            if ($Name -in @('wsl', 'wslc')) { return $null }
+            "C:\$Name.exe"
+        }
+        $result = @(Invoke-Verification -Json)
+        $result.Count | Should -Be 2
+        [int]$result[-1] | Should -Be 1
+        $parsed = $result[0] | ConvertFrom-Json
+        $checks = @($parsed)
+        $checks.Count | Should -Be 29
+        $failed = @($checks | Where-Object Status -eq FAIL)
+        (($failed.Name | Sort-Object) -join ',') | Should -Be 'wsl,wslc'
+        foreach ($check in $failed) { $check.Found | Should -Be 'Missing/unusable' }
+        foreach ($name in @('winget', 'git', 'code', 'python', 'uv', 'pwsh', 'java', 'go')) {
+            ($checks | Where-Object Name -eq $name).Status | Should -Be 'PASS'
+        }
+        Should -Invoke Invoke-NativeCommand -Times 0 -Exactly -ParameterFilter {
+            $FilePath -in @('C:\wsl.exe', 'C:\wslc.exe') -or $ArgumentList -contains 'configure'
+        }
+    }
+    It 'does not misclassify a missing Native JDK as the separately absent WSL scope' {
+        Mock Get-NativeCommandPath {
+            if ($Name -in @('wsl', 'wslc', 'java')) { return $null }
+            "C:\$Name.exe"
+        }
+        $result = @(Invoke-Verification -Json)
+        [int]$result[-1] | Should -Be 1
+        $parsed = $result[0] | ConvertFrom-Json
+        $checks = @($parsed)
+        (($checks | Where-Object Status -eq FAIL | Select-Object -ExpandProperty Name |
+            Sort-Object) -join ',') | Should -Be 'java,wsl,wslc'
+        ($checks | Where-Object Name -eq java).Found | Should -Be 'Missing/unusable'
+        Should -Invoke Invoke-NativeCommand -Times 0 -Exactly -ParameterFilter {
+            $FilePath -in @('C:\wsl.exe', 'C:\wslc.exe', 'C:\java.exe') -or $ArgumentList -contains 'configure'
+        }
+    }
+    It 'preserves an unusable incomplete inventory report as FAIL rather than Native acceptance' {
+        Mock Get-LocalInstallation { throw 'Synthetic inventory uncertainty.' }
+        $result = @(Invoke-Verification -Json)
+        [int]$result[-1] | Should -Be 1
+        $parsed = $result[0] | ConvertFrom-Json
+        $checks = @($parsed)
+        $checks.Count | Should -Be 1
+        $checks[0].Name | Should -Be 'Verification'
+        $checks[0].Status | Should -Be 'FAIL'
+        $checks.Name | Should -Not -Contain 'java'
+        Should -Invoke Invoke-NativeCommand -Times 0 -Exactly
+    }
     It 'fails Python outside the prescribed 3.14 line' {
         Mock Invoke-NativeCommand {
             [pscustomobject]@{ ExitCode = 0; Output = 'Python 3.12.0'; StdOut = 'Python 3.12.0'; StdErr = ''; TimedOut = $false }

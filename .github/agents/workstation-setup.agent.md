@@ -111,7 +111,9 @@ powershell.exe -NoProfile -File .\scripts\verify.ps1 -Json
 ```
 
 Require no Preflight FAIL and exit 0 before an install. Missing pre-setup outputs
-can make optional Verify exit 1; that is inventory, not installation failure.
+make full-profile Verify exit 1; report that failure as inventory, not
+installation failure. Missing WSL/wslc is Preflight WARN, not permission to
+install WSL or a reason to make unrelated Native modules wait for WSL.
 Do not use `-RunConfigTest`, which can involve provider work. Summarize actual
 scope in a table, including missing and unknown WSL/extensions. Ask for the
 specific next missing-module approval, not a module picker or blanket consent.
@@ -121,6 +123,9 @@ specific next missing-module approval, not a module picker or blanket consent.
 Use this existing recipe for the approved module. Replace `Python` only with
 the **catalog module** selected from actual missing-target evidence: Core,
 Python, Java or Go. Never guess package IDs/versions or write install one-liners.
+Core includes tools beyond Native prerequisites. Do not select it solely for
+missing optional full-profile tools; if a Native prerequisite needs Core,
+show every missing Core target and approve the actual wider scope first.
 
 ```powershell
 powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action Setup -SetupModule Python -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm
@@ -163,11 +168,41 @@ marketplace banner do not prove that acceptance. Unsupported private routing
 is an IT managed-automated-delivery blocker, not public VSIX/profile/source
 switching or manual installation of every ID.
 
-Distinguish **local-demo prerequisites accepted** from **full workstation
-readiness**. If WSL/wslc, cloud-tool or other required full-profile checks are
-missing/unknown, keep them visible as not accepted. Ask whether to continue the
-explicitly narrower local demo; never hide those failures or call it full setup.
-Do not continue the affected sample with an unapproved profile/runtime.
+`verify.ps1 -Json` always checks the full profile; it has **no Native switch**.
+Absent WSL/wslc produces `FAIL`, `Found = Missing/unusable` and **exit 1**.
+Preserve and report that exact exit and every failure as **full-workstation
+verification FAIL**; do not drop rows, ignore an error or fabricate Native PASS.
+
+Native Verify tool rows: `winget`, `git`, `code`, `python`, `uv`, `pwsh`, `java`, `go`.
+Other full-profile tool rows: `gh`, `copilot`, `az`, `azd`, `kubectl`, `node`, `wsl`, `wslc`.
+Native continuation also requires every actual policy row and the 12 default
+extension rows to pass, fresh installed-runtime evidence, and the human's
+intended-profile/source/enabled-state acceptance. Parse the actual JSON, not
+formatted text. In PowerShell assign the `ConvertFrom-Json` result first, then
+normalize `@($parsed)`; directly wrapping that pipeline nests arrays on 5.1.
+Require an array of structured check records, one of every
+source-defined default tool/extension/policy identity, and no duplicate or
+unexpected rows. Empty/incomplete arrays,
+malformed JSON, unexpected exit status, missing required rows, policy failure,
+or a required Native/runtime/profile FAIL/unknown **block Native continuation**.
+Never classify an arbitrary failed check as an optional tool.
+
+Failure identities eligible for narrower Native: `wsl`, `wslc`.
+Only nonempty `FAIL` rows with those **exact Name identities** and
+`Found = Missing/unusable`, with exit 1 and **every other default Verify row
+positively PASS**, permit this WSL-only exception. A message containing "WSL",
+another missing tool, incompatible/unknown output or a missing Native runtime
+does not qualify. Preserve missing WSL/wslc as not accepted; do not probe/install
+it to get a green full report. In that exact case, after known vendor/reboot
+safety, fresh Native inventory and actual profile/policy acceptance, ask for
+**explicit narrower Native continuation**, not WSL installation. Declining
+that continuation stops; approving it permits only the separate Dependencies
+Restore stage below. It does not accept full readiness, acquire WSL or prove
+Native tests/startup/requests. Distinguish **local-demo prerequisites accepted**
+from eventual observed local-demo acceptance and full workstation readiness;
+never hide those failures or call it full setup. Native launches use the
+existing `RunLocal` action, which binds `Container = false`, not a guessed
+Verify mode or a WSL/container runtime.
 
 Inspect existing runtime and dependency evidence, then request a separate
 **Dependencies Restore** approval for the named samples and reviewed registries,

@@ -130,6 +130,51 @@ class WorkstationAgentTests(unittest.TestCase):
             self.assertNotIn("Confirm", recipe)
             self.assertNotIn("Apply", recipe)
 
+    def test_native_readiness_and_verify_recipe_are_bound_to_existing_source(self) -> None:
+        verify = [tokens for tokens in recipes() if tokens[3:4] == [r".\scripts\verify.ps1"]]
+        self.assertEqual(verify, [[
+            "powershell.exe", "-NoProfile", "-File", r".\scripts\verify.ps1", "-Json"
+        ]])
+        text = agent_text()
+        native_line = re.search(r"Native Verify tool rows: (.*)", text)
+        other_line = re.search(r"Other full-profile tool rows: (.*)", text)
+        self.assertIsNotNone(native_line)
+        self.assertIsNotNone(other_line)
+        assert native_line is not None and other_line is not None
+        native = set(re.findall(r"`([a-z]+)`", native_line[1]))
+        other = set(re.findall(r"`([a-z]+)`", other_line[1]))
+        self.assertEqual(native, {"winget", "git", "code", "python", "uv", "pwsh", "java", "go"})
+        self.assertEqual(other, {"gh", "copilot", "az", "azd", "kubectl", "node", "wsl", "wslc"})
+        failures = re.search(r"Failure identities eligible for narrower Native: (.*)", text)
+        self.assertIsNotNone(failures)
+        assert failures is not None
+        self.assertEqual(set(re.findall(r"`([a-z]+)`", failures[1])), {"wsl", "wslc"})
+        source = (ROOT / "scripts" / "verify.ps1").read_text(encoding="utf-8-sig")
+        definitions = source.split("$definitions = @(", 1)[1].split("$local =", 1)[0]
+        self.assertEqual(set(re.findall(r"Name = '([a-z]+)'", definitions)), native | other)
+        self.assertIn("Get-CheckResult $name FAIL", source)
+        self.assertIn("-Found 'Missing/unusable'", source)
+        self.assertIn("return (Get-CheckExitCode $checks)", source)
+        self.assertTrue((ROOT / "tests" / "fixtures" / "native-readiness.ps1").is_file())
+        self.assertNotRegex(source.split("Set-StrictMode", 1)[0], r"\$(?:Native|Mode)\b")
+        normalized = " ".join(text.split())
+        for boundary in (
+            "full-workstation verification FAIL", "explicit narrower Native continuation",
+            "Empty/incomplete arrays", "block Native continuation", "Declining that continuation stops",
+            "Container = false", "Core includes tools beyond Native prerequisites",
+            "every other default Verify row positively PASS", "exact Name identities",
+            "no duplicate or unexpected rows",
+            "directly wrapping that pipeline nests arrays on 5.1",
+        ):
+            self.assertIn(boundary, normalized)
+        developer = (ROOT / "scripts" / "developer.ps1").read_text(encoding="utf-8-sig")
+        self.assertIn(
+            "Start-DeveloperSample $Sample -Container:($Action -eq 'RunContainer')", developer
+        )
+        preflight = (ROOT / "scripts" / "preflight.ps1").read_text(encoding="utf-8-sig")
+        self.assertIn("Get-CheckResult 'WSL' WARN 'Not installed.", preflight)
+        self.assertIn("$status = if ($wslc) { 'PASS' } else { 'WARN' }", preflight)
+
     def test_every_changing_recipe_retains_native_confirmation(self) -> None:
         for recipe in dispatcher_recipes():
             with self.subTest(recipe=recipe):
