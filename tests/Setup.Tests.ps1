@@ -378,7 +378,7 @@ Describe 'Current-user packaged PowerShell installed-first discovery' {
     }
     AfterEach { Remove-Variable PackagedPowerShellFixture, PackagedPowerShellExecutable -Scope Global }
     It 'discovers the exact registered MSIX and probes real package content, never an alias' {
-        $package = @(Get-SetupPackage Core)[0]
+        $package = @(Get-SetupPackage Core | Where-Object Command -eq pwsh)[0]
         $local = @(Get-LocalInstallation)
         $result = Get-SetupInventory $package $local
         $result.State | Should -Be 'Installed'
@@ -397,7 +397,7 @@ Describe 'Current-user packaged PowerShell installed-first discovery' {
     }
     It 'keeps a package whose executable is absent installed/unverified with no download' {
         Mock Test-Path -ModuleName _setup { $false } -ParameterFilter { $LiteralPath -eq $global:PackagedPowerShellExecutable }
-        $result = Get-SetupInventory (@(Get-SetupPackage Core)[0]) @(Get-LocalInstallation)
+        $result = Get-SetupInventory (@(Get-SetupPackage Core | Where-Object Command -eq pwsh)[0]) @(Get-LocalInstallation)
         $result.State | Should -Be 'Installed'
         $result.Compatible | Should -BeFalse
         Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 1
@@ -430,7 +430,7 @@ Describe 'Current-user packaged PowerShell installed-first discovery' {
     }
     It 'preserves normal MSI discovery and truly absent classification independently of aliases' {
         Mock Get-AppxPackage -ModuleName _setup { @() } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
-        $package = @(Get-SetupPackage Core)[0]
+        $package = @(Get-SetupPackage Core | Where-Object Command -eq pwsh)[0]
         (Get-SetupInventory $package @(Get-LocalInstallation)).State | Should -Be 'Missing'
         Mock Test-Path -ModuleName _setup { $true } -ParameterFilter { $LiteralPath -eq 'C:\Program Files\PowerShell\7\pwsh.exe' }
         $result = Get-SetupInventory $package @(
