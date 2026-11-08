@@ -282,7 +282,7 @@ Describe 'Local installed-target discovery, including stale PATH' {
             }
         }
         It 'rejects control, illegal, unexpanded, relative and network path syntax consistently' -TestCases @(
-            @{ Value = "C:\bad`0path" }, @{ Value = "C:\bad`tpath" }, @{ Value = 'C:\bad<path' },
+            @{ Value = 'C:\bad{NUL}path' }, @{ Value = "C:\bad`tpath" }, @{ Value = 'C:\bad<path' },
             @{ Value = 'C:\bad>path' }, @{ Value = 'C:\bad?path' }, @{ Value = 'C:\bad*path' },
             @{ Value = 'C:\bad:path' }, @{ Value = 'C:\bad"path' }, @{ Value = 'relative' },
             @{ Value = '\\untrusted\share\tool.exe' }, @{ Value = '%SHOWCASE_UNSET_PATH_FIXTURE%\tool' }) {
@@ -293,7 +293,7 @@ Describe 'Local installed-target discovery, including stale PATH' {
                 $result.Path | Should -BeNullOrEmpty
                 $result.Reason | Should -Not -BeNullOrEmpty
                 $result.OptionalAbsent | Should -BeFalse
-            } $Value
+            } ($Value.Replace('{NUL}', [string][char]0))
         }
         It 'finds an inactive NVM runtime when node is absent from PATH' {
             $previous = $env:NVM_HOME
