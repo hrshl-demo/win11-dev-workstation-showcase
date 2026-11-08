@@ -31,6 +31,11 @@ function Get-SetupPackage {
 function Get-LocalInstallation {
     [CmdletBinding()]
     param()
+    # Cold Appx import defines session aliases; installer confirmation must not
+    # leak into this trusted read-only inventory or its module initialization.
+    $previousConfirm = $ConfirmPreference
+    $ConfirmPreference = 'None'
+    try {
     $records = @()
     foreach ($path in @('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
         'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall',
@@ -61,6 +66,7 @@ function Get-LocalInstallation {
             Version = [string]$package.Version; Location = [string]$package.InstallLocation }
     }
     return $records
+    } finally { $ConfirmPreference = $previousConfirm }
 }
 
 function ConvertTo-SetupPath {
@@ -250,6 +256,9 @@ function Get-SetupExtension {
 function Get-SetupWslState {
     [CmdletBinding()]
     param()
+    $previousConfirm = $ConfirmPreference
+    $ConfirmPreference = 'None'
+    try {
     $features = @()
     foreach ($name in @('Microsoft-Windows-Subsystem-Linux', 'VirtualMachinePlatform')) {
         $feature = Get-WindowsOptionalFeature -Online -FeatureName $name -ErrorAction Stop
@@ -281,6 +290,7 @@ function Get-SetupWslState {
     }
     [pscustomobject]@{ Features = $features; Installed = [bool]$version; Version = $version; Path = $wsl
         Distributions = $distributions; UbuntuInstalled = [bool]($distroPackages.Count -gt 0 -or @($distributions | Where-Object { $_ -match '^Ubuntu(?:-|$)' }).Count -gt 0) }
+    } finally { $ConfirmPreference = $previousConfirm }
 }
 
 function Invoke-SetupNative {
@@ -427,17 +437,21 @@ function Invoke-SetupModule {
         $mutex = New-Object Threading.Mutex($false, 'Local\Win11ShowcaseModularSetup')
         if (-not $mutex.WaitOne(0)) { throw 'Another modular setup is active. Wait; no concurrent installer or automatic retry.' }
         $mutexHeld = $true
-        $logDirectory = Join-Path (Get-ShowcaseRoot) '.showcase-setup'
-        Assert-SafeDirectory $logDirectory
-        if (-not (Test-Path -LiteralPath $logDirectory)) { $null = New-Item -ItemType Directory -Path $logDirectory }
-        $logPath = Join-Path $logDirectory ("module-{0}-{1}.jsonl" -f $Module, [guid]::NewGuid().ToString('N'))
-        Write-SetupEvent $logPath $Module 'Started'
-        Write-ShowcaseMessage "[INFO] Module event log: $logPath (states only, no installer output/credentials)."
         foreach ($item in $missing) {
             if (-not $PSCmdlet.ShouldProcess($item.Id, "Install locally proven missing target only; $Module module; no upgrades; Docker requires licence approval")) {
                 Write-ShowcaseMessage "[WARN] Target declined; still missing/unverified: $($item.Id)."
                 Write-SetupEvent $logPath $Module 'Declined' $item.Id ([int]$clock.Elapsed.TotalSeconds)
                 continue
+            }
+            if (-not $logPath) {
+                $logDirectory = Join-Path (Get-ShowcaseRoot) '.showcase-setup'
+                Assert-SafeDirectory $logDirectory
+                if (-not (Test-Path -LiteralPath $logDirectory)) {
+                    $null = New-Item -ItemType Directory -Path $logDirectory -Confirm:$false
+                }
+                $logPath = Join-Path $logDirectory ("module-{0}-{1}.jsonl" -f $Module, [guid]::NewGuid().ToString('N'))
+                Write-SetupEvent $logPath $Module 'Started'
+                Write-ShowcaseMessage "[INFO] Module event log: $logPath (states only, no installer output/credentials)."
             }
             Write-SetupEvent $logPath $Module 'CheckingAgain' $item.Id ([int]$clock.Elapsed.TotalSeconds)
             # Reinventory before each installer: a concurrent/manual installation is not adopted as missing.
