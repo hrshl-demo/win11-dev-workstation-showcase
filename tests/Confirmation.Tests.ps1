@@ -120,7 +120,7 @@ $logDirectory = Join-Path $FixtureRoot '.showcase-setup'
 Describe 'Fresh process trusted inventory confirmation scoping' {
     It 'cold installed inventory defines aliases without prompts and preserves caller preferences' {
         $result = Invoke-ColdConfirmationFixture -Mode Installed
-        $result.Data.Result | Should -Be 0
+        $result.Data.Result | Should -Be 0 -Because $result.Output
         $result.Data.Confirm | Should -Be 'Low'
         $result.Data.Installer | Should -BeFalse
         $result.Data.Journal | Should -BeFalse
@@ -129,14 +129,14 @@ Describe 'Fresh process trusted inventory confirmation scoping' {
     }
     It 'declining the actual target writes no journal or installer marker' {
         $result = Invoke-ColdConfirmationFixture -Mode Missing -Answer N
-        $result.Data.Result | Should -Be 0
+        $result.Data.Result | Should -Be 0 -Because $result.Output
         $result.Data.Installer | Should -BeFalse
         $result.Data.Journal | Should -BeFalse
         $result.Output | Should -Match 'Target declined'
     }
     It 'cold WSL inventory also avoids inherited alias confirmations without feature actions' {
         $result = Invoke-ColdConfirmationFixture -Mode WslInstalled
-        $result.Data.Result | Should -Be 0
+        $result.Data.Result | Should -Be 0 -Because $result.Output
         $result.Data.Installer | Should -BeFalse
         $result.Data.Journal | Should -BeFalse
         $result.Data.Confirm | Should -Be 'Low'
@@ -144,7 +144,7 @@ Describe 'Fresh process trusted inventory confirmation scoping' {
     }
     It 'approving the real target permits only scoped fixture housekeeping and simulated installer' {
         $result = Invoke-ColdConfirmationFixture -Mode Missing -Answer Y
-        $result.Data.Result | Should -Be 0
+        $result.Data.Result | Should -Be 0 -Because $result.Output
         $result.Data.Installer | Should -BeTrue
         $result.Data.Journal | Should -BeTrue
         $result.Data.Confirm | Should -Be 'Low'
@@ -152,7 +152,7 @@ Describe 'Fresh process trusted inventory confirmation scoping' {
     }
     It 'WhatIf preserves inventory with no journal or installer and no internal prompts' {
         $result = Invoke-ColdConfirmationFixture -Mode Missing -WhatIf
-        $result.Data.Result | Should -Be 0
+        $result.Data.Result | Should -Be 0 -Because $result.Output
         $result.Data.Installer | Should -BeFalse
         $result.Data.Journal | Should -BeFalse
         $result.Data.WhatIf | Should -BeFalse
