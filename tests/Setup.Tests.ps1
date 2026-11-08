@@ -57,6 +57,21 @@ Describe 'Installed-first module effects' {
         Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
         Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
     }
+    It 'unknown relevant registration blocks apply with no preflight or download' {
+        Mock Get-SetupInventory -ModuleName _setup {
+            & (Get-Module _setup) {
+                Get-SetupExecutable ([pscustomobject]@{ Id = 'Synthetic.Tool'; Command = 'synthetic'
+                    Args = @('--version'); Required = '.+'; Paths = @() }) @(
+                    [pscustomobject]@{ Location = "C:\bad`"location" })
+            }
+        }
+        Mock Get-NativeCommandPath -ModuleName _setup { $null }
+        Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 1
+        Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
+        Should -Invoke Assert-WorkstationPolicy -ModuleName _setup -Times 0 -Exactly
+        Test-Path (Join-Path $global:SetupFixtureRoot '.showcase-setup') | Should -BeFalse
+    }
     It 'default preview and WhatIf have zero installer and file effects even when missing' {
         $global:SetupFixtureState = 'Missing'
         Invoke-SetupModule | Should -Be 0
@@ -198,6 +213,56 @@ Describe 'Local installed-target discovery, including stale PATH' {
         $result.State | Should -Be 'Installed'
         $result.Compatible | Should -BeFalse
     }
+    It 'normalizes a quoted registration directory containing spaces before probing' {
+        $global:SetupFixturePackage.Paths = @()
+        Mock Get-NativeCommandPath -ModuleName _setup { $null }
+        Mock Test-Path -ModuleName _setup { $true } -ParameterFilter { $LiteralPath -eq 'C:\Program Files\Synthetic Python\python.exe' }
+        $result = Get-SetupInventory $global:SetupFixturePackage @(
+            [pscustomobject]@{ Name = 'Python 3.14.10'; Location = '  "C:\Program Files\Synthetic Python"  '; Version = '3.14.10' })
+        $result.State | Should -Be 'Installed'
+        $result.Path | Should -Be 'C:\Program Files\Synthetic Python\python.exe'
+        $result.Compatible | Should -BeTrue
+    }
+    It 'retains a proven compatible candidate despite malformed matching registration' {
+        $result = Get-SetupInventory $global:SetupFixturePackage @(
+            [pscustomobject]@{ Name = 'Python 3.14.10'; Location = 'C:\bad"location'; Version = '3.14.10' })
+        $result.Path | Should -Be 'C:\already-installed\python.exe'
+        $result.Compatible | Should -BeTrue
+    }
+    It 'reports malformed relevant registration as package-specific unknown, not missing' -TestCases @(
+        @{ Value = 'C:\bad"location' }, @{ Value = "C:\bad`nlocation" },
+        @{ Value = 'C:\bad|location' }, @{ Value = 'relative\location' },
+        @{ Value = '%SHOWCASE_UNSET_PATH_FIXTURE%\tool' }, @{ Value = 'C:relative' }) {
+        param($Value)
+        $global:SetupFixturePackage.Paths = @()
+        Mock Get-NativeCommandPath -ModuleName _setup { $null }
+        { Get-SetupInventory $global:SetupFixturePackage @(
+            [pscustomobject]@{ Name = 'Python 3.14.10'; Location = $Value; Version = '3.14.10' }) } |
+            Should -Throw '*Inventory unknown for Python.Python.3.14*no downloads*'
+        Should -Invoke Invoke-NativeCommand -ModuleName _setup -Times 0 -Exactly
+    }
+    It 'validates known and link target paths instead of executing registration strings' {
+        $global:SetupFixturePackage.Paths = @('C:\bad"known.exe')
+        Mock Get-NativeCommandPath -ModuleName _setup { $null }
+        { Get-SetupExecutable $global:SetupFixturePackage @() } | Should -Throw '*known location*'
+        $global:SetupFixturePackage.Paths = @('C:\already-installed\python.exe')
+        Mock Get-Item -ModuleName _setup {
+            [pscustomobject]@{ Attributes = [IO.FileAttributes]::ReparsePoint; Target = 'C:\bad"target.exe' }
+        }
+        { Get-SetupExecutable $global:SetupFixturePackage @() } | Should -Throw '*executable link*'
+        Should -Invoke Invoke-NativeCommand -ModuleName _setup -Times 0 -Exactly
+    }
+    It 'reports invalid Python ExecutablePath without invoking it as a command' {
+        $global:SetupFixturePackage.Paths = @()
+        Mock Get-NativeCommandPath -ModuleName _setup { $null }
+        Mock Test-Path -ModuleName _setup { $true } -ParameterFilter { $LiteralPath -like 'HKCU:\SOFTWARE\Python\PythonCore*' }
+        Mock Get-ChildItem -ModuleName _setup {
+            [pscustomobject]@{ PSPath = 'HKCU:\SOFTWARE\Python\PythonCore\3.14' }
+        }
+        Mock Get-ItemProperty -ModuleName _setup { [pscustomobject]@{ ExecutablePath = 'C:\python.exe --install' + '"' } }
+        { Get-SetupExecutable $global:SetupFixturePackage @() } | Should -Throw '*Python registration executable*'
+        Should -Invoke Invoke-NativeCommand -ModuleName _setup -Times 0 -Exactly
+    }
     It 'retains a registered Store Python with a four-component package version' {
         $global:SetupFixturePackage.Product = (@(Get-SetupPackage Python)[0]).Product
         Mock Get-SetupExecutable -ModuleName _setup { $null }
@@ -205,6 +270,62 @@ Describe 'Local installed-target discovery, including stale PATH' {
             [pscustomobject]@{ Name = 'Python 3.14.1000.0'; Version = '3.14.1000.0'; Location = 'C:\registered-store' })
         $result.State | Should -Be 'Installed'
         $result.Compatible | Should -BeFalse
+    }
+
+    Describe 'Real path normalization and inactive NVM discovery' {
+        It 'uses real .NET normalization with quotes, spaces and process environment expansion' {
+            & (Get-Module _setup) {
+                $result = ConvertTo-SetupPath '  "%ProgramFiles%\Synthetic Tool\..\Synthetic Tool"  '
+                $result.Reason | Should -BeNullOrEmpty
+                $result.Path | Should -Be ([IO.Path]::Combine($env:ProgramFiles, 'Synthetic Tool'))
+                [IO.Path]::IsPathRooted($result.Path) | Should -BeTrue
+            }
+        }
+        It 'rejects control, illegal, unexpanded, relative and network path syntax consistently' -TestCases @(
+            @{ Value = "C:\bad`0path" }, @{ Value = "C:\bad`tpath" }, @{ Value = 'C:\bad<path' },
+            @{ Value = 'C:\bad>path' }, @{ Value = 'C:\bad?path' }, @{ Value = 'C:\bad*path' },
+            @{ Value = 'C:\bad:path' }, @{ Value = 'C:\bad"path' }, @{ Value = 'relative' },
+            @{ Value = '\\untrusted\share\tool.exe' }, @{ Value = '%SHOWCASE_UNSET_PATH_FIXTURE%\tool' }) {
+            param($Value)
+            & (Get-Module _setup) {
+                param($InputPath)
+                $result = ConvertTo-SetupPath $InputPath
+                $result.Path | Should -BeNullOrEmpty
+                $result.Reason | Should -Not -BeNullOrEmpty
+                $result.OptionalAbsent | Should -BeFalse
+            } $Value
+        }
+        It 'finds an inactive NVM runtime when node is absent from PATH' {
+            $previous = $env:NVM_HOME
+            $env:NVM_HOME = 'C:\Synthetic NVM'
+            Mock Get-NativeCommandPath -ModuleName _setup { $null }
+            Mock Test-Path -ModuleName _setup { $false }
+            Mock Test-Path -ModuleName _setup { $true } -ParameterFilter {
+                $LiteralPath -in @('C:\Synthetic NVM', 'C:\Synthetic NVM\v24.0.0\node.exe')
+            }
+            Mock Get-ChildItem -ModuleName _setup {
+                [pscustomobject]@{ Name = 'v24.0.0'; FullName = 'C:\Synthetic NVM\v24.0.0' }
+            }
+            Mock Get-Item -ModuleName _setup { [pscustomobject]@{ Attributes = [IO.FileAttributes]::Normal } }
+            Mock Invoke-NativeCommand -ModuleName _setup { [pscustomobject]@{ ExitCode = 0; TimedOut = $false; Output = 'v24.0.0' } }
+            Mock Get-LocalInstallation -ModuleName _setup { @() }
+            Mock Get-SetupPackage -ModuleName _setup {
+                [pscustomobject]@{ Id = 'OpenJS.NodeJS.LTS'; Command = 'node'
+                    Args = @('--version'); Required = '^v24\.'; Product = '^Node'; Paths = @() }
+            }
+            Mock Invoke-SetupNative -ModuleName _setup {}
+            Mock Invoke-SetupReadiness -ModuleName _setup {}
+            try {
+                $result = Get-SetupInventory ([pscustomobject]@{ Id = 'OpenJS.NodeJS.LTS'; Command = 'node'
+                    Args = @('--version'); Required = '^v24\.'; Product = '^Node'; Paths = @() }) @()
+                $result.State | Should -Be 'Installed'
+                $result.Compatible | Should -BeTrue
+                $result.Path | Should -Be 'C:\Synthetic NVM\v24.0.0\node.exe'
+                Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 0
+                Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
+                Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
+            } finally { $env:NVM_HOME = $previous }
+        }
     }
     It 'finds already-installed PowerShell 7 despite a stale PATH miss' {
         $global:SetupFixturePackage.Command = 'pwsh'

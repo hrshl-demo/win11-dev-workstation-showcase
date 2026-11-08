@@ -54,29 +54,66 @@ function Get-LocalInstallation {
     return $records
 }
 
+function ConvertTo-SetupPath {
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param([string]$Value, [switch]$OptionalEnvironment)
+    if ($Value -match '[\x00-\x1f\x7f]') { return [pscustomobject]@{ Path = ''; Reason = 'control characters in path'; OptionalAbsent = $false } }
+    $path = ([string]$Value).Trim()
+    if ($path.StartsWith('"') -and $path.EndsWith('"') -and $path.Length -ge 2) {
+        $path = $path.Substring(1, $path.Length - 2).Trim()
+    }
+    if (-not $path) { return [pscustomobject]@{ Path = ''; Reason = 'empty path'; OptionalAbsent = $false } }
+    $expanded = [Environment]::ExpandEnvironmentVariables($path)
+    if ($expanded -match '%[^%]+%') {
+        return [pscustomobject]@{ Path = ''; Reason = 'unresolved environment variable'; OptionalAbsent = [bool]$OptionalEnvironment }
+    }
+    # Explicit checks keep .NET Framework and modern .NET equally conservative.
+    if ($expanded -match '[\x00-\x1f\x7f<>"|?*]' -or $expanded -notmatch '^[A-Za-z]:\\' -or
+        $expanded.Substring(2).Contains(':')) {
+        return [pscustomobject]@{ Path = ''; Reason = 'invalid or non-local absolute path'; OptionalAbsent = $false }
+    }
+    try {
+        $full = [IO.Path]::GetFullPath($expanded)
+    } catch [ArgumentException] {
+        return [pscustomobject]@{ Path = ''; Reason = 'invalid path syntax'; OptionalAbsent = $false }
+    } catch [NotSupportedException] {
+        return [pscustomobject]@{ Path = ''; Reason = 'unsupported path syntax'; OptionalAbsent = $false }
+    } catch [IO.PathTooLongException] {
+        return [pscustomobject]@{ Path = ''; Reason = 'path exceeds platform limit'; OptionalAbsent = $false }
+    }
+    return [pscustomobject]@{ Path = $full; Reason = ''; OptionalAbsent = $false }
+}
+
 function Get-SetupExecutable {
     [CmdletBinding()]
     [OutputType([string])]
     param([object]$Package, [object[]]$Installations)
     $candidates = @()
+    $invalid = @()
     $onPath = Get-NativeCommandPath $Package.Command
-    if ($onPath) { $candidates += $onPath }
+    if ($onPath) { $candidates += [pscustomobject]@{ Value = $onPath; Source = 'command discovery'; Optional = $false } }
     foreach ($path in @($Package.Paths)) {
-        $expanded = [Environment]::ExpandEnvironmentVariables($path)
-        if ($expanded -notmatch '%[^%]+%') { $candidates += $expanded }
+        $candidates += [pscustomobject]@{ Value = $path; Source = 'known location'; Optional = $true }
     }
     $exe = if ($Package.Command -eq 'java11') { 'java.exe' } else { $Package.Command + '.exe' }
     foreach ($item in $Installations) {
-        if ($item.Location -and [IO.Path]::IsPathRooted($item.Location)) {
-            $candidates += @((Join-Path $item.Location $exe), (Join-Path $item.Location "bin\$exe"))
+        if ($item.Location) {
+            $location = ConvertTo-SetupPath $item.Location
+            if ($location.Reason) { $invalid += "registration location: $($location.Reason)"; continue }
+            foreach ($suffix in @($exe, "bin\$exe")) {
+                $candidates += [pscustomobject]@{ Value = [IO.Path]::Combine($location.Path, $suffix); Source = 'registration executable'; Optional = $false }
+            }
         }
     }
     if ($Package.Command -in @('java', 'java11')) {
-        foreach ($parent in @((Join-Path $env:ProgramFiles 'Microsoft'), (Join-Path $env:ProgramFiles 'Java'),
-            (Join-Path $env:ProgramFiles 'Eclipse Adoptium'))) {
-            if (Test-Path -LiteralPath $parent -PathType Container) {
-                foreach ($directory in Get-ChildItem -LiteralPath $parent -Directory -ErrorAction Stop) {
-                    $candidates += Join-Path $directory.FullName 'bin\java.exe'
+        foreach ($parent in @('%ProgramFiles%\Microsoft', '%ProgramFiles%\Java', '%ProgramFiles%\Eclipse Adoptium')) {
+            $location = ConvertTo-SetupPath $parent -OptionalEnvironment
+            if ($location.OptionalAbsent) { continue }
+            if ($location.Reason) { $invalid += "Java discovery parent: $($location.Reason)"; continue }
+            if (Test-Path -LiteralPath $location.Path -PathType Container) {
+                foreach ($directory in Get-ChildItem -LiteralPath $location.Path -Directory -ErrorAction Stop) {
+                    $candidates += [pscustomobject]@{ Value = $directory.FullName + '\bin\java.exe'; Source = 'Java directory'; Optional = $false }
                 }
             }
         }
@@ -89,43 +126,64 @@ function Get-SetupExecutable {
                     $key = Join-Path $version.PSPath 'InstallPath'
                     if (Test-Path -LiteralPath $key) {
                         $values = Get-ItemProperty -LiteralPath $key -ErrorAction Stop
-                        if ($values.PSObject.Properties['ExecutablePath']) { $candidates += [string]$values.ExecutablePath }
-                    }
-                }
-                if ($Package.Command -eq 'node') {
-                    foreach ($parent in @([Environment]::ExpandEnvironmentVariables('%NVM_HOME%'),
-                        [Environment]::ExpandEnvironmentVariables('%APPDATA%\nvm'))) {
-                        if ($parent -notmatch '%[^%]+%' -and (Test-Path -LiteralPath $parent -PathType Container)) {
-                            foreach ($directory in Get-ChildItem -LiteralPath $parent -Directory -ErrorAction Stop |
-                                Where-Object Name -Match '^v[0-9]+\.[0-9]+\.[0-9]+$') {
-                                $candidates += Join-Path $directory.FullName 'node.exe'
-                            }
+                        if ($values.PSObject.Properties['ExecutablePath']) {
+                            $candidates += [pscustomobject]@{ Value = [string]$values.ExecutablePath; Source = 'Python registration executable'; Optional = $false }
                         }
                     }
                 }
             }
         }
     }
+    if ($Package.Command -eq 'node') {
+        foreach ($parent in @('%NVM_HOME%', '%APPDATA%\nvm')) {
+            $location = ConvertTo-SetupPath $parent -OptionalEnvironment
+            if ($location.OptionalAbsent) { continue }
+            if ($location.Reason) { $invalid += "NVM discovery parent: $($location.Reason)"; continue }
+            if (Test-Path -LiteralPath $location.Path -PathType Container) {
+                foreach ($directory in Get-ChildItem -LiteralPath $location.Path -Directory -ErrorAction Stop |
+                    Where-Object Name -Match '^v[0-9]+\.[0-9]+\.[0-9]+$') {
+                    $candidates += [pscustomobject]@{ Value = $directory.FullName + '\node.exe'; Source = 'NVM version directory'; Optional = $false }
+                }
+            }
+        }
+    }
     $firstInstalled = $null
-    foreach ($path in $candidates | Select-Object -Unique) {
+    $seen = @{}
+    foreach ($candidate in $candidates) {
+        $location = ConvertTo-SetupPath $candidate.Value -OptionalEnvironment:$candidate.Optional
+        if ($location.OptionalAbsent) { continue }
+        if ($location.Reason) { $invalid += "$($candidate.Source): $($location.Reason)"; continue }
+        $path = $location.Path
+        if ($seen.ContainsKey($path)) { continue }
+        $seen[$path] = $true
         # App Execution Aliases are launch/install stubs, not proof of a runtime.
         if ($path -match '\\Microsoft\\WindowsApps\\') { continue }
         if (Test-Path -LiteralPath $path -PathType Leaf) {
             if ((Get-Item -LiteralPath $path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
                 # WinGet Links are permitted only when a real local target exists.
                 $item = Get-Item -LiteralPath $path -Force
-                if (-not $item.PSObject.Properties['Target'] -or -not $item.Target -or
-                    -not (Test-Path -LiteralPath ([string]@($item.Target)[0]) -PathType Leaf)) {
-                    throw 'Executable is an unresolved link; inventory unknown.'
+                if (-not $item.PSObject.Properties['Target'] -or @($item.Target).Count -ne 1) {
+                    $invalid += 'executable link: missing or ambiguous target'; continue
                 }
+                $target = ConvertTo-SetupPath ([string]@($item.Target)[0])
+                if ($target.Reason) { $invalid += "executable link: $($target.Reason)"; continue }
+                if (-not (Test-Path -LiteralPath $target.Path -PathType Leaf) -or
+                    ((Get-Item -LiteralPath $target.Path -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+                    $invalid += 'executable link: unresolved or chained target'; continue
+                }
+                $path = $target.Path
             }
             $probe = Invoke-NativeCommand $path @($Package.Args) -TimeoutSeconds 30
             if ($probe.TimedOut -or $probe.ExitCode -ne 0 -or -not $probe.Output.Trim()) {
-                throw 'Existing executable version probe failed; inventory unknown, not missing.'
+                throw "Inventory unknown for $($Package.Id): existing executable version probe failed; no downloads."
             }
-            if ($probe.Output -match $Package.Required) { return $path }
+            if ($probe.Output -match $Package.Required) {
+                if ($invalid.Count) { Write-ShowcaseMessage "[WARN] $($Package.Id): invalid discovery metadata ($($invalid -join '; ')); using independently proven compatible executable." }
+                return $path
+            }
             if (-not $firstInstalled -and $Package.Command -ne 'java11') { $firstInstalled = $path }
         }
+        if ($invalid.Count) { throw "Inventory unknown for $($Package.Id): $($invalid -join '; '). Existing software retained; no downloads." }
     }
     return $firstInstalled
 }
