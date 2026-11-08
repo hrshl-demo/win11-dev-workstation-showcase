@@ -36,6 +36,7 @@ function Get-RegisteredSetupPackage {
     # local override. Isolate cold Appx initialization from installer approvals.
     $query = @'
 $ConfirmPreference = 'None'
+$ProgressPreference = 'SilentlyContinue'
 $ErrorActionPreference = 'Stop'
 try {
     ConvertTo-Json -InputObject @(Get-AppxPackage -Name '__PACKAGE_NAME__' -ErrorAction Stop |
@@ -54,7 +55,10 @@ try {
     if ($result.StdOut -notmatch '^\s*\[') {
         throw "Inventory unknown for ${Name}: missing package inventory array. No downloads; retain existing software."
     }
-    try { $packages = @($result.StdOut | ConvertFrom-Json -ErrorAction Stop) } catch {
+    try {
+        $decoded = ConvertFrom-Json -InputObject $result.StdOut -ErrorAction Stop
+        $packages = @(foreach ($package in $decoded) { $package })
+    } catch {
         throw "Inventory unknown for ${Name}: invalid package inventory response. No downloads; retain existing software."
     }
     foreach ($package in $packages) {
