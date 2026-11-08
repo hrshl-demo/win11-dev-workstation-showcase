@@ -362,8 +362,8 @@ Describe 'Current-user packaged PowerShell installed-first discovery' {
         Mock Test-Path -ModuleName _setup { $true } -ParameterFilter {
             $LiteralPath -eq $global:PackagedPowerShellExecutable
         }
-        Mock Get-AppxPackage -ModuleName _setup { @() }
-        Mock Get-AppxPackage -ModuleName _setup { $global:PackagedPowerShellFixture } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
+        Mock Get-RegisteredSetupPackage -ModuleName _setup { @() }
+        Mock Get-RegisteredSetupPackage -ModuleName _setup { $global:PackagedPowerShellFixture } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
         Mock Get-NativeCommandPath -ModuleName _setup { 'C:\Users\synthetic\AppData\Local\Microsoft\WindowsApps\pwsh.exe' }
         Mock Get-Item -ModuleName _setup { [pscustomobject]@{ Attributes = [IO.FileAttributes]::Normal } }
         Mock Invoke-NativeCommand -ModuleName _setup {
@@ -391,8 +391,8 @@ Describe 'Current-user packaged PowerShell installed-first discovery' {
         Should -Invoke Invoke-NativeCommand -ModuleName _setup -Times 0 -Exactly -ParameterFilter {
             $FilePath -match '\\AppData\\Local\\Microsoft\\WindowsApps\\'
         }
-        Should -Invoke Get-AppxPackage -ModuleName _setup -ParameterFilter {
-            $Name -eq 'Microsoft.PowerShell' -and -not $AllUsers
+        Should -Invoke Get-RegisteredSetupPackage -ModuleName _setup -ParameterFilter {
+            $Name -eq 'Microsoft.PowerShell'
         }
     }
     It 'keeps a package whose executable is absent installed/unverified with no download' {
@@ -405,7 +405,9 @@ Describe 'Current-user packaged PowerShell installed-first discovery' {
         Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
     }
     It 'fails package inventory query before downloads' {
-        Mock Get-AppxPackage -ModuleName _setup { throw 'Synthetic query denied' } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
+        Mock Get-RegisteredSetupPackage -ModuleName _setup {
+            throw 'Inventory unknown for Microsoft.PowerShell: current-user registered package query failed. No downloads; retain existing software.'
+        } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
         { Get-LocalInstallation } | Should -Throw '*Microsoft.PowerShell*current-user*no downloads*'
         Invoke-SetupModule -Module Core -Apply -Confirm:$false | Should -Be 1
         Should -Invoke Invoke-SetupNative -ModuleName _setup -Times 0 -Exactly
@@ -429,7 +431,7 @@ Describe 'Current-user packaged PowerShell installed-first discovery' {
         Should -Invoke Invoke-SetupReadiness -ModuleName _setup -Times 0 -Exactly
     }
     It 'preserves normal MSI discovery and truly absent classification independently of aliases' {
-        Mock Get-AppxPackage -ModuleName _setup { @() } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
+        Mock Get-RegisteredSetupPackage -ModuleName _setup { @() } -ParameterFilter { $Name -eq 'Microsoft.PowerShell' }
         $package = @(Get-SetupPackage Core | Where-Object Command -eq pwsh)[0]
         (Get-SetupInventory $package @(Get-LocalInstallation)).State | Should -Be 'Missing'
         Mock Test-Path -ModuleName _setup { $true } -ParameterFilter { $LiteralPath -eq 'C:\Program Files\PowerShell\7\pwsh.exe' }
