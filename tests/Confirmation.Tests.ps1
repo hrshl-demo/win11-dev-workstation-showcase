@@ -24,7 +24,7 @@ Set-Alias -Name Get-SyntheticPackage -Value Get-SyntheticPackageRecord
 Set-Alias -Name Add-SyntheticPackage -Value Get-SyntheticPackageRecord
 Set-Alias -Name Remove-SyntheticPackage -Value Get-SyntheticPackageRecord
 Set-Alias -Name Reset-SyntheticPackage -Value Get-SyntheticPackageRecord
-function Get-SyntheticPackageRecord { [pscustomobject]@{ Version = '7.6.9.0'; InstallLocation = 'C:\synthetic\package' } }
+function Get-SyntheticPackageRecord { [pscustomobject]@{ Name = 'Microsoft.PowerShell'; Version = [version]'7.6.9.0'; InstallLocation = 'C:\synthetic\package' } }
 Export-ModuleMember -Function Get-SyntheticPackageRecord -Alias *
 '@
         if ($FailImport) { $moduleText += "`nthrow 'Synthetic initialization failed'`n" }
@@ -67,6 +67,7 @@ $module = Get-Module _setup
     }
     function script:Get-SetupInventory {
         param($Package, $Installations)
+        if (@($Installations | Where-Object Version -ne '7.6.9.0').Count -gt 0) { throw 'Package version text changed during transport' }
         if ($global:ConfirmationFixtureMode -eq 'Unknown') { throw 'Synthetic inventory unknown; no downloads' }
         [pscustomobject]@{ Id = $Package.Id; State = $(if ($global:ConfirmationFixtureMode -eq 'Installed') { 'Installed' } else { 'Missing' })
             Compatible = $true; Version = '25.0.1'; Path = '' }
