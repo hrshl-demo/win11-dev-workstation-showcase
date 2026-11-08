@@ -51,6 +51,15 @@ function Get-LocalInstallation {
         $records += [pscustomobject]@{ Name = 'Python ' + ([string]$package.Version)
             Version = [string]$package.Version; Location = [string]$package.InstallLocation }
     }
+    try {
+        $powerShellPackages = @(Get-AppxPackage -Name 'Microsoft.PowerShell' -ErrorAction Stop)
+    } catch {
+        throw 'Inventory unknown for Microsoft.PowerShell: current-user registered package query failed. No downloads; retain existing software.'
+    }
+    foreach ($package in $powerShellPackages) {
+        $records += [pscustomobject]@{ Name = 'PowerShell 7 (registered Microsoft.PowerShell)'
+            Version = [string]$package.Version; Location = [string]$package.InstallLocation }
+    }
     return $records
 }
 
@@ -204,6 +213,7 @@ function Get-SetupInventory {
             Compatible = [bool]($version.Output -match $Package.Required) }
     }
     if ($registered.Count -gt 0) {
+        Write-ShowcaseMessage "[WARN] $($Package.Id): registered installation has no proven usable runtime; retained as installed/unverified, never download-eligible."
         return [pscustomobject]@{ Id = $Package.Id; State = 'Installed'; Path = $registered[0].Location
             Version = ($registered.Version -join ', '); Compatible = $false }
     }
