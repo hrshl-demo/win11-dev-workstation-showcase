@@ -1,7 +1,7 @@
 # Source facts and trust boundaries
 
 Underlying installer/application/agent source:
-`d79e9a106c03561887a8f17ef4c8af6c0294df97`. Facts as of **2026-11-08**.
+`c226e1233c56f10ee9215835f7cb56cf8ee24b84`. Facts as of **2026-11-08**.
 The source-command lock contains exact command/prompt text and immutable source
 hashes. The named local agent adds an approval-scoped execution route through
 existing scripts, not a new installer/framework, cloud environment or MCP server.
@@ -22,6 +22,10 @@ CI checks its static recipes and the inert companion; live tool use is separate.
 - Required acceptance is 12 extensions in the intended approved profile,
   with the thirteenth modernization recommendation optional. CLI IDs alone
   do not prove profile, enabled state or marketplace policy acceptance.
+- Verify has no Native switch. Missing WSL/wslc stays full FAIL/exit 1.
+  Only those exact structured missing identities, every other default row
+  positively PASS and actual runtime/profile/policy acceptance can lead to
+  human approval of narrower Native scope, never automatic WSL acquisition.
 - Explicit human-approved Restore is separate from daily Test/Lint/Coverage and F5.
   Missing prerequisites mean NOT RUN. All excludes legacy Java.
 - Money uses exact arithmetic, explicit half-up rounding, fixed two-decimal

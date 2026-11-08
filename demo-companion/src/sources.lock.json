@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/hrshl-demo/win11-dev-workstation-showcase",
-  "underlying_source_commit": "d79e9a106c03561887a8f17ef4c8af6c0294df97",
+  "underlying_source_commit": "c226e1233c56f10ee9215835f7cb56cf8ee24b84",
   "as_of": "2026-11-08",
   "comparison": "Copyable text matches current checkout and immutable pin; no commands executed.",
   "blocks": {
@@ -411,7 +411,7 @@
   "pinned_source_files": {
     ".vscode\\tasks.json": "1adbea2de95df8b1655b2ee2d998828c8a0d677c9209d3b1b1d6c0e991def9b9",
     "docs\\DEMO-SCRIPT.md": "2ccfc914f1d876ec6c7b34fa1890d197e771ed6526985bcf109c03548f1bbcd1",
-    "docs\\SETUP.md": "a5ed67d00d238b2e07c2a3e81eaaad46225c30d80fb4e4943ff7c4cc5f1eb594",
+    "docs\\SETUP.md": "2a3e99bf613c585870be4d4f48213af88bcc9b1b29ff0e06d328b71e567f6d6a",
     "scripts\\verify.ps1": "e60ec1032f53786a4c998fbe416ce31457a8233f876964780f37f7566f2b9975"
   }
 }

@@ -98,6 +98,9 @@ class CompanionTests(unittest.TestCase):
             self.assertEqual(block["source"], [{"path": "docs\\SETUP.md"}])
         page = (ROOT / "pages" / "setup" / "setup-modules.html").read_text(encoding="utf-8")
         self.assertIn("Live VS Code selection/tool/native-confirmation acceptance is not yet proven", page)
+        verify = (ROOT / "pages" / "setup" / "setup-verify.html").read_text(encoding="utf-8")
+        for boundary in ("Missing/unusable", "every other default row positively PASS", "Malformed/unusable JSON", "Container=false"):
+            self.assertIn(boundary, verify)
 
     def test_regeneration_is_byte_deterministic(self):
         files = sorted(ROOT.rglob("*.html")) + sorted((ROOT / "data").glob("*.js")) + [S.LOCK]
