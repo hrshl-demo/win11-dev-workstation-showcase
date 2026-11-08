@@ -77,6 +77,10 @@ digits**, no exponent notation, and at most 40 characters. Queries are capped
 at 512 characters. The upper bound keeps converted paise safely inside int64.
 Request contexts expire after two seconds; the server also has bounded
 header/read/write/idle timeouts. No credentials or customer inputs are needed.
+In the `demo-complete` fallback, conversion diagnostics include only the fixed
+route `/convert`, never query strings, supplied amounts or currency values.
+Unknown source currencies receive the stable public message
+`"Unsupported source currency."`, with no internal lookup details.
 
 Revised main uses safe client errors and does not log raw query strings.
 The review exercise is isolated non-serving text in
@@ -130,6 +134,10 @@ Primary metadata checked **7 November 2026** without downloading software:
 installation. The two test files cover exact rounding/formatting, currencies,
 bounds, HTTP health/conversion/validation, cancellation and port overrides
 using in-process `httptest` (no listener or external service).
+The fallback adds two regression tests asserting that supplied query values
+cannot appear in logs and unknown-currency responses cannot expose internal
+diagnostics. These Go tests were **NOT RUN** for the same missing-runtime/user
+installation boundary; source changes were statically inspected only.
 Container builds/runs and live-server checks were also **NOT RUN**: execution
 was prohibited and no approved container runtime was available. Registry
 verification establishes image existence/digests, not a successful build.

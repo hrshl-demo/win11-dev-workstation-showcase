@@ -94,7 +94,7 @@ def test_openapi_preserves_request_and_response_models() -> None:
     operation = schema["paths"]["/emi"]["post"]
     assert operation["requestBody"]["content"]["application/json"]["schema"]["$ref"].endswith("EmiRequest")
     assert schema["components"]["schemas"]["EmiResponse"]["properties"]["emi"]["type"] == "string"
-    assert "/emi/schedule" not in schema["paths"]
+    assert "/emi/schedule" in schema["paths"]
 
 
 @pytest.mark.parametrize(

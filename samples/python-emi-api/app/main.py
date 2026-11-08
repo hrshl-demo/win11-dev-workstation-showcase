@@ -12,7 +12,8 @@ from starlette.responses import Response
 
 from app.emi import calculate_emi
 from app.logging_config import configure_logging
-from app.models import EmiRequest, EmiResponse
+from app.models import EmiRequest, EmiResponse, ScheduleRequest, ScheduleResponse
+from app.schedule import ScheduleError, calculate_schedule
 
 MAX_BODY_BYTES = 4096
 configure_logging()
@@ -88,6 +89,18 @@ def health() -> dict[str, str]:
 def emi(request: EmiRequest) -> EmiResponse:
     result = calculate_emi(request)
     logger.info("Synthetic EMI calculation completed")
+    return result
+
+
+@app.post("/emi/schedule", response_model=ScheduleResponse)
+def schedule(request: ScheduleRequest) -> ScheduleResponse:
+    try:
+        result = calculate_schedule(request)
+    except ScheduleError:
+        raise HTTPException(
+            422, "Loan cannot be represented as an amortizing cent-denominated schedule."
+        ) from None
+    logger.info("Synthetic amortisation schedule completed")
     return result
 
 
