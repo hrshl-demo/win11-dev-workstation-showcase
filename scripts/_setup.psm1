@@ -40,7 +40,10 @@ $ProgressPreference = 'SilentlyContinue'
 $ErrorActionPreference = 'Stop'
 try {
     ConvertTo-Json -InputObject @(Get-AppxPackage -Name '__PACKAGE_NAME__' -ErrorAction Stop |
-        Select-Object Name, Version, InstallLocation) -Compress
+        ForEach-Object {
+            [pscustomobject]@{ Name = [string]$_.Name; Version = [string]$_.Version
+                InstallLocation = [string]$_.InstallLocation }
+        }) -Compress
 } catch {
     [Console]::Error.WriteLine($_.Exception.Message)
     exit 1
