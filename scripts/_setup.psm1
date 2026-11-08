@@ -28,14 +28,54 @@ function Get-SetupPackage {
     return @($property.Value)
 }
 
+function Get-RegisteredSetupPackage {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][ValidateSet('PythonSoftwareFoundation.Python*', 'Microsoft.PowerShell',
+        'MicrosoftCorporationII.WindowsSubsystemForLinux', '*Ubuntu*')][string]$Name)
+    # Imported modules inherit root-session preferences, not a calling function's
+    # local override. Isolate cold Appx initialization from installer approvals.
+    $query = @'
+$ConfirmPreference = 'None'
+$ProgressPreference = 'SilentlyContinue'
+$ErrorActionPreference = 'Stop'
+try {
+    ConvertTo-Json -InputObject @(Get-AppxPackage -Name '__PACKAGE_NAME__' -ErrorAction Stop |
+        ForEach-Object {
+            [pscustomobject]@{ Name = [string]$_.Name; Version = [string]$_.Version
+                InstallLocation = [string]$_.InstallLocation }
+        }) -Compress
+} catch {
+    [Console]::Error.WriteLine($_.Exception.Message)
+    exit 1
+}
+'@
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($query.Replace('__PACKAGE_NAME__', $Name)))
+    $result = Invoke-NativeCommand -FilePath (Get-Process -Id $PID).Path `
+        -ArgumentList @('-NoProfile', '-NonInteractive', '-EncodedCommand', $encoded) -TimeoutSeconds 30
+    if ($result.ExitCode -ne 0 -or $result.StdErr) {
+        throw "Inventory unknown for ${Name}: current-user registered package query failed (exit $($result.ExitCode)). No downloads; retain existing software. $($result.StdErr)"
+    }
+    if ($result.StdOut -notmatch '^\s*\[') {
+        throw "Inventory unknown for ${Name}: missing package inventory array. No downloads; retain existing software."
+    }
+    try {
+        $decoded = ConvertFrom-Json -InputObject $result.StdOut -ErrorAction Stop
+        $packages = @(foreach ($package in $decoded) { $package })
+    } catch {
+        throw "Inventory unknown for ${Name}: invalid package inventory response. No downloads; retain existing software."
+    }
+    foreach ($package in $packages) {
+        if ($null -eq $package -or -not $package.PSObject.Properties['Name'] -or
+            -not $package.PSObject.Properties['Version'] -or -not $package.PSObject.Properties['InstallLocation']) {
+            throw "Inventory unknown for ${Name}: incomplete package inventory response. No downloads; retain existing software."
+        }
+    }
+    return $packages
+}
+
 function Get-LocalInstallation {
     [CmdletBinding()]
     param()
-    # Cold Appx import defines session aliases; installer confirmation must not
-    # leak into this trusted read-only inventory or its module initialization.
-    $previousConfirm = $ConfirmPreference
-    $ConfirmPreference = 'None'
-    try {
     $records = @()
     foreach ($path in @('HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
         'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall',
@@ -52,21 +92,16 @@ function Get-LocalInstallation {
             }
         }
     }
-    foreach ($package in Get-AppxPackage -Name 'PythonSoftwareFoundation.Python*' -ErrorAction Stop) {
+    foreach ($package in Get-RegisteredSetupPackage -Name 'PythonSoftwareFoundation.Python*') {
         $records += [pscustomobject]@{ Name = 'Python ' + ([string]$package.Version)
             Version = [string]$package.Version; Location = [string]$package.InstallLocation }
     }
-    try {
-        $powerShellPackages = @(Get-AppxPackage -Name 'Microsoft.PowerShell' -ErrorAction Stop)
-    } catch {
-        throw 'Inventory unknown for Microsoft.PowerShell: current-user registered package query failed. No downloads; retain existing software.'
-    }
+    $powerShellPackages = @(Get-RegisteredSetupPackage -Name 'Microsoft.PowerShell')
     foreach ($package in $powerShellPackages) {
         $records += [pscustomobject]@{ Name = 'PowerShell 7 (registered Microsoft.PowerShell)'
             Version = [string]$package.Version; Location = [string]$package.InstallLocation }
     }
     return $records
-    } finally { $ConfirmPreference = $previousConfirm }
 }
 
 function ConvertTo-SetupPath {
@@ -256,9 +291,6 @@ function Get-SetupExtension {
 function Get-SetupWslState {
     [CmdletBinding()]
     param()
-    $previousConfirm = $ConfirmPreference
-    $ConfirmPreference = 'None'
-    try {
     $features = @()
     foreach ($name in @('Microsoft-Windows-Subsystem-Linux', 'VirtualMachinePlatform')) {
         $feature = Get-WindowsOptionalFeature -Online -FeatureName $name -ErrorAction Stop
@@ -267,8 +299,8 @@ function Get-SetupWslState {
         }
         $features += [pscustomobject]@{ Name = $name; State = [string]$feature.State }
     }
-    $packages = @(Get-AppxPackage -Name MicrosoftCorporationII.WindowsSubsystemForLinux -ErrorAction Stop)
-    $distroPackages = @(Get-AppxPackage -Name '*Ubuntu*' -ErrorAction Stop)
+    $packages = @(Get-RegisteredSetupPackage -Name MicrosoftCorporationII.WindowsSubsystemForLinux)
+    $distroPackages = @(Get-RegisteredSetupPackage -Name '*Ubuntu*')
     $distributions = @()
     $key = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss'
     if (Test-Path -LiteralPath $key) {
@@ -290,7 +322,6 @@ function Get-SetupWslState {
     }
     [pscustomobject]@{ Features = $features; Installed = [bool]$version; Version = $version; Path = $wsl
         Distributions = $distributions; UbuntuInstalled = [bool]($distroPackages.Count -gt 0 -or @($distributions | Where-Object { $_ -match '^Ubuntu(?:-|$)' }).Count -gt 0) }
-    } finally { $ConfirmPreference = $previousConfirm }
 }
 
 function Invoke-SetupNative {

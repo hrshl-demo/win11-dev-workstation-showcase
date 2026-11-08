@@ -24,7 +24,7 @@ Set-Alias -Name Get-SyntheticPackage -Value Get-SyntheticPackageRecord
 Set-Alias -Name Add-SyntheticPackage -Value Get-SyntheticPackageRecord
 Set-Alias -Name Remove-SyntheticPackage -Value Get-SyntheticPackageRecord
 Set-Alias -Name Reset-SyntheticPackage -Value Get-SyntheticPackageRecord
-function Get-SyntheticPackageRecord { [pscustomobject]@{ Version = '7.6.9.0'; InstallLocation = 'C:\synthetic\package' } }
+function Get-SyntheticPackageRecord { [pscustomobject]@{ Name = 'Microsoft.PowerShell'; Version = [version]'7.6.9.0'; InstallLocation = 'C:\synthetic\package' } }
 Export-ModuleMember -Function Get-SyntheticPackageRecord -Alias *
 '@
         if ($FailImport) { $moduleText += "`nthrow 'Synthetic initialization failed'`n" }
@@ -42,17 +42,24 @@ $global:ConfirmationFixtureMode = $Mode
 Import-Module (Join-Path $Repository 'scripts\_setup.psm1')
 $module = Get-Module _setup
 & $module {
+    $script:FixtureNativeInvoker = (Get-Command Invoke-NativeCommand).ScriptBlock
     function script:Test-Path {
         [CmdletBinding()]
         param($LiteralPath, $PathType)
         if ($LiteralPath -like 'HK*:*') { return $false }
         Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath
     }
-    function script:Get-AppxPackage {
+    function script:Invoke-NativeCommand {
         [CmdletBinding()]
-        param($Name)
-        Import-Module (Join-Path $global:ConfirmationFixtureRoot 'SyntheticPackages.psm1') -ErrorAction Stop
-        Get-SyntheticPackageRecord
+        param($FilePath, $ArgumentList, $TimeoutSeconds)
+        if ($ArgumentList[2] -ne '-EncodedCommand') { throw 'Unexpected native fixture call' }
+        $query = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($ArgumentList[3]))
+        $prefix = 'function Get-AppxPackage { [CmdletBinding()]param($Name); Import-Module ''__SYNTHETIC_MODULE__'' -ErrorAction Stop; Get-SyntheticPackageRecord }'
+        $syntheticPath = (Join-Path $global:ConfirmationFixtureRoot 'SyntheticPackages.psm1').Replace("'", "''")
+        $query = $prefix.Replace('__SYNTHETIC_MODULE__', $syntheticPath) + "`n" + $query
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($query))
+        & $script:FixtureNativeInvoker -FilePath $FilePath `
+            -ArgumentList @('-NoProfile', '-NonInteractive', '-EncodedCommand', $encoded) -TimeoutSeconds $TimeoutSeconds
     }
     function script:Get-ShowcaseRoot { $global:ConfirmationFixtureRoot }
     function script:Get-SetupPackage {
@@ -60,6 +67,7 @@ $module = Get-Module _setup
     }
     function script:Get-SetupInventory {
         param($Package, $Installations)
+        if (@($Installations | Where-Object Version -ne '7.6.9.0').Count -gt 0) { throw 'Package version text changed during transport' }
         if ($global:ConfirmationFixtureMode -eq 'Unknown') { throw 'Synthetic inventory unknown; no downloads' }
         [pscustomobject]@{ Id = $Package.Id; State = $(if ($global:ConfirmationFixtureMode -eq 'Installed') { 'Installed' } else { 'Missing' })
             Compatible = $true; Version = '25.0.1'; Path = '' }
@@ -127,6 +135,35 @@ Describe 'Fresh process trusted inventory confirmation scoping' {
         $result.Error | Should -BeNullOrEmpty
         $result.Output | Should -Not -Match 'Install locally proven'
     }
+
+    Describe 'Bounded registered-package inventory protocol' {
+        BeforeAll { Import-Module (Join-Path $script:Repository 'scripts\_setup.psm1') }
+        It 'validates actual JSON arrays and preserves genuinely absent packages' {
+            InModuleScope _setup {
+                Mock Invoke-NativeCommand { [pscustomobject]@{ ExitCode = 0; StdErr = ''; StdOut = '[]' } }
+                @(Get-RegisteredSetupPackage -Name Microsoft.PowerShell).Count | Should -Be 0
+                Should -Invoke Invoke-NativeCommand -Times 1 -Exactly -ParameterFilter {
+                    $TimeoutSeconds -eq 30 -and $ArgumentList[0] -eq '-NoProfile' -and
+                    $ArgumentList[1] -eq '-NonInteractive' -and $ArgumentList[2] -eq '-EncodedCommand' -and
+                    [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($ArgumentList[3])) -match "Get-AppxPackage -Name 'Microsoft.PowerShell'"
+                }
+            }
+        }
+        It 'fails closed for timeout, initialization error, empty, malformed and incomplete JSON' -TestCases @(
+            @{ Code = 124; ErrorText = ''; Json = '[]' },
+            @{ Code = 1; ErrorText = 'Synthetic initialization denied'; Json = '' },
+            @{ Code = 0; ErrorText = 'Synthetic unexpected stderr'; Json = '[]' },
+            @{ Code = 0; ErrorText = ''; Json = '' },
+            @{ Code = 0; ErrorText = ''; Json = 'not-json' },
+            @{ Code = 0; ErrorText = ''; Json = '[{"Name":"Microsoft.PowerShell"}]' }) {
+            param($Code, $ErrorText, $Json)
+            InModuleScope _setup -Parameters @{ Code = $Code; ErrorText = $ErrorText; Json = $Json } {
+                param($Code, $ErrorText, $Json)
+                Mock Invoke-NativeCommand { [pscustomobject]@{ ExitCode = $Code; StdErr = $ErrorText; StdOut = $Json } }
+                { Get-RegisteredSetupPackage -Name Microsoft.PowerShell } | Should -Throw '*Inventory unknown*Microsoft.PowerShell*No downloads*'
+            }
+        }
+    }
     It 'declining the actual target writes no journal or installer marker' {
         $result = Invoke-ColdConfirmationFixture -Mode Missing -Answer N
         $result.Data.Result | Should -Be 0 -Because $result.Output
@@ -165,6 +202,6 @@ Describe 'Fresh process trusted inventory confirmation scoping' {
         $result.Data.Installer | Should -BeFalse
         $result.Data.Journal | Should -BeFalse
         $result.Data.Confirm | Should -Be 'Low'
-        $result.Output | Should -Match '\[FAIL\]'
+        $result.Output | Should -Match $(if ($FailImport) { 'Synthetic initialization failed' } else { 'Synthetic inventory unknown' })
     }
 }
