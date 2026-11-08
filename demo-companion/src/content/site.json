@@ -5,13 +5,13 @@
   "version": "1.0",
   "as_of": "2026-11-08",
   "summary": "A guided, offline companion for installed-first setup and a synthetic developer demo. Read the quick path, open its detailed activity, and keep human approval separate from machine evidence.",
-  "sources_note": "Written from the underlying source pin below. Source links open only when clicked and require private-repository access. Dated CI evidence does not verify your laptop.",
+  "sources_note": "Written from the underlying source pin below. Source links open only when clicked and require private-repository access. The evidence register records earlier dated revisions, not acceptance of this agent, its tools or your laptop.",
   "repos": {
     "poc": {
       "label": "Workstation showcase",
       "url": "https://github.com/hrshl-demo/win11-dev-workstation-showcase",
       "branch": "main",
-      "commit": "73cd348c198da748c77d8a22c4d8314abdc66d36",
+      "commit": "d79e9a106c03561887a8f17ef4c8af6c0294df97",
       "color": "#2563EB",
       "step_box": false
     }
@@ -19,7 +19,7 @@
   "legend": {
     "actors": {
       "manual": {"label": "You / IT", "glyph": "Y", "color": "#F59E0B"},
-      "copilot": {"label": "Agent: scoped files", "glyph": "A", "color": "#A78BFA"},
+      "copilot": {"label": "Agent: named scope", "glyph": "A", "color": "#A78BFA"},
       "terminal": {"label": "Human terminal", "glyph": ">", "color": "#38BDF8"},
       "pipeline": {"label": "GitHub Actions", "glyph": "G", "color": "#34D399"},
       "generated": {"label": "Expected / recorded", "glyph": "O", "color": "#FB7185"}

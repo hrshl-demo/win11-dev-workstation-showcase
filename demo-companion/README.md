@@ -4,6 +4,15 @@ An offline, multi-page guided companion for this private repository. The 20
 pages contain quick steps, detailed A-G activities, recovery, architecture,
 copy-only commands, exact runbook prompts and a dated evidence register.
 
+For **execution rather than command copying**, open the reviewed repository in
+locally running Windows VS Code, select **Workstation setup** in Chat's Agent
+dropdown, and use the companion's source-bound start/resume prompt. The named
+agent invokes existing terminal surfaces after inventory and scoped human
+approval; you answer native confirmations. Generic coding/build/desktop/cloud
+agents do not have that exception. Missing tools/prompts, IT policy, UAC and
+restart remain real pauses. This HTML only copies instructions and never runs
+the agent or setup. Live VS Code tool/approval acceptance is not yet proven.
+
 ## Open the complete folder
 
 Keep this **whole folder** and double-click `index.html`. No server, viewer
@@ -31,9 +40,10 @@ Online source links require user clicks and private-repository access.
 ## Source and evidence scope
 
 Underlying source pin:
-`73cd348c198da748c77d8a22c4d8314abdc66d36`, facts as of **2026-11-08**.
-The evidence register records observed hosted runs on this pin and the
-separate schedule fallback; it is not live polling. Laptop setup, extension
+`d79e9a106c03561887a8f17ef4c8af6c0294df97`, facts as of **2026-11-08**.
+The evidence register preserves earlier dated main/fallback runs, independently
+of this source pin; it is not live polling or acceptance of the new agent.
+Laptop setup, extension
 profile/source acceptance, Restore, F5, sample/container requests and AKS
 deployment are **not proven live by this companion**.
 

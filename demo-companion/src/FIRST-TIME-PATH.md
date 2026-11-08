@@ -6,6 +6,7 @@ server, build, account or download is part of opening the companion.
 | Need | In-folder route |
 | --- | --- |
 | Corporate approval, script policy and safe clone | Start safely / Phase 0 |
+| Select/start/resume local Workstation setup instead of copying each command | Quick setup / Phase 2 / Source-bound prompt library |
 | Short setup path with matching detailed anchors | Quick setup / Phases 1-3 |
 | Installed-first module list and retained installed versions | Phase 2 |
 | Timeouts, partial vendor/reboot state and source/profile acceptance | Phases 1-3 / Recover |

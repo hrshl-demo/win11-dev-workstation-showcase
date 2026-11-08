@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/hrshl-demo/win11-dev-workstation-showcase",
-  "underlying_source_commit": "73cd348c198da748c77d8a22c4d8314abdc66d36",
+  "underlying_source_commit": "d79e9a106c03561887a8f17ef4c8af6c0294df97",
   "as_of": "2026-11-08",
   "comparison": "Copyable text matches current checkout and immutable pin; no commands executed.",
   "blocks": {
@@ -357,6 +357,26 @@
       ],
       "actor": "copilot"
     },
+    "prompt-workstation-start": {
+      "sha256": "0ec6cf72360d9d5547998e9907e031db0554b7bd6b7c37fa0635b25200aa6a20",
+      "text": "Start the local setup and demo journey. Inventory first, retain installed versions/settings, and ask for my approval before installations, dependency Restore and local launches. Keep WSL changes and optional scopes separate.",
+      "source": [
+        {
+          "path": "docs\\SETUP.md"
+        }
+      ],
+      "actor": "copilot"
+    },
+    "prompt-workstation-resume": {
+      "sha256": "a3d692d4b1e496a5caf05a8de8758fe0784517aaf9136890df4247cbc5a13371",
+      "text": "Resume the local setup and demo journey. Recheck installer/reboot safety and fresh installed-software inventory; do not blindly retry. Ask for new approvals for any remaining changes.",
+      "source": [
+        {
+          "path": "docs\\SETUP.md"
+        }
+      ],
+      "actor": "copilot"
+    },
     "prompt-schedule": {
       "sha256": "89d177fc91ac519dbf3aebc9aef0d78477b7180cb0213ee6b54636bff99a2c40",
       "text": "Use the extend-emi-api skill and repository instructions to add POST /emi/schedule only in samples\\python-emi-api. Use Decimal and ROUND_HALF_UP; fixed two-decimal monetary strings and Indian INR grouping. Preserve existing rounded EMI and POST /emi total_payment. Accept optional paired prepayment_amount/prepayment_month. Each month round interest, apply regular installment, then one-time prepayment to remaining principal after that month's payment. Shorten tenure without lowering EMI. Reject invalid/unpaired inputs and prepayment above remaining principal. Final installment is exactly remaining principal plus rounded interest; never create a negative balance. Add no-prepayment, valid/invalid prepayment, shortened-tenure, settlement and rounding tests. Run only no-download/no-restore checks with the existing pinned environment. If unavailable, report NOT RUN; do not install, launch or change another sample.",
@@ -390,8 +410,8 @@
   },
   "pinned_source_files": {
     ".vscode\\tasks.json": "1adbea2de95df8b1655b2ee2d998828c8a0d677c9209d3b1b1d6c0e991def9b9",
-    "docs\\DEMO-SCRIPT.md": "2a44f4fd0179d4f1862703e00e4962f7f47d5164941c5ec610b94c6b50a40f18",
-    "docs\\SETUP.md": "216e1ea6ca3321d54793cd4bfa2f15f927a8f687dc41784450a2f858c1f0433b",
-    "scripts\\verify.ps1": "28da6e5d825cd67da29cf4afaff4b9a28a367d5c5a045ec1f9b59a11ca4b91b2"
+    "docs\\DEMO-SCRIPT.md": "2ccfc914f1d876ec6c7b34fa1890d197e771ed6526985bcf109c03548f1bbcd1",
+    "docs\\SETUP.md": "a5ed67d00d238b2e07c2a3e81eaaad46225c30d80fb4e4943ff7c4cc5f1eb594",
+    "scripts\\verify.ps1": "e60ec1032f53786a4c998fbe416ce31457a8233f876964780f37f7566f2b9975"
   }
 }

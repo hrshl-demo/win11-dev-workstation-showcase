@@ -22,8 +22,8 @@ class CompanionTests(unittest.TestCase):
 
     def test_named_source_registry_is_complete_and_unique(self):
         blocks = S.file_blocks()
-        self.assertEqual(len(blocks), 38)
-        self.assertEqual(len(S.prompts()[0]), 4)
+        self.assertEqual(len(blocks), 40)
+        self.assertEqual(len(S.prompts()[0]), 6)
         self.assertTrue(all(block["text"] and block["source"] for block in blocks.values()))
 
     def test_invalid_task_picker_is_rejected(self):
@@ -86,6 +86,18 @@ class CompanionTests(unittest.TestCase):
         self.assertIn("-Port 8081", S.file_blocks()["run-java-local"]["text"])
         self.assertIn("-Port 8082", S.file_blocks()["run-go-local"]["text"])
         self.assertNotIn("RunContainer", S.file_blocks()["run-python-local"]["text"])
+
+    def test_local_agent_kickoffs_are_source_bound_not_execution(self):
+        for identifier, start in (
+            ("prompt-workstation-start", "Start the local setup and demo journey."),
+            ("prompt-workstation-resume", "Resume the local setup and demo journey."),
+        ):
+            block = S.file_blocks()[identifier]
+            self.assertEqual(block["actor"], "copilot")
+            self.assertTrue(block["text"].startswith(start))
+            self.assertEqual(block["source"], [{"path": "docs\\SETUP.md"}])
+        page = (ROOT / "pages" / "setup" / "setup-modules.html").read_text(encoding="utf-8")
+        self.assertIn("Live VS Code selection/tool/native-confirmation acceptance is not yet proven", page)
 
     def test_regeneration_is_byte_deterministic(self):
         files = sorted(ROOT.rglob("*.html")) + sorted((ROOT / "data").glob("*.js")) + [S.LOCK]

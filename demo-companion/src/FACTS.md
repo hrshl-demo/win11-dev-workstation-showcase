@@ -1,17 +1,20 @@
 # Source facts and trust boundaries
 
-Underlying installer/application source:
-`73cd348c198da748c77d8a22c4d8314abdc66d36`. Facts as of **2026-11-08**.
-The source-command lock contains the exact command/prompt text and immutable
-source hashes. Companion discovery links are focused documentation additions;
-no installer, sample, CI, deployment or cleanup logic is changed.
+Underlying installer/application/agent source:
+`d79e9a106c03561887a8f17ef4c8af6c0294df97`. Facts as of **2026-11-08**.
+The source-command lock contains exact command/prompt text and immutable source
+hashes. The named local agent adds an approval-scoped execution route through
+existing scripts, not a new installer/framework, cloud environment or MCP server.
+CI checks its static recipes and the inert companion; live tool use is separate.
 
 - Setup is one installed-first named module. Every target is inventoried
   before payload/source/provider activity; compatible installed versions are
   retained, unknown/incompatible inventory stops without downloads.
-- Normal bootstrap previews Core without mutation. Agents never execute even
-  module preview/WhatIf. SDKs, approved extensions, WSL and optional Ubuntu are
-  independently confirmed. Docker/licensing and modernization are opt-in.
+- Normal bootstrap previews Core without mutation. Only human-selected local
+  VS Code **Workstation setup** may run approved setup/Restore/launch stages
+  with native confirmations retained. Coding/build/desktop/cloud/subagents,
+  including implementation roles, still use source/AST/mocks only. WSL changes,
+  Ubuntu, Docker/licensing, modernization and image scopes are separate opt-ins.
 - The legacy Microsoft bundle is not normal setup or partial-run recovery.
   A stopped partial base is not completed Finish/SkipBase/reboot/resume.
 - Save work and fully exit/reopen VS Code from Windows when environment
@@ -19,7 +22,7 @@ no installer, sample, CI, deployment or cleanup logic is changed.
 - Required acceptance is 12 extensions in the intended approved profile,
   with the thirteenth modernization recommendation optional. CLI IDs alone
   do not prove profile, enabled state or marketplace policy acceptance.
-- Explicit human Restore is separate from daily Test/Lint/Coverage and F5.
+- Explicit human-approved Restore is separate from daily Test/Lint/Coverage and F5.
   Missing prerequisites mean NOT RUN. All excludes legacy Java.
 - Money uses exact arithmetic, explicit half-up rounding, fixed two-decimal
   JSON strings and Indian INR grouping. Go review defects are non-serving
@@ -31,8 +34,9 @@ no installer, sample, CI, deployment or cleanup logic is changed.
   trees, WSL/distro data and cloud resources. Only exact newly owned unchanged
   generated outputs can qualify after review and confirmation.
 
-These are repository facts, not a recorded successful laptop setup. The
-dated evidence register scopes the successful underlying main/fallback jobs;
+These are repository facts, not a recorded successful laptop setup or live
+agent selection/tool/native-confirmation rehearsal. The
+dated evidence register scopes earlier successful main/fallback jobs;
 all live operator acceptance still requires a human observation.
 
 ## User-clicked link registry

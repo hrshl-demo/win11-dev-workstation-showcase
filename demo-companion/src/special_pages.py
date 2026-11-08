@@ -37,8 +37,8 @@ def home_page(cur, page_info):
 
 def prompts_page(cur):
     context = new_ctx()
-    sections = [{"id": "boundaries", "title": "Ask for explanation or scoped files, not machine mutation",
-                 "html": blocks([{"callout": {"kind": "warn", "text": "These are the exact source-bound prompts from the demo runbook. Copy never sends a chat. Choose the named agent/skill yourself. Never approve setup, repair, Restore, launch, authentication or deployment by an agent."}}], cur, context)}]
+    sections = [{"id": "boundaries", "title": "Select the named role; human approval stays separate",
+                 "html": blocks([{"callout": {"kind": "warn", "text": "Exact source-bound setup/runbook prompts; Copy never sends a chat. Only human-selected Workstation setup in local Windows VS Code may drive approved setup/Restore/launch stages with native confirmations retained. Ordinary coding/build/desktop/cloud agents cannot. No agent gains repair, policy bypass, automatic elevation/restart, Git publication, cleanup or cloud execution."}}], cur, context)}]
     for block in S.prompts()[0]:
         sections.append({"id": block["id"], "title": block["label"], "html": code_block(block, cur, context)})
     return build_page_html(cur, sections, context, {"status": "documented", "repos": ["poc"], "duration": "Read and review; no timing promise", "cost": "Existing approved Copilot access"}), context
