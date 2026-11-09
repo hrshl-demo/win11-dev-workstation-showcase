@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/hrshl-demo/win11-dev-workstation-showcase",
-  "underlying_source_commit": "c226e1233c56f10ee9215835f7cb56cf8ee24b84",
-  "as_of": "2026-11-08",
+  "underlying_source_commit": "72aea2d45c934a9529bf5ae0ac8af9795169ea53",
+  "as_of": "2026-11-09",
   "comparison": "Copyable text matches current checkout and immutable pin; no commands executed.",
   "blocks": {
     "policy-read": {
@@ -100,6 +100,46 @@
       "source": [
         {
           "path": ".vscode\\tasks.json"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "preview-native-extensions": {
+      "sha256": "9b6c5ffd899d1c71d8454b544cc86c8d2adeeb8b682cf8faa846a080a059c7c7",
+      "text": ".\\scripts\\developer.ps1 -Action SetupPreview -SetupModule Extensions -NativeDemo",
+      "source": [
+        {
+          "path": "docs\\SETUP.md"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "setup-native-extensions": {
+      "sha256": "9278fd6113cb0063627583da71315a4dd448ebcbe9d5b7a3a4884c19ccc90fef",
+      "text": ".\\scripts\\developer.ps1 -Action Setup -SetupModule Extensions -NativeDemo -ExtensionSourceApproved -Confirm",
+      "source": [
+        {
+          "path": "docs\\SETUP.md"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "preflight-native": {
+      "sha256": "57b740a718f2165e83353cfcafae0c6c828d4866b97dd53a238feb5ac58f84b5",
+      "text": ".\\scripts\\preflight.ps1 -NativeDemo -Json",
+      "source": [
+        {
+          "path": "docs\\SETUP.md"
+        }
+      ],
+      "actor": "terminal"
+    },
+    "verify-native": {
+      "sha256": "db980a9e510e0e914e24bd97fb0818f0c098e4e254a325dfd497b373eba74b75",
+      "text": ".\\scripts\\verify.ps1 -NativeDemo -Json",
+      "source": [
+        {
+          "path": "docs\\SETUP.md"
         }
       ],
       "actor": "terminal"
@@ -358,8 +398,8 @@
       "actor": "copilot"
     },
     "prompt-workstation-start": {
-      "sha256": "0ec6cf72360d9d5547998e9907e031db0554b7bd6b7c37fa0635b25200aa6a20",
-      "text": "Start the local setup and demo journey. Inventory first, retain installed versions/settings, and ask for my approval before installations, dependency Restore and local launches. Keep WSL changes and optional scopes separate.",
+      "sha256": "2ea1611da8e282da1a342b1be5674402276b00372505d2af72df6a9916aa7c7a",
+      "text": "Start the local setup and demo journey. Use NativeDemo for Python/Java/Go and essential debugger extensions. Inventory first, retain installed versions/settings, and ask for my approval before installations, dependency Restore and local launches. Keep Azure, containers, WSL and optional scopes separate.",
       "source": [
         {
           "path": "docs\\SETUP.md"
@@ -368,8 +408,8 @@
       "actor": "copilot"
     },
     "prompt-workstation-resume": {
-      "sha256": "a3d692d4b1e496a5caf05a8de8758fe0784517aaf9136890df4247cbc5a13371",
-      "text": "Resume the local setup and demo journey. Recheck installer/reboot safety and fresh installed-software inventory; do not blindly retry. Ask for new approvals for any remaining changes.",
+      "sha256": "18f3c410fc683f423b38392605e07d0acb58f076f8ca6e653dcbe314caffd960",
+      "text": "Resume the local setup and demo journey. Use NativeDemo for Python/Java/Go and essential debugger extensions; leave Azure/containers/WSL separate. Recheck installer/reboot safety and fresh installed-software inventory; do not blindly retry. Ask for new approvals for any remaining changes.",
       "source": [
         {
           "path": "docs\\SETUP.md"
@@ -410,8 +450,8 @@
   },
   "pinned_source_files": {
     ".vscode\\tasks.json": "1adbea2de95df8b1655b2ee2d998828c8a0d677c9209d3b1b1d6c0e991def9b9",
-    "docs\\DEMO-SCRIPT.md": "2ccfc914f1d876ec6c7b34fa1890d197e771ed6526985bcf109c03548f1bbcd1",
-    "docs\\SETUP.md": "2a3e99bf613c585870be4d4f48213af88bcc9b1b29ff0e06d328b71e567f6d6a",
-    "scripts\\verify.ps1": "e60ec1032f53786a4c998fbe416ce31457a8233f876964780f37f7566f2b9975"
+    "docs\\DEMO-SCRIPT.md": "64b1a42a8c9f17ec13d378b95e50cb2804aef36d5974da405d030d8a0e0ff43b",
+    "docs\\SETUP.md": "f14267c8e42f8ddd6c864b423f2aef0a07af6a265c19a3c4e9993d2dfa6a3198",
+    "scripts\\verify.ps1": "ec8cbb29360370fe022941d0481606ee6ac3615cb9adeeef2fc2d8a9306f3c77"
   }
 }

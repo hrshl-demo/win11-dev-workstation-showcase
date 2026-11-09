@@ -15,7 +15,8 @@ setup** in a VS Code chat running locally on their reviewed Windows checkout.
 If invoked through delegation, a remote/cloud session or another client, stop.
 The agent name and instructions are not a security boundary.
 
-For `start`, default to the local **Python/current Java/Go** setup, checks and
+For `start`, default to the **Native VS Code Python/current Java/Go demo**:
+the essential language/debugger extensions, setup, checks and
 synthetic requests. For `resume`, start with fresh local evidence, not a saved
 list of completed steps. Do the terminal work yourself; do not turn the journey
 into another list of commands or ask the human to pick each Run Task/module.
@@ -32,14 +33,15 @@ Do not invent qualified tool names. If execution, output retrieval or a
 human-accessible interactive terminal is unavailable, report **NOT RUN** with
 the exact missing tool/permission; do not claim execution.
 
-Keep VS Code tool approvals enabled. Before a changing stage, show the exact
+Leave the human-owned VS Code approval settings unchanged; never enable or
+bypass approvals yourself. Before a changing stage, show the exact
 command, missing targets or dependency scope, retained versions/settings,
 network/licence implications and bounded wait; obtain the human's approval
 for that stage. `start` is not installation, Restore or launch consent.
 Use `-Confirm` for every changing command below. The human, **not you**, answers
 individual PowerShell/vendor prompts in the exposed terminal. Do not type
 Y/A/Yes-to-All, pipe answers, use `-Confirm:$false`, change `$ConfirmPreference`,
-enable autoapprove/autopilot, or suppress tool/native/organization permissions.
+enable autoapprove/autopilot, or suppress native/organization permissions.
 If a prompt cannot be answered by the human in this harness, stop at that
 specific prompt; never replace it with an unconfirmed command.
 
@@ -81,7 +83,7 @@ powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action SetupPreview -Se
 powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action SetupPreview -SetupModule Python
 powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action SetupPreview -SetupModule Java
 powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action SetupPreview -SetupModule Go
-powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action SetupPreview -SetupModule Extensions
+powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action SetupPreview -SetupModule Extensions -NativeDemo
 ```
 
 If the existing VS Code CLI cannot inventory extensions, mark that scope unknown;
@@ -99,21 +101,19 @@ Python/Go/uv executable directories when needed. Never set global/user
 JAVA_HOME/PATH or substitute a mismatched runtime. If selection cannot be proven,
 stop instead of asking the human to copy environment commands.
 
-WSL/feature inventory is read-only but can require Administrator context.
-Do not elevate: report **NOT RUN/unknown** if the existing context cannot inspect
-it. WSL changes require their separate approval below; missing WSL/wslc or
-unverified runtime state must never become green full-workstation readiness.
-After local inventory, run read-only Preflight and Verify:
+Do not query WSL/feature state for default Native readiness. WSL inventory and
+changes belong to the separate optional scope below. After local inventory,
+run the explicit Native read-only Preflight and Verify:
 
 ```powershell
-powershell.exe -NoProfile -File .\scripts\preflight.ps1 -Json -HttpsTimeoutSeconds 5
-powershell.exe -NoProfile -File .\scripts\verify.ps1 -Json
+powershell.exe -NoProfile -File .\scripts\preflight.ps1 -NativeDemo -Json -HttpsTimeoutSeconds 5
+powershell.exe -NoProfile -File .\scripts\verify.ps1 -NativeDemo -Json
 ```
 
-Require no Preflight FAIL and exit 0 before an install. Missing pre-setup outputs
-make full-profile Verify exit 1; report that failure as inventory, not
-installation failure. Missing WSL/wslc is Preflight WARN, not permission to
-install WSL or a reason to make unrelated Native modules wait for WSL.
+Require no Native Preflight FAIL and exit 0 before an install. Missing Native
+pre-setup outputs make Native Verify exit 1; report that failure as inventory,
+not installation failure. Optional Core/full-profile tools do not become
+Native requirements: use the fresh positive Native report, not ignored failures.
 Do not use `-RunConfigTest`, which can involve provider work. Summarize actual
 scope in a table, including missing and unknown WSL/extensions. Ask for the
 specific next missing-module approval, not a module picker or blanket consent.
@@ -136,14 +136,14 @@ profile's approved source/account routing**, required IDs and bundled
 dependencies. `ExtensionSourceApproved` is an attestation, not a source bypass:
 
 ```powershell
-powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action Setup -SetupModule Extensions -ExtensionSourceApproved -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm
+powershell.exe -NoProfile -File .\scripts\developer.ps1 -Action Setup -SetupModule Extensions -NativeDemo -ExtensionSourceApproved -HttpsTimeoutSeconds 5 -InstallTimeoutSeconds 7200 -Confirm
 ```
 
 Stream real progress and retain the terminal ID. A declined target remains
 missing even if a wrapper reports PASS/exit 0. Timeout/failure/cancellation,
 exit 3010/1641, RestartRequired, or uncertain vendor state means **stop before
 the next install**. Never infer vendor success from launcher completion.
-After known completion, repeat that module's fresh SetupPreview and Verify.
+After known completion, repeat that module's fresh SetupPreview and Native Verify.
 A restart or stale VS Code environment can require the human to save work,
 fully exit/reopen VS Code and send `resume`; do not restart/reopen it yourself.
 
@@ -161,48 +161,51 @@ The broad legacy Microsoft bundle, LegacySetup, FinishSetup and SkipBase are
 
 ## 3. Verify acceptance and explicitly Restore dependencies
 
-Run fresh Verify against actual locations/versions. Ask the human to accept
-the 12 required extensions **enabled in the intended existing VS Code profile**
+Run fresh `verify.ps1 -NativeDemo -Json` against actual locations/versions.
+Ask the human to accept the five Native language/debugger extensions
+**enabled in the intended existing VS Code profile**
 and approved marketplace routing. CLI lists, recommendations or a private
 marketplace banner do not prove that acceptance. Unsupported private routing
 is an IT managed-automated-delivery blocker, not public VSIX/profile/source
 switching or manual installation of every ID.
 
-`verify.ps1 -Json` always checks the full profile; it has **no Native switch**.
-Absent WSL/wslc produces `FAIL`, `Found = Missing/unusable` and **exit 1**.
-Preserve and report that exact exit and every failure as **full-workstation
-verification FAIL**; do not drop rows, ignore an error or fabricate Native PASS.
-
+Native requirements are defined once by `Get-NativeDemoRequirement` in
+`scripts\_common.psm1`, reused by verification and installed-first Extensions.
 Native Verify tool rows: `winget`, `git`, `code`, `python`, `uv`, `pwsh`, `java`, `go`.
-Other full-profile tool rows: `gh`, `copilot`, `az`, `azd`, `kubectl`, `node`, `wsl`, `wslc`.
-Native continuation also requires every actual policy row and the 12 default
-extension rows to pass, fresh installed-runtime evidence, and the human's
-intended-profile/source/enabled-state acceptance. Parse the actual JSON, not
-formatted text. In PowerShell assign the `ConvertFrom-Json` result first, then
-normalize `@($parsed)`; directly wrapping that pipeline nests arrays on 5.1.
-Require an array of structured check records, one of every
-source-defined default tool/extension/policy identity, and no duplicate or
-unexpected rows. Empty/incomplete arrays,
-malformed JSON, unexpected exit status, missing required rows, policy failure,
-or a required Native/runtime/profile FAIL/unknown **block Native continuation**.
-Never classify an arbitrary failed check as an optional tool.
+Native extension rows: `ms-python.python`, `ms-python.debugpy`, `redhat.java`,
+`vscjava.vscode-java-debug`, `golang.go`. Python Debugger bundles debugpy;
+Java language support is a debugger dependency. Approved bundle dependencies
+must also use the existing marketplace route; no public VSIX bypass.
+Require all **18** Native records (8 tools, 5 extensions, 5 policies) positively
+PASS and **exit 0**, fresh installed-runtime evidence, known vendor/reboot safety,
+and the human's intended-profile/source/enabled-state acceptance. Parse actual
+JSON, not text. Assign the `ConvertFrom-Json` result first, then normalize
+`@($parsed)`; directly wrapping that pipeline nests arrays on 5.1.
+Malformed JSON, empty/incomplete arrays, missing/duplicate/unexpected rows,
+unknown status, any required FAIL, runtime/profile/policy uncertainty or
+unexpected exit status **block Native continuation**. No failure-ignore list
+or interpretation of WSL stub output grants Native acceptance.
 
-Failure identities eligible for narrower Native: `wsl`, `wslc`.
-Only nonempty `FAIL` rows with those **exact Name identities** and
-`Found = Missing/unusable`, with exit 1 and **every other default Verify row
-positively PASS**, permit this WSL-only exception. A message containing "WSL",
-another missing tool, incompatible/unknown output or a missing Native runtime
-does not qualify. Preserve missing WSL/wslc as not accepted; do not probe/install
-it to get a green full report. In that exact case, after known vendor/reboot
-safety, fresh Native inventory and actual profile/policy acceptance, ask for
-**explicit narrower Native continuation**, not WSL installation. Declining
-that continuation stops; approving it permits only the separate Dependencies
-Restore stage below. It does not accept full readiness, acquire WSL or prove
-Native tests/startup/requests. Distinguish **local-demo prerequisites accepted**
-from eventual observed local-demo acceptance and full workstation readiness;
-never hide those failures or call it full setup. Native launches use the
-existing `RunLocal` action, which binds `Container = false`, not a guessed
-Verify mode or a WSL/container runtime.
+Report **Native prerequisites** separately from **full workstation readiness**.
+Do not run full Verify or probe/install WSL to make the Native demo ready.
+Keep any earlier full-workstation verification FAIL/exit 1 visible and dated;
+if full Verify was not requested/run, label full readiness **NOT RUN/not accepted**.
+Only when the human separately requests full-profile inventory, use:
+
+```powershell
+powershell.exe -NoProfile -File .\scripts\verify.ps1 -Json
+```
+
+Default full Verify still strictly requires 16 tools, 12 extensions and all
+policies; WSL absence/stub failure and optional-full-profile missing extensions
+remain genuine FAIL/exit 1, regardless of the WSL message/timeout.
+Native PASS never changes that result or grants full readiness.
+Ask for **explicit narrower Native continuation** after all Native prerequisites
+and human profile/safety acceptance. Declining that continuation stops;
+approval permits only the separate Dependencies Restore request, not app or
+F5 acceptance. `RunLocal` binds `Container = false`, with no WSL/container runtime.
+Distinguish **local-demo prerequisites accepted** from observed tests/startup/
+requests and debugger acceptance; never hide failures or call it full setup.
 
 Inspect existing runtime and dependency evidence, then request a separate
 **Dependencies Restore** approval for the named samples and reviewed registries,
@@ -278,8 +281,10 @@ requested, separately approve existing runtime/licence and explicit
 `Restore -RestoreTarget ContainerImages`, then separately approve RunContainer
 using that same approved runtime and existing image. Reuse the task arguments;
 RunContainer inspects the image and uses `--pull=never`. Never fall back after a
-runtime denial. F5 helper downloads and Dev Container acquisition are not part
-of this workflow.
+runtime denial. Go Delve or other debugger helper acquisition requires a separate approved
+Restore before F5. Missing helpers mean **F5 NOT RUN**, not an automatic
+download/update or a claim of debugger acceptance. Dev Container acquisition
+is not part of this workflow.
 
 ## 6. Stop at the local result
 

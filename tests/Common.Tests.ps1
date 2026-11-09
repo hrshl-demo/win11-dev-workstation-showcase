@@ -312,6 +312,13 @@ Describe 'Extension profiles and signed payload reading' {
         $extensions.Count | Should -Be 12
         $extensions | Should -Not -Contain 'vscjava.migrate-java-to-azure'
     }
+    It 'selects only five explicit Native language/debugger extensions without changing full requirements' {
+        $native = @(Get-RequiredExtension $script:ExtensionFile -NativeDemo)
+        $native | Should -Be @('ms-python.python', 'ms-python.debugpy', 'redhat.java',
+            'vscjava.vscode-java-debug', 'golang.go')
+        @(Get-RequiredExtension $script:ExtensionFile).Count | Should -Be 12
+        { Get-RequiredExtension $script:ExtensionFile -NativeDemo -IncludeJavaModernization } | Should -Throw '*separate scopes*'
+    }
 
     Describe 'Read-only base restart/resume detection' {
         BeforeEach {

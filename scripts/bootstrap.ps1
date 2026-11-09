@@ -15,6 +15,9 @@ Enable confirmed missing-target installations. Omit for a read-only preview.
 .PARAMETER ExtensionSourceApproved
 Human confirms IT-approved current CLI/default-profile marketplace routing.
 Required before any missing extension install; never changes that routing.
+.PARAMETER NativeDemo
+Select only the five Native language/debugger targets in the Extensions module.
+Full Extensions remains the default; cannot combine with legacy or other modules.
 .PARAMETER LegacyMicrosoftBundle
 Explicit opt-in to the signed broad Microsoft preset, not installed-first modules.
 .PARAMETER SkipBase
@@ -36,7 +39,7 @@ Legacy base-only wait, 7200-28800 seconds, default 14400.
 param(
     [ValidateSet('Core', 'Python', 'Java', 'Go', 'Extensions', 'WSL', 'Ubuntu', 'Docker', 'Modernization')]
     [string]$Module = 'Core',
-    [switch]$Apply, [switch]$ExtensionSourceApproved,
+    [switch]$Apply, [switch]$ExtensionSourceApproved, [switch]$NativeDemo,
     [switch]$LegacyMicrosoftBundle, [switch]$SkipBase, [switch]$IncludeJavaModernization,
     [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5,
     [ValidateRange(300, 14400)][int]$InstallTimeoutSeconds = 7200,
@@ -48,6 +51,9 @@ Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
 Import-Module (Join-Path $PSScriptRoot '_setup.psm1')
 if ($MyInvocation.InvocationName -ne '.') {
     try {
+        if ($NativeDemo -and ($LegacyMicrosoftBundle -or $Module -ne 'Extensions')) {
+            throw 'NativeDemo requires the Extensions module, never the legacy bundle.'
+        }
         if ($LegacyMicrosoftBundle) {
             if (-not $Apply) { throw 'Legacy bundle requires explicit Apply; review legacy-bootstrap.ps1 without executing it for preview.' }
             if ($PSBoundParameters.ContainsKey('Module') -or $ExtensionSourceApproved) { throw 'Do not combine modular options with the legacy bundle.' }
@@ -64,6 +70,6 @@ if ($MyInvocation.InvocationName -ne '.') {
         }
         if ($SkipBase -or $IncludeJavaModernization) { throw 'SkipBase/IncludeJavaModernization require explicit LegacyMicrosoftBundle. A stopped partial base is not complete.' }
         exit (Invoke-SetupModule -Module $Module -Apply:$Apply -ExtensionSourceApproved:$ExtensionSourceApproved `
-            -HttpsTimeoutSeconds $HttpsTimeoutSeconds -InstallTimeoutSeconds $InstallTimeoutSeconds -WhatIf:$WhatIfPreference -Confirm:$true)
+            -NativeDemo:$NativeDemo -HttpsTimeoutSeconds $HttpsTimeoutSeconds -InstallTimeoutSeconds $InstallTimeoutSeconds -WhatIf:$WhatIfPreference -Confirm:$true)
     } catch { Write-ShowcaseMessage "[FAIL] Setup: $($_.Exception.Message)"; exit 1 }
 }

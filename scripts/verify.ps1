@@ -10,6 +10,10 @@ Installed-first module tasks preserve existing versions; incompatible inventory
 does not authorize automatic upgrades. After setup required FAIL is not accepted.
 Extension listing uses the CLI without a profile argument; confirm approved
 source/profile and enabled extensions in the intended window separately.
+.PARAMETER NativeDemo
+Check only Native Python/Java/Go tools, five language/debugger extensions and
+all policy rows. Does not probe WSL, Azure or containers. Full verification is
+separate; Native PASS is not full readiness or profile/source acceptance.
 .PARAMETER RunConfigTest
 Also run the read-only WinGet configuration test, including modernization when selected.
 .PARAMETER IncludeJavaModernization
@@ -20,7 +24,7 @@ Emit one JSON array without native output or formatting.
 .\scripts\verify.ps1 -RunConfigTest -IncludeJavaModernization
 #>
 [CmdletBinding()]
-param([switch]$RunConfigTest, [switch]$IncludeJavaModernization, [switch]$Json)
+param([switch]$RunConfigTest, [switch]$IncludeJavaModernization, [switch]$Json, [switch]$NativeDemo)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
@@ -29,7 +33,10 @@ Import-Module (Join-Path $PSScriptRoot '_setup.psm1')
 function Get-VerificationCheck {
     [CmdletBinding()]
     [OutputType([pscustomobject], [object[]])]
-    param([switch]$RunConfigTest, [switch]$IncludeJavaModernization)
+    param([switch]$RunConfigTest, [switch]$IncludeJavaModernization, [switch]$NativeDemo)
+    if ($NativeDemo -and ($RunConfigTest -or $IncludeJavaModernization)) {
+        throw 'NativeDemo cannot run the full configuration test or modernization scope.'
+    }
     $definitions = @(
         @{ Name = 'winget'; Args = @('--version'); Expected = '>= 1.6.2631'; Pattern = '\d+\.\d+\.\d+'; Minimum = '1.6.2631' },
         @{ Name = 'git'; Args = @('--version'); Expected = 'Installed' },
@@ -48,6 +55,10 @@ function Get-VerificationCheck {
         @{ Name = 'wsl'; Args = @('--version'); Expected = '>= 2.9.3'; Pattern = '\d+\.\d+\.\d+'; Minimum = '2.9.3' },
         @{ Name = 'wslc'; Args = @(); Expected = 'Present on PATH'; PresenceOnly = $true }
     )
+    if ($NativeDemo) {
+        $required = Get-NativeDemoRequirement
+        $definitions = @($definitions | Where-Object { $required.Tools -ccontains $_.Name })
+    }
     $local = @(Get-LocalInstallation)
     $packages = @('Core', 'Python', 'Java', 'Go' | ForEach-Object { Get-SetupPackage $_ })
     $policies = @(Get-WinGetPolicy)
@@ -95,19 +106,28 @@ function Get-VerificationCheck {
     }
     $root = Get-ShowcaseRoot
     try {
-        $extensions = @(Get-RequiredExtension (Join-Path $root '.vscode\extensions.json') -IncludeJavaModernization:$IncludeJavaModernization)
-        $code = Get-NativeCommandPath code
-        $installed = @()
-        if ($code) {
-            $list = Invoke-NativeCommand $code @('--list-extensions') -TimeoutSeconds 30
-            Assert-NativeSuccess $list 'List VS Code extensions'
-            $installed = @($list.StdOut -split '[\r\n]+' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-        }
-        foreach ($extension in $extensions) {
-            $present = $installed -icontains $extension
-            $status = if ($present) { 'PASS' } else { 'FAIL' }
-            $found = if ($present) { 'Installed' } else { 'Missing' }
-            Get-CheckResult $extension $status 'Required configuration automates extension installation. See SETUP Phase 2/3 for approved source, CLI account/profile and enabled-state acceptance; do not bypass enterprise policy.' -Expected 'Installed' -Found $found
+        $extensions = @(Get-RequiredExtension (Join-Path $root '.vscode\extensions.json') -IncludeJavaModernization:$IncludeJavaModernization -NativeDemo:$NativeDemo)
+        if ($NativeDemo) {
+            foreach ($item in Get-SetupExtension -NativeDemo) {
+                $present = $item.State -eq 'Installed' -and $item.Compatible
+                $status = if ($present) { 'PASS' } else { 'FAIL' }
+                $found = if ($present) { "Installed $($item.Version)" } else { 'Missing/unusable' }
+                Get-CheckResult $item.Id $status 'Native language/debugger prerequisite only. Human/IT must separately accept existing source/account/profile and enabled state; no marketplace bypass.' -Expected 'Installed' -Found $found
+            }
+        } else {
+            $code = Get-NativeCommandPath code
+            $installed = @()
+            if ($code) {
+                $list = Invoke-NativeCommand $code @('--list-extensions') -TimeoutSeconds 30
+                Assert-NativeSuccess $list 'List VS Code extensions'
+                $installed = @($list.StdOut -split '[\r\n]+' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+            }
+            foreach ($extension in $extensions) {
+                $present = $installed -icontains $extension
+                $status = if ($present) { 'PASS' } else { 'FAIL' }
+                $found = if ($present) { 'Installed' } else { 'Missing' }
+                Get-CheckResult $extension $status 'Required configuration automates extension installation. See SETUP Phase 2/3 for approved source, CLI account/profile and enabled-state acceptance; do not bypass enterprise policy.' -Expected 'Installed' -Found $found
+            }
         }
     } catch { Get-CheckResult 'Extension profile' FAIL $_.Exception.Message }
     if ($RunConfigTest) {
@@ -134,11 +154,37 @@ function Get-VerificationCheck {
     }
 }
 
+function Assert-NativeDemoCheck {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][AllowEmptyCollection()][object[]]$Checks)
+    $required = Get-NativeDemoRequirement
+    $names = @($required.Tools) + @($required.Extensions) + @($required.Policies)
+    if ($Checks.Count -ne $names.Count) {
+        $failures = @($Checks | Where-Object {
+            $_.PSObject.Properties['Status'] -and $_.Status -eq 'FAIL' -and $_.PSObject.Properties['Message']
+        } | ForEach-Object { "$($_.Name): $($_.Message)" }) -join '; '
+        throw "Native report is incomplete or contains unexpected rows; no Native acceptance. $failures"
+    }
+    $seen = @()
+    foreach ($check in $Checks) {
+        if ($null -eq $check -or @($check.PSObject.Properties).Count -ne 5) { throw 'Malformed Native check record; no Native acceptance.' }
+        foreach ($field in @('Name', 'Expected', 'Found', 'Status', 'Message')) {
+            if (-not $check.PSObject.Properties[$field] -or $check.$field -isnot [string]) { throw "Malformed Native field $field; no Native acceptance." }
+        }
+        if ($names -cnotcontains $check.Name -or $seen -ccontains $check.Name -or
+            $check.Status -cnotin @('PASS', 'FAIL')) { throw 'Unexpected, duplicate or unknown Native check; no Native acceptance.' }
+        $seen += $check.Name
+    }
+}
+
 function Invoke-Verification {
     [CmdletBinding()]
     [OutputType([int])]
-    param([switch]$RunConfigTest, [switch]$IncludeJavaModernization, [switch]$Json)
-    try { $checks = @(Get-VerificationCheck -RunConfigTest:$RunConfigTest -IncludeJavaModernization:$IncludeJavaModernization) }
+    param([switch]$RunConfigTest, [switch]$IncludeJavaModernization, [switch]$Json, [switch]$NativeDemo)
+    try {
+        $checks = @(Get-VerificationCheck -RunConfigTest:$RunConfigTest -IncludeJavaModernization:$IncludeJavaModernization -NativeDemo:$NativeDemo)
+        if ($NativeDemo) { Assert-NativeDemoCheck $checks }
+    }
     catch { $checks = @(Get-CheckResult 'Verification' FAIL $_.Exception.Message) }
     Write-CheckReport $checks -Json:$Json -Table
     return (Get-CheckExitCode $checks)

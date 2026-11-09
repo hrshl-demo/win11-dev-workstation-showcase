@@ -263,7 +263,8 @@ function Get-SetupInventory {
 
 function Get-SetupExtension {
     [CmdletBinding()]
-    param([switch]$Modernization)
+    param([switch]$Modernization, [switch]$NativeDemo)
+    if ($NativeDemo -and $Modernization) { throw 'NativeDemo and modernization extension scopes cannot be combined.' }
     $code = Get-NativeCommandPath code
     if (-not $code) {
         $package = @(Get-SetupPackage Core | Where-Object Command -eq code)[0]
@@ -278,9 +279,15 @@ function Get-SetupExtension {
         if ($line -notmatch '^([a-z0-9][a-z0-9.-]+\.[a-z0-9][a-z0-9.-]+)@(.+)$') {
             throw 'Unrecognised extension inventory; no extension installer will run.'
         }
-        $installed[$Matches[1].ToLowerInvariant()] = $Matches[2]
+        $id = $Matches[1].ToLowerInvariant()
+        $version = $Matches[2]
+        if ($NativeDemo -and ($installed.ContainsKey($id) -or
+            $version -notmatch '^\d+\.\d+\.\d+(?:[-+][a-z0-9.-]+)?$')) {
+            throw 'Duplicate or unknown Native extension version; no extension installer will run.'
+        }
+        $installed[$id] = $version
     }
-    $required = @(Get-RequiredExtension (Join-Path (Get-ShowcaseRoot) '.vscode\extensions.json'))
+    $required = @(Get-RequiredExtension (Join-Path (Get-ShowcaseRoot) '.vscode\extensions.json') -NativeDemo:$NativeDemo)
     if ($Modernization) { $required = @('vscjava.migrate-java-to-azure') }
     foreach ($id in $required) {
         [pscustomobject]@{ Id = $id; State = $(if ($installed.ContainsKey($id.ToLowerInvariant())) { 'Installed' } else { 'Missing' })
@@ -391,10 +398,12 @@ function Write-SetupEvent {
 
 function Invoke-SetupReadiness {
     [CmdletBinding()]
-    param([int]$HttpsTimeoutSeconds)
+    param([int]$HttpsTimeoutSeconds, [switch]$NativeDemo)
     $shell = (Get-Process -Id $PID).Path
-    $result = Invoke-NativeCommand $shell @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'preflight.ps1'),
-        '-Json', '-HttpsTimeoutSeconds', [string]$HttpsTimeoutSeconds) -TimeoutSeconds (Get-PreflightTimeout $HttpsTimeoutSeconds)
+    $arguments = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'preflight.ps1'),
+        '-Json', '-HttpsTimeoutSeconds', [string]$HttpsTimeoutSeconds)
+    if ($NativeDemo) { $arguments += '-NativeDemo' }
+    $result = Invoke-NativeCommand $shell $arguments -TimeoutSeconds (Get-PreflightTimeout $HttpsTimeoutSeconds)
     Assert-NativeSuccess $result 'Module preflight; no installers started'
     $checks = @($result.StdOut | ConvertFrom-Json)
     if ((Get-CheckExitCode $checks) -ne 0) { throw 'Module preflight failed; no installers started.' }
@@ -404,7 +413,7 @@ function Invoke-SetupModule {
     [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
     [OutputType([int])]
     param([ValidateSet('Core', 'Python', 'Java', 'Go', 'Extensions', 'WSL', 'Ubuntu', 'Docker', 'Modernization')]
-        [string]$Module = 'Core', [switch]$Apply, [switch]$ExtensionSourceApproved,
+        [string]$Module = 'Core', [switch]$Apply, [switch]$ExtensionSourceApproved, [switch]$NativeDemo,
         [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5,
         [ValidateRange(300, 14400)][int]$InstallTimeoutSeconds = 7200)
     $clock = [Diagnostics.Stopwatch]::StartNew()
@@ -412,12 +421,13 @@ function Invoke-SetupModule {
     $mutex = $null
     $mutexHeld = $false
     try {
+        if ($NativeDemo -and $Module -ne 'Extensions') { throw 'NativeDemo selects only the Extensions module; no other setup scope.' }
         Write-ShowcaseMessage "[INFO] Module $Module inventory first; $(if ($Apply) { 'apply requested' } else { 'read-only preview' })."
         # Complete the module's local inventory before any source/payload activity.
         $inventory = @()
         $wsl = $null
         if ($Module -in @('WSL', 'Ubuntu')) { $wsl = Get-SetupWslState }
-        elseif ($Module -eq 'Extensions') { $inventory = @(Get-SetupExtension) }
+        elseif ($Module -eq 'Extensions') { $inventory = @(Get-SetupExtension -NativeDemo:$NativeDemo) }
         else {
             $installed = @(Get-LocalInstallation)
             foreach ($package in Get-SetupPackage $Module) { $inventory += Get-SetupInventory $package $installed }
@@ -462,7 +472,7 @@ function Invoke-SetupModule {
             throw 'Missing extensions require explicit ExtensionSourceApproved after IT validates existing CLI/default-profile marketplace routing. No public-source override.'
         }
         Assert-WorkstationPolicy
-        Invoke-SetupReadiness $HttpsTimeoutSeconds
+        Invoke-SetupReadiness $HttpsTimeoutSeconds -NativeDemo:$NativeDemo
         # Only human apply creates a local, non-secret event journal; no provider
         # restore, profile changes, or pre-existing download ownership is involved.
         $mutex = New-Object Threading.Mutex($false, 'Local\Win11ShowcaseModularSetup')
@@ -509,7 +519,7 @@ function Invoke-SetupModule {
                 if ((Get-SetupWslState).UbuntuInstalled) { Write-ShowcaseMessage '[PASS] SKIP Ubuntu now present.'; continue }
                 $result = Invoke-SetupNative $item.Path @('--install', '--distribution', 'Ubuntu', '--no-launch') 'Ubuntu' $InstallTimeoutSeconds
             } elseif ($Module -eq 'Extensions' -or $item.Id -eq 'vscjava.migrate-java-to-azure') {
-                $current = @(Get-SetupExtension -Modernization:($Module -eq 'Modernization') | Where-Object Id -eq $item.Id)[0]
+                $current = @(Get-SetupExtension -Modernization:($Module -eq 'Modernization') -NativeDemo:$NativeDemo | Where-Object Id -eq $item.Id)[0]
                 if ($current.State -eq 'Installed') { Write-ShowcaseMessage "[PASS] SKIP extension now present: $($item.Id)"; continue }
                 $result = Invoke-SetupNative $current.Path @('--install-extension', $item.Id) $item.Id $InstallTimeoutSeconds
             } else {

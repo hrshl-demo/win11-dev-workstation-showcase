@@ -4,11 +4,11 @@ Setup and package restoration happen **before** the presentation. Full provision
 
 ## Pre-demo checklist
 
-- Follow [Setup Phase 0–7](SETUP.md): prerequisites before scripts, Preflight, automated full setup for fresh/partial incomplete-base devices, Finish setup only after base completion/resume, post-setup Verify then explicit **user** Restore. Confirm runtimes, test packages, 12 required extensions enabled in the intended approved profile/source and GitHub/Copilot access.
-- Rehearse daily Test/Lint/Coverage tasks and inspect reports. Before the presentation, explicitly build approved local images through confirmed Restore ContainerImages. RunContainer requires those existing images and uses `--pull=never`, with no build/pull/restoration. Missing prerequisites mean NOT RUN; do not restore packages/images or repair the machine during the demo.
+- For the default **Native Python/Java/Go demo**, follow [Native selection](SETUP.md#native-demo-selection): approved prerequisites, installed-first essential extensions, `verify.ps1 -NativeDemo -Json` (all 18 PASS/exit 0), actual enabled/source/profile acceptance, then explicit **user** Dependencies Restore. WSL, Azure and containers are separate, not required for Native. Full Verify remains strict and its FAIL is separately visible.
+- Rehearse daily Test/Lint/Coverage for Python/Java/Go and inspect reports. Debugging also requires already approved helper tools; missing Go Delve means F5 NOT RUN, never a hidden download. Only if containers are separately selected, prepare images through confirmed Restore ContainerImages; RunContainer uses existing images and `--pull=never`. Do not acquire/repair during the demo.
 - Confirm instructions, Workstation setup/read-only onboarding agents and skills in the Agent Customizations editor. Tool access does not grant permission; new setup-agent live tool/confirmation acceptance must be rehearsed separately.
 - Inspect current `main` and the retained `demo-complete` schedule fallback. The original `demo-baseline` tag is historical unsafe code: **do not launch it, restore running samples from it or deploy it**.
-- Confirm port 8080 and the already approved runtime. `-Runtime Auto` chooses `wslc` first and Docker only if WSL CLI is absent; explicit `-Runtime wslc|docker` probes only that approved choice without fallback. Never select another runtime to bypass a policy denial.
+- Confirm Native loopback ports 8080/8081/8082. For a separately selected container segment only, `-Runtime Auto` chooses `wslc` first and Docker only if WSL CLI is absent; an explicit runtime never bypasses denial.
 - Inspect GitHub CI and [existing-AKS prerequisites](GITHUB-AKS.md). The live demo prepares/reviews files; deployment is a separate dispatch and independent approval, not a surprise end-of-demo action.
 - Optional modernization requires Java 11 and its extension arranged in advance. Core checks exclude legacy; `verify.ps1 -IncludeJavaModernization` checks the extension but does not select Java 11.
 - Keep recorded output clearly labelled with its revision/runtime/date. Never present recorded checks as live results.
@@ -20,9 +20,13 @@ Setup and package restoration happen **before** the presentation. Full provision
 In **Terminal → New Terminal → PowerShell**, repository root:
 
 ```powershell
-.\scripts\verify.ps1
-.\scripts\developer.ps1 -Action Test -Sample All
+.\scripts\verify.ps1 -NativeDemo -Json
+.\scripts\developer.ps1 -Action Test -Sample Python
 ```
+
+Repeat the focused test with `-Sample Java` and `-Sample Go`. `All` also
+requires separately restored PowerShell test modules; it is not the minimal
+Native-demo acceptance command.
 
 Show **Terminal → Run Task**, the Testing Activity Bar, Source Control and the GitHub Pull Requests view.
 
@@ -56,6 +60,12 @@ Synthetic existing EMI example: principal `"2500000.00"`, annual rate `"8.5"`, t
 **Expected:** Focused behavior/tests and truthful check results. **Fallback:** Open inspected `demo-complete` schedule files and recorded evidence; do not accept an unfinished diff to meet the clock.
 
 ## 3. Operator container launch — 06:00–08:00
+
+For the default Native demo, use the existing approved local launch instead:
+`.\scripts\developer.ps1 -Action RunLocal -Sample Python -Port 8080 -Confirm`.
+Observe the same health/EMI request below. No WSL, Azure or container runtime is
+needed. The following container segment is a separate opt-in, not a readiness
+requirement or automatic fallback.
 
 **Say:** “The operator, not the agent, starts the approved runtime and verifies a real synthetic request.”
 

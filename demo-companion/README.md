@@ -13,6 +13,11 @@ agents do not have that exception. Missing tools/prompts, IT policy, UAC and
 restart remain real pauses. This HTML only copies instructions and never runs
 the agent or setup. Live VS Code tool/approval acceptance is not yet proven.
 
+The default Native demo uses the existing five-ID essential Extensions
+selection and positive 18-row Native Verify. WSL/Azure/containers are separate;
+full verification remains strict and separately reported. Source/profile
+acceptance, approved helper Restore and live F5/requests are not inferred.
+
 ## Open the complete folder
 
 Keep this **whole folder** and double-click `index.html`. No server, viewer
@@ -40,7 +45,7 @@ Online source links require user clicks and private-repository access.
 ## Source and evidence scope
 
 Underlying source pin:
-`c226e1233c56f10ee9215835f7cb56cf8ee24b84`, facts as of **2026-11-08**.
+`72aea2d45c934a9529bf5ae0ac8af9795169ea53`, facts as of **2026-11-09**.
 The evidence register preserves earlier dated main/fallback runs, independently
 of this source pin; it is not live polling or acceptance of the new agent.
 Laptop setup, extension

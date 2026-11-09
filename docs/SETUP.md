@@ -19,6 +19,11 @@ Complete this checklist **before running any repository script**, including Pref
 | Script execution | Effective policy permits reviewed repository scripts/modules; see the inline checks below |
 | Extension delivery | Approved marketplace, extension allowlist, target VS Code installation/account/profile and licences; see [extension acceptance](#extension-source-and-profile-acceptance) |
 
+For the narrower Native Python/Java/Go demo, virtualization and WSL/container
+permissions apply only to those separately opted-in scopes; Native Preflight
+does not query or require them. Other platform, disk, policy and source
+approvals remain required.
+
 Python 3.14, Java 25, Go, WSL/wslc and the 12 required extensions are **setup outputs**, not things you must manually install first. See [IT prerequisites](IT-PREREQUISITES.md) for approvals outside this repository's checks.
 
 This VS Code-first route genuinely requires Git/VS Code first. IT can supply an approved image or software distribution for that minimum; Core also inventories them but cannot install them before you have cloned/opened it. Missing minimum clone tools are an IT prerequisite, not an automatic fallback to the broad Microsoft preset. That preset is only the separately reviewed explicit legacy option described below.
@@ -69,7 +74,7 @@ from `.github\agents\workstation-setup.agent.md`; no plugin, MCP server, cloud
 environment or setup Actions job is needed. Send one kickoff:
 
 ```text
-Start the local setup and demo journey. Inventory first, retain installed versions/settings, and ask for my approval before installations, dependency Restore and local launches. Keep WSL changes and optional scopes separate.
+Start the local setup and demo journey. Use NativeDemo for Python/Java/Go and essential debugger extensions. Inventory first, retain installed versions/settings, and ask for my approval before installations, dependency Restore and local launches. Keep Azure, containers, WSL and optional scopes separate.
 ```
 
 The agent reads the scripts/catalog/tasks, checks safe workspace/vendor state,
@@ -89,19 +94,26 @@ restart, script signing and private-marketplace compatibility can require a
 human pause. If the harness cannot expose an interactive prompt, the operation
 is **NOT RUN/blocked**, not silently rerun unconfirmed.
 
-Default scope is local Python/current Java/Go. Missing WSL/wslc, full-profile
-tools or unapproved extension/runtime state remain visible: a narrower local
-demo is **not full-workstation readiness**. The existing `verify.ps1 -Json`
-has no Native switch: absent WSL/wslc still emits required `FAIL` rows and exit
-**1**. The agent reports the full failure, not a green Verify. Only exact
-`wsl`/`wslc` failures with `Found = Missing/unusable`, every other default
-Verify row positively PASS, fresh Native runtime inventory and the approved
-enabled extension profile qualify for the WSL-only continuation request.
-It can then ask to continue the narrower Native demo, then separately
-request Dependencies Restore and launch approval. Invalid/incomplete results or
-missing/duplicate/unexpected rows, any other failure or Native/profile/policy
-uncertainty block that continuation. `RunLocal` is
-the existing native action; it does not select a WSL/container runtime.
+Default scope is **Native VS Code Python/current Java/Go**, not the full
+workstation. `verify.ps1 -NativeDemo -Json` positively checks **18 records**:
+eight required tools, five language/debugger extension IDs and all five policy
+rows. Native Preflight/Verify do not query WSL/wslc or require virtualization,
+Azure tools or containers. The shared definition is
+`Get-NativeDemoRequirement` in `scripts\_common.psm1`.
+Every Native record must PASS with exit **0**, alongside fresh runtime evidence,
+known vendor/reboot safety and human/IT acceptance of the actual enabled
+profile and existing source/account routing. Malformed/partial/duplicate/
+unexpected records, required FAIL/unknown or policy/profile/source uncertainty
+stop. No failure-ignore list or WSL output heuristic is used.
+
+Full `verify.ps1 -Json` remains unchanged and strict: 16 tools, 12 extensions,
+five policies. Its missing WSL/stub timeout or optional-full-profile extensions
+remain **full FAIL/exit 1**, even if Native passes. Keep full and Native results
+separate; full readiness is **NOT RUN/not accepted** if no full inventory was
+requested. Do not probe/install WSL to make Native ready. The human's narrower
+Native approval permits requesting separately approved Dependencies Restore,
+not full readiness, F5 or startup acceptance. `RunLocal` is the existing native
+action; it does not select a WSL/container runtime.
 WSL changes, Ubuntu, licensed
 Docker, modernization, PowerShell test-module Restore, image builds and
 container launches have separate approvals. Broad legacy bundle/Finish/SkipBase,
@@ -124,7 +136,7 @@ After a known stopped/completed task, or after **you** save work and perform an
 approved restart/full VS Code reopen, select the same agent and send:
 
 ```text
-Resume the local setup and demo journey. Recheck installer/reboot safety and fresh installed-software inventory; do not blindly retry. Ask for new approvals for any remaining changes.
+Resume the local setup and demo journey. Use NativeDemo for Python/Java/Go and essential debugger extensions; leave Azure/containers/WSL separate. Recheck installer/reboot safety and fresh installed-software inventory; do not blindly retry. Ask for new approvals for any remaining changes.
 ```
 
 The agent does not interpret launcher exit 0, a declined target, an installer
@@ -201,7 +213,7 @@ Discovery checks local uninstall registration, Python registration/Store package
 | **Install Python SDK** / Python | Python 3.14, separately retryable |
 | **Install Java SDK** / Java | Microsoft OpenJDK 25, separately retryable |
 | **Install Go SDK** / Go | Go, separately retryable; missing-target install is pinned to the sample's `go.mod` version (1.27.3), not an accidental newer release |
-| **Install extensions (approved source)** / Extensions | Missing members of the 12 required set only, after CLI/default-profile source approval |
+| **Install extensions (approved source)** / Extensions | Full default: missing members of the 12 required set. Explicit `-NativeDemo`: only five language/debugger targets. Both require existing CLI/default-profile source approval |
 | **Install WSL components** / WSL | Read-only runtime/features/distro inventory first; only disabled features or absent runtime. Approved Administrator terminal needed for feature inventory/actions |
 | **Install Ubuntu (optional)** / Ubuntu | Explicit distro opt-in after WSL/features/restart ready. Existing package/distro skips download; no reset/unregister/default changes or automatic launch |
 | **Install Docker Desktop (licensed optional)** / Docker | Separately licensed approved opt-in; existing Docker skips install, no fallback after wslc denial |
@@ -281,7 +293,32 @@ After the selected modules/any user restart, open a **fresh terminal**, then cho
 
 Now required FAIL/exit 1 means setup is **not accepted**: diagnose installation/configuration logs, PATH/version selection, reboot/resume and approved extension source/profile. Do not treat an old Python first on PATH as proof Python 3.14 was not installed; compare executable locations with IT, without deleting other runtimes.
 
-Default verification requires **12 extensions**. In the intended VS Code window, also confirm its profile, enabled required extensions, approved source and enterprise sign-in. The [CLI reference](https://code.visualstudio.com/docs/configure/command-line) documents read-only `code --list-extensions --show-versions --profile "Your approved existing profile"`; use the actual existing approved profile, not a newly invented profile. Compare this with Verify's unqualified CLI list. Policy-disabled installed extensions are not accepted.
+Default **full** verification requires **12 extensions**. In the intended VS Code window, also confirm its profile, enabled required extensions, approved source and enterprise sign-in. The [CLI reference](https://code.visualstudio.com/docs/configure/command-line) documents read-only `code --list-extensions --show-versions --profile "Your approved existing profile"`; use the actual existing approved profile, not a newly invented profile. Compare this with Verify's unqualified CLI list. Policy-disabled installed extensions are not accepted.
+
+### Native demo selection
+
+The existing Extensions module can explicitly select only
+`ms-python.python`, `ms-python.debugpy`, `redhat.java`,
+`vscjava.vscode-java-debug` and `golang.go`, as required by the native
+`debugpy`/`java`/`go` launch configurations. Python Debugger bundles debugpy;
+Java language support is a debugger dependency. Approved bundled dependencies
+use the same marketplace route and human/IT approval. The full twelve-extension
+module and optional modernization profile are unchanged.
+
+```powershell
+.\scripts\developer.ps1 -Action SetupPreview -SetupModule Extensions -NativeDemo
+# Only after scope and existing CLI/source/profile routing are human/IT approved:
+.\scripts\developer.ps1 -Action Setup -SetupModule Extensions -NativeDemo -ExtensionSourceApproved -Confirm
+.\scripts\preflight.ps1 -NativeDemo -Json
+.\scripts\verify.ps1 -NativeDemo -Json
+```
+
+Compatible installed IDs/versions are retained; malformed/duplicate/unknown
+inventory stops before sources/downloads. Native selection cannot be used with
+another module or the legacy bundle. Native PASS checks prerequisites only,
+not intended-profile enablement, source approval, helper availability or live F5.
+Go Delve/helper acquisition requires a separate approved Restore before
+debugging; missing helpers mean **F5 NOT RUN**, never a hidden download.
 
 Java modernization remains optional:
 
@@ -300,7 +337,7 @@ Read configuration in the editor before choosing to apply it. `winget configure 
 | --- | --- | --- |
 | Phase 0 approvals and script policy | Required before scripts | Still required; no bypass |
 | Preflight | No FAIL; WSL/wslc WARN expected if absent | Recheck infrastructure failures; no claimed payload/enterprise certification |
-| Verify | Optional inventory exit 1 expected for missing setup outputs | Required profile exit 0; CLI/profile/source/enabled checks also accepted |
+| Verify | Optional inventory exit 1 expected for missing selected outputs | Native: all 18 PASS/exit 0 plus human profile/source acceptance. Full: separately all 33 PASS/exit 0; Native never changes full FAIL |
 | Project dependencies | Not supplied by laptop setup | Explicit Phase 4 Restore before daily checks |
 | GitHub / AKS | Access/governance decisions separate | CI checked; deployment independently manual, not automatically provisioned |
 

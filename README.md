@@ -8,6 +8,13 @@ A VS Code-first developer workflow for synthetic Python EMI, Java IFSC and Go FX
 
 **Want Copilot to drive the local journey?** Open the reviewed clone in VS Code, choose a chat session running **locally on Windows** (not remote/cloud), select **Workstation setup** in the Agent dropdown, and send **Start the local setup and demo journey; inventory first and ask for my approvals.** The [repository agent](.github/agents/workstation-setup.agent.md) runs the existing terminal surfaces rather than asking you to copy commands or pick every module. Installations, dependency Restore and local launches still need scoped approvals and your native confirmations; UAC, IT decisions and restarts remain human pauses. [Selection, resume and tool troubleshooting](docs/SETUP.md#select-workstation-setup-in-vs-code) explain the narrow exception. Coding/build/desktop/cloud agents still cannot execute setup.
 
+Default **NativeDemo** positively checks Python/current Java/Go, essential
+language/debugger extensions and policy, without probing or requiring WSL,
+Azure or containers. The existing Extensions module's explicit `-NativeDemo`
+selection installs only its five approved missing targets. Full verification's
+12-extension profile remains strict and separate; Native PASS is not full
+readiness, marketplace/profile acceptance or live F5 success.
+
 **Prefer a guided companion?** [Open the offline demo companion instructions](demo-companion/README.md). Keep the complete `demo-companion` folder and double-click `index.html` for quick steps, detailed activities and slide navigation. Commands are copy-only and progress is manual; the companion never runs setup or verifies your laptop.
 
 **Start with [Phase 0 prerequisites](docs/SETUP.md#phase-0-prerequisites-before-repository-scripts), before executing any script.** IT/humans supply supported Windows, virtualization/disk, elevation/licensing, App Installer/WinGet, network/proxy, repository access, approved Git/VS Code to clone, script execution and extension-source approvals. Python/Java/Go/WSL and extensions are automated setup outputs, not a manual shopping list.
@@ -46,7 +53,7 @@ Open the cloned folder. Review its source before accepting Workspace Trust. All 
 
 **Enterprise extension delivery:** automation uses VS Code DSC/CLI, which does not select the active window's profile or expose a marketplace parameter. Before apply, IT must verify approved CLI/account/profile/source compatibility and all required IDs; after apply verify they are enabled in the intended window. A private-marketplace banner alone proves neither a block nor automation compatibility. Unsupported routing is a setup acceptance failure requiring a compatible **managed automated delivery** route, not manual installation of each missing extension or a public-marketplace bypass. See [source/profile acceptance](docs/SETUP.md#extension-source-and-profile-acceptance).
 
-The default runtime remains `wslc`, Docker only if absent; explicit approved selection never bypasses denial. Docker Desktop stays commented, optional and licence-reviewed. Full laptop provisioning is separate from the 15-minute coding demo; CI is not fresh-device acceptance.
+The default **container** runtime remains `wslc`, Docker only if absent; explicit approved selection never bypasses denial. Native RunLocal needs neither. Docker Desktop stays commented, optional and licence-reviewed. Full laptop provisioning is separate from the 15-minute coding demo; CI is not fresh-device acceptance.
 
 ## Your first request
 
