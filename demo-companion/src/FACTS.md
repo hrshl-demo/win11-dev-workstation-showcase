@@ -1,7 +1,7 @@
 # Source facts and trust boundaries
 
 Underlying installer/application/agent source:
-`c226e1233c56f10ee9215835f7cb56cf8ee24b84`. Facts as of **2026-11-08**.
+`72aea2d45c934a9529bf5ae0ac8af9795169ea53`. Facts as of **2026-11-09**.
 The source-command lock contains exact command/prompt text and immutable source
 hashes. The named local agent adds an approval-scoped execution route through
 existing scripts, not a new installer/framework, cloud environment or MCP server.

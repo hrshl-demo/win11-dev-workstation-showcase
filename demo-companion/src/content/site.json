@@ -3,7 +3,7 @@
   "short": "Workstation companion",
   "project": "Safe setup · Develop · Review · Deliver",
   "version": "1.0",
-  "as_of": "2026-11-08",
+  "as_of": "2026-11-09",
   "summary": "A guided, offline companion for installed-first setup and a synthetic developer demo. Read the quick path, open its detailed activity, and keep human approval separate from machine evidence.",
   "sources_note": "Written from the underlying source pin below. Source links open only when clicked and require private-repository access. The evidence register records earlier dated revisions, not acceptance of this agent, its tools or your laptop.",
   "repos": {
@@ -11,7 +11,7 @@
       "label": "Workstation showcase",
       "url": "https://github.com/hrshl-demo/win11-dev-workstation-showcase",
       "branch": "main",
-      "commit": "c226e1233c56f10ee9215835f7cb56cf8ee24b84",
+      "commit": "72aea2d45c934a9529bf5ae0ac8af9795169ea53",
       "color": "#2563EB",
       "step_box": false
     }

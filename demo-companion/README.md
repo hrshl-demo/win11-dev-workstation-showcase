@@ -45,7 +45,7 @@ Online source links require user clicks and private-repository access.
 ## Source and evidence scope
 
 Underlying source pin:
-`c226e1233c56f10ee9215835f7cb56cf8ee24b84`, facts as of **2026-11-08**.
+`72aea2d45c934a9529bf5ae0ac8af9795169ea53`, facts as of **2026-11-09**.
 The evidence register preserves earlier dated main/fallback runs, independently
 of this source pin; it is not live polling or acceptance of the new agent.
 Laptop setup, extension
