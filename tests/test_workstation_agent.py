@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 AGENT = ROOT / ".github" / "agents" / "workstation-setup.agent.md"
 DEFAULT_MODULES = {"Core", "Python", "Java", "Go", "Extensions"}
 DEFAULT_SAMPLES = {"Python", "Java", "Go"}
-FLAGS = {"Confirm", "Json", "ExtensionSourceApproved"}
+FLAGS = {"Confirm", "Json", "ExtensionSourceApproved", "NativeDemo"}
 
 
 def agent_text() -> str:
@@ -132,38 +132,47 @@ class WorkstationAgentTests(unittest.TestCase):
 
     def test_native_readiness_and_verify_recipe_are_bound_to_existing_source(self) -> None:
         verify = [tokens for tokens in recipes() if tokens[3:4] == [r".\scripts\verify.ps1"]]
-        self.assertEqual(verify, [[
-            "powershell.exe", "-NoProfile", "-File", r".\scripts\verify.ps1", "-Json"
-        ]])
+        self.assertEqual([parameters(tokens[4:]) for tokens in verify], [
+            {"NativeDemo": True, "Json": True}, {"Json": True},
+        ])
         text = agent_text()
         native_line = re.search(r"Native Verify tool rows: (.*)", text)
-        other_line = re.search(r"Other full-profile tool rows: (.*)", text)
         self.assertIsNotNone(native_line)
-        self.assertIsNotNone(other_line)
-        assert native_line is not None and other_line is not None
+        assert native_line is not None
         native = set(re.findall(r"`([a-z]+)`", native_line[1]))
-        other = set(re.findall(r"`([a-z]+)`", other_line[1]))
         self.assertEqual(native, {"winget", "git", "code", "python", "uv", "pwsh", "java", "go"})
-        self.assertEqual(other, {"gh", "copilot", "az", "azd", "kubectl", "node", "wsl", "wslc"})
-        failures = re.search(r"Failure identities eligible for narrower Native: (.*)", text)
-        self.assertIsNotNone(failures)
-        assert failures is not None
-        self.assertEqual(set(re.findall(r"`([a-z]+)`", failures[1])), {"wsl", "wslc"})
+        common = (ROOT / "scripts" / "_common.psm1").read_text(encoding="utf-8-sig")
+        requirements = common.split("function Get-NativeDemoRequirement {", 1)[1].split(
+            "function Get-RequiredExtension {", 1
+        )[0]
+        tool_ids = re.search(r"Tools = @\((.*?)\)", requirements, re.S)
+        assert tool_ids is not None
+        self.assertEqual(set(re.findall(r"'([^']+)'", tool_ids[1])), native)
+        extension_ids = re.search(r"Extensions = @\((.*?)\)", requirements, re.S)
+        assert extension_ids is not None
+        self.assertEqual(set(re.findall(r"'([^']+)'", extension_ids[1])), {
+            "ms-python.python", "ms-python.debugpy", "redhat.java",
+            "vscjava.vscode-java-debug", "golang.go",
+        })
+        launches = json.loads((ROOT / ".vscode" / "launch.json").read_text(encoding="utf-8"))
+        self.assertEqual({item["type"] for item in launches["configurations"]}, {"debugpy", "java", "go"})
         source = (ROOT / "scripts" / "verify.ps1").read_text(encoding="utf-8-sig")
         definitions = source.split("$definitions = @(", 1)[1].split("$local =", 1)[0]
-        self.assertEqual(set(re.findall(r"Name = '([a-z]+)'", definitions)), native | other)
+        self.assertEqual(len(set(re.findall(r"Name = '([a-z]+)'", definitions))), 16)
+        self.assertIn("$required.Tools -ccontains $_.Name", source)
+        self.assertIn("Assert-NativeDemoCheck $checks", source)
         self.assertIn("Get-CheckResult $name FAIL", source)
         self.assertIn("-Found 'Missing/unusable'", source)
         self.assertIn("return (Get-CheckExitCode $checks)", source)
         self.assertTrue((ROOT / "tests" / "fixtures" / "native-readiness.ps1").is_file())
-        self.assertNotRegex(source.split("Set-StrictMode", 1)[0], r"\$(?:Native|Mode)\b")
+        self.assertRegex(source.split("Set-StrictMode", 1)[0], r"\$NativeDemo\b")
         normalized = " ".join(text.split())
         for boundary in (
             "full-workstation verification FAIL", "explicit narrower Native continuation",
-            "Empty/incomplete arrays", "block Native continuation", "Declining that continuation stops",
+            "empty/incomplete arrays", "block Native continuation", "Declining that continuation stops",
             "Container = false", "Core includes tools beyond Native prerequisites",
-            "every other default Verify row positively PASS", "exact Name identities",
-            "no duplicate or unexpected rows",
+            "Native PASS never changes that result", "all **18** Native records",
+            "missing/duplicate/unexpected rows", "No failure-ignore list",
             "directly wrapping that pipeline nests arrays on 5.1",
         ):
             self.assertIn(boundary, normalized)
@@ -174,6 +183,7 @@ class WorkstationAgentTests(unittest.TestCase):
         preflight = (ROOT / "scripts" / "preflight.ps1").read_text(encoding="utf-8-sig")
         self.assertIn("Get-CheckResult 'WSL' WARN 'Not installed.", preflight)
         self.assertIn("$status = if ($wslc) { 'PASS' } else { 'WARN' }", preflight)
+        self.assertIn("if (-not $NativeDemo)", preflight)
 
     def test_every_changing_recipe_retains_native_confirmation(self) -> None:
         for recipe in dispatcher_recipes():
@@ -204,7 +214,13 @@ class WorkstationAgentTests(unittest.TestCase):
             recipe for recipe in dispatcher_recipes()
             if recipe.get("Action") == "Setup" and recipe.get("SetupModule") == "Extensions"
         )
-        self.assertEqual(recipe, task_parameters("Install extensions (approved source)"))
+        self.assertEqual(recipe, {
+            **task_parameters("Install extensions (approved source)"), "NativeDemo": True,
+        })
+        setup = (ROOT / "scripts" / "_setup.psm1").read_text(encoding="utf-8-sig")
+        self.assertIn("Get-SetupExtension -NativeDemo:$NativeDemo", setup)
+        self.assertIn("Get-RequiredExtension (Join-Path (Get-ShowcaseRoot)", setup)
+        self.assertIn("Duplicate or unknown Native extension version", setup)
         self.assertIn("attestation, not a source bypass", agent_text())
         self.assertIn("Unsupported private routing", agent_text())
 

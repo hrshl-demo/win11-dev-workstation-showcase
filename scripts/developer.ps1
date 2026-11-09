@@ -36,6 +36,8 @@ Optional legacy Microsoft base-only wait, 7200-28800 seconds; default 14400.
 One installed-first workstation module. Default Core is not a Microsoft preset.
 .PARAMETER ExtensionSourceApproved
 Human/IT approval for current VS Code CLI/default-profile marketplace routing.
+.PARAMETER NativeDemo
+Explicit five-extension Native selection, only for SetupPreview/Setup Extensions.
 .PARAMETER InstallTimeoutSeconds
 One missing-target launcher budget, 300-14400 seconds, default 7200.
 .PARAMETER SourceSha
@@ -70,7 +72,7 @@ param(
     [ValidateRange(7200, 28800)][int]$BaseSetupTimeoutSeconds = 14400,
     [ValidateSet('Core', 'Python', 'Java', 'Go', 'Extensions', 'WSL', 'Ubuntu', 'Docker', 'Modernization')]
     [string]$SetupModule = 'Core',
-    [switch]$ExtensionSourceApproved,
+    [switch]$ExtensionSourceApproved, [switch]$NativeDemo,
     [ValidateRange(300, 14400)][int]$InstallTimeoutSeconds = 7200,
     [ValidatePattern('^([0-9a-f]{40})?$')][string]$SourceSha = '',
     [string]$Namespace = $env:AKS_NAMESPACE
@@ -460,7 +462,7 @@ function Invoke-Developer {
         [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5,
         [ValidateRange(7200, 28800)][int]$BaseSetupTimeoutSeconds = 14400,
         [ValidateSet('Core', 'Python', 'Java', 'Go', 'Extensions', 'WSL', 'Ubuntu', 'Docker', 'Modernization')]
-        [string]$SetupModule = 'Core', [switch]$ExtensionSourceApproved,
+        [string]$SetupModule = 'Core', [switch]$ExtensionSourceApproved, [switch]$NativeDemo,
         [ValidateRange(300, 14400)][int]$InstallTimeoutSeconds = 7200)
     $environment = @{}
     foreach ($key in @('UV_OFFLINE', 'UV_NO_SYNC', 'UV_PYTHON_DOWNLOADS', 'GOTOOLCHAIN',
@@ -468,6 +470,9 @@ function Invoke-Developer {
         $environment[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
     }
     try {
+        if ($NativeDemo -and ($Action -notin @('SetupPreview', 'Setup') -or $SetupModule -ne 'Extensions')) {
+            throw 'NativeDemo is only an explicit SetupPreview/Setup Extensions selection.'
+        }
         $env:UV_PYTHON_DOWNLOADS = 'never'
         $env:GOTOOLCHAIN = 'local'
         if ($Action -eq 'Restore') {
@@ -486,7 +491,7 @@ function Invoke-Developer {
                     '-HttpsTimeoutSeconds', [string]$HttpsTimeoutSeconds) -TimeoutSeconds (Get-PreflightTimeout $HttpsTimeoutSeconds)
             }
             'SetupPreview' {
-                $result = Invoke-SetupModule -Module $SetupModule -HttpsTimeoutSeconds $HttpsTimeoutSeconds -InstallTimeoutSeconds $InstallTimeoutSeconds
+                $result = Invoke-SetupModule -Module $SetupModule -NativeDemo:$NativeDemo -HttpsTimeoutSeconds $HttpsTimeoutSeconds -InstallTimeoutSeconds $InstallTimeoutSeconds
                 if ($result -ne 0) { throw 'Read-only module inventory failed; no setup started.' }
             }
             { $_ -in @('Setup', 'LegacySetup', 'FinishSetup') } {
@@ -501,6 +506,7 @@ function Invoke-Developer {
                     } else {
                         $arguments += @('-Module', $SetupModule, '-InstallTimeoutSeconds', [string]$InstallTimeoutSeconds)
                         if ($ExtensionSourceApproved) { $arguments += '-ExtensionSourceApproved' }
+                        if ($NativeDemo) { $arguments += '-NativeDemo' }
                     }
                     & $shell @arguments | Out-Host
                     if ($LASTEXITCODE -ne 0) { throw 'User-run setup failed.' }

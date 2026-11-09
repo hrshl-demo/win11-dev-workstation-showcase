@@ -22,7 +22,7 @@ class CompanionTests(unittest.TestCase):
 
     def test_named_source_registry_is_complete_and_unique(self):
         blocks = S.file_blocks()
-        self.assertEqual(len(blocks), 40)
+        self.assertEqual(len(blocks), 44)
         self.assertEqual(len(S.prompts()[0]), 6)
         self.assertTrue(all(block["text"] and block["source"] for block in blocks.values()))
 
@@ -99,8 +99,16 @@ class CompanionTests(unittest.TestCase):
         page = (ROOT / "pages" / "setup" / "setup-modules.html").read_text(encoding="utf-8")
         self.assertIn("Live VS Code selection/tool/native-confirmation acceptance is not yet proven", page)
         verify = (ROOT / "pages" / "setup" / "setup-verify.html").read_text(encoding="utf-8")
-        for boundary in ("Missing/unusable", "every other default row positively PASS", "Malformed/unusable JSON", "Container=false"):
+        for boundary in ("18 Native records positively PASS", "exit 0", "Malformed/unusable JSON", "Container=false"):
             self.assertIn(boundary, verify)
+
+    def test_native_selection_commands_are_current_source_bound(self):
+        for identifier in ("preview-native-extensions", "setup-native-extensions", "preflight-native", "verify-native"):
+            block = S.file_blocks()[identifier]
+            self.assertIn("-NativeDemo", block["text"])
+            self.assertEqual(block["source"], [{"path": "docs\\SETUP.md"}])
+        self.assertIn("-Confirm", S.file_blocks()["setup-native-extensions"]["text"])
+        self.assertIn("ExtensionSourceApproved", S.file_blocks()["setup-native-extensions"]["text"])
 
     def test_regeneration_is_byte_deterministic(self):
         files = sorted(ROOT.rglob("*.html")) + sorted((ROOT / "data").glob("*.js")) + [S.LOCK]

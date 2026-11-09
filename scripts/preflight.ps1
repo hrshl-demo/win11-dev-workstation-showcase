@@ -13,11 +13,14 @@ Emit machine-readable checks instead of human-readable messages.
 Suppress PASS and WARN messages (JSON still contains every check).
 .PARAMETER HttpsTimeoutSeconds
 HTTPS-only per-attempt timeout, default 5; choose 30 for an approved slow network.
+.PARAMETER NativeDemo
+Do not query WSL/wslc or require virtualization for the native demo.
+All other policy, platform and network checks remain required.
 .EXAMPLE
 .\scripts\preflight.ps1 -Json
 #>
 [CmdletBinding()]
-param([switch]$Json, [switch]$Quiet,
+param([switch]$Json, [switch]$Quiet, [switch]$NativeDemo,
     [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -26,7 +29,7 @@ Import-Module (Join-Path $PSScriptRoot '_common.psm1') -Force
 function Get-PreflightCheck {
     [CmdletBinding()]
     [OutputType([pscustomobject], [object[]])]
-    param([ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
+    param([ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5, [switch]$NativeDemo)
     try {
         $os = Get-CimInstance Win32_OperatingSystem
         $build = [int]$os.BuildNumber
@@ -38,13 +41,13 @@ function Get-PreflightCheck {
         $elevated = Test-IsAdministrator
         Get-CheckResult 'Elevation (information)' PASS "Elevated: $elevated. Preflight needs no admin; setup needs local admin and UAC consent."
     } catch { Get-CheckResult 'Elevation (information)' WARN $_.Exception.Message }
-    try {
+    if (-not $NativeDemo) { try {
         $processors = @(Get-CimInstance Win32_Processor)
         $system = Get-CimInstance Win32_ComputerSystem
         $available = [bool]$system.HypervisorPresent -or @($processors | Where-Object { $_.VirtualizationFirmwareEnabled }).Count -gt 0
         $status = if ($available) { 'PASS' } else { 'FAIL' }
         Get-CheckResult 'Virtualization' $status "Firmware virtualization or hypervisor present: $available. Enable hardware virtualization in firmware if unavailable."
-    } catch { Get-CheckResult 'Virtualization' FAIL "Cannot check virtualization: $($_.Exception.Message)" }
+    } catch { Get-CheckResult 'Virtualization' FAIL "Cannot check virtualization: $($_.Exception.Message)" } }
     try {
         $drive = Get-CimInstance Win32_LogicalDisk -Filter "DeviceID='$env:SystemDrive'"
         $free = [Math]::Round($drive.FreeSpace / 1GB, 1)
@@ -116,6 +119,7 @@ function Get-PreflightCheck {
         $policiesText = (Get-ExecutionPolicy -List | ForEach-Object { "$($_.Scope)=$($_.ExecutionPolicy)" }) -join '; '
         Get-CheckResult 'Execution policies (information)' PASS "$policiesText. Report only; contact IT for policy changes."
     } catch { Get-CheckResult 'Execution policies (information)' WARN $_.Exception.Message }
+    if (-not $NativeDemo) {
     $wsl = Get-NativeCommandPath wsl
     if ($wsl) {
         try {
@@ -129,14 +133,15 @@ function Get-PreflightCheck {
     $wslc = Get-NativeCommandPath wslc
     $status = if ($wslc) { 'PASS' } else { 'WARN' }
     Get-CheckResult 'WSL containers' $status "wslc present: $([bool]$wslc). WSL 2.9.3 or later is required."
+    }
 }
 
 function Invoke-Preflight {
     [CmdletBinding()]
     [OutputType([int])]
-    param([switch]$Json, [switch]$Quiet,
+    param([switch]$Json, [switch]$Quiet, [switch]$NativeDemo,
         [ValidateRange(1, 30)][int]$HttpsTimeoutSeconds = 5)
-    try { $checks = @(Get-PreflightCheck -HttpsTimeoutSeconds $HttpsTimeoutSeconds) }
+    try { $checks = @(Get-PreflightCheck -HttpsTimeoutSeconds $HttpsTimeoutSeconds -NativeDemo:$NativeDemo) }
     catch { $checks = @(Get-CheckResult 'Preflight' FAIL $_.Exception.Message) }
     Write-CheckReport $checks -Json:$Json -Quiet:$Quiet
     return (Get-CheckExitCode $checks)

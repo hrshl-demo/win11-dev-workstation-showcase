@@ -107,9 +107,7 @@ function Get-WinGetPolicy {
     if (Test-Path -LiteralPath $path) {
         $values = Get-ItemProperty -LiteralPath $path -ErrorAction Stop
     }
-    foreach ($name in @('EnableAppInstaller',
-        'EnableWindowsPackageManagerCommandLineInterfaces',
-        'EnableWindowsPackageManagerConfiguration', 'EnableAllowedSources', 'EnableDefaultSource')) {
+    foreach ($name in (Get-NativeDemoRequirement).Policies) {
         $property = if ($null -ne $values) { $values.PSObject.Properties[$name] } else { $null }
         if ($null -eq $property) {
             Get-CheckResult -Name $name -Status PASS -Message 'Not configured (no explicit policy block).' -Found 'Not configured'
@@ -454,20 +452,42 @@ function Assert-SafeDirectory {
     }
 }
 
+function Get-NativeDemoRequirement {
+    <#
+    .SYNOPSIS
+    Return the positive prerequisites for the native Python, Java and Go demo.
+    .DESCRIPTION
+    Debugger IDs match launch.json. Java language support is a debugger dependency;
+    Python Debugger bundles debugpy. Go Delve acquisition remains a separate Restore.
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param()
+    [pscustomobject]@{
+        Tools = @('winget', 'git', 'code', 'python', 'uv', 'pwsh', 'java', 'go')
+        Extensions = @('ms-python.python', 'ms-python.debugpy', 'redhat.java',
+            'vscjava.vscode-java-debug', 'golang.go')
+        Policies = @('EnableAppInstaller', 'EnableWindowsPackageManagerCommandLineInterfaces',
+            'EnableWindowsPackageManagerConfiguration', 'EnableAllowedSources', 'EnableDefaultSource')
+    }
+}
+
 function Get-RequiredExtension {
     <#
     .SYNOPSIS
-    Read the 12 default or 13 modernization extension requirements.
+    Read the full profile or the explicit five-extension Native demo selection.
     #>
     [CmdletBinding()]
     [OutputType([string])]
-    param([Parameter(Mandatory)][string]$Path, [switch]$IncludeJavaModernization)
+    param([Parameter(Mandatory)][string]$Path, [switch]$IncludeJavaModernization, [switch]$NativeDemo)
+    if ($NativeDemo -and $IncludeJavaModernization) { throw 'NativeDemo and Java modernization are separate scopes.' }
     $extensionProfile = Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
     $extensions = @($extensionProfile.recommendations)
     if ($extensions.Count -ne 13 -or @($extensions | Select-Object -Unique).Count -ne 13 -or
         $extensions -notcontains 'vscjava.migrate-java-to-azure') {
         throw 'Expected 13 unique recommendations in the workspace extension profile.'
     }
+    if ($NativeDemo) { return (Get-NativeDemoRequirement).Extensions }
 
     foreach ($extension in $extensions) {
         if ($extension -eq 'vscjava.migrate-java-to-azure' -and -not $IncludeJavaModernization) { continue }
@@ -544,5 +564,5 @@ Export-ModuleMember -Function Get-ShowcaseRoot, Get-CheckResult, Write-CheckRepo
     Get-CheckExitCode, Get-WinGetPolicy, Assert-WinGetPolicy, Assert-WorkstationPolicy, Get-NativeCommandPath,
     ConvertTo-NativeArgument, Invoke-NativeCommand, Assert-NativeSuccess,
     Get-ContainerRuntime, Get-HttpsProbe, Get-PreflightTimeout, Test-HttpsEndpoint, Wait-SampleHealth, Test-IsAdministrator,
-    Test-BaseResumePending, Get-BaseSetupOutcome, Assert-SafeDirectory, Get-RequiredExtension,
+    Test-BaseResumePending, Get-BaseSetupOutcome, Assert-SafeDirectory, Get-RequiredExtension, Get-NativeDemoRequirement,
     Read-MicrosoftSignedScript, Assert-SafeSampleTree

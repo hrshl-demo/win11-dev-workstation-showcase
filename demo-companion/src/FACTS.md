@@ -19,13 +19,17 @@ CI checks its static recipes and the inert companion; live tool use is separate.
   A stopped partial base is not completed Finish/SkipBase/reboot/resume.
 - Save work and fully exit/reopen VS Code from Windows when environment
   refresh is needed. A new terminal or Reload Window is not guaranteed.
-- Required acceptance is 12 extensions in the intended approved profile,
-  with the thirteenth modernization recommendation optional. CLI IDs alone
-  do not prove profile, enabled state or marketplace policy acceptance.
-- Verify has no Native switch. Missing WSL/wslc stays full FAIL/exit 1.
-  Only those exact structured missing identities, every other default row
-  positively PASS and actual runtime/profile/policy acceptance can lead to
-  human approval of narrower Native scope, never automatic WSL acquisition.
+- Full acceptance remains 12 extensions, with optional modernization thirteenth.
+  Explicit NativeDemo selects only five language/debugger IDs in the existing
+  installed-first Extensions module. CLI IDs alone do not accept enabled state,
+  intended profile or marketplace/source/account policy.
+- Native Verify positively requires all 18 tool/extension/policy records PASS
+  and exit 0, plus human runtime/profile/source/safety acceptance. Malformed,
+  incomplete, duplicate, unexpected or failed/unknown results stop.
+  Native never probes/requires WSL/Azure/containers; full 33-row verification
+  remains strict and its FAIL/exit 1 is separate, not an ignore-list exception.
+- F5 helper acquisition, including Go Delve, needs separate approved Restore;
+  Native PASS is not debugger/live-request acceptance or full readiness.
 - Explicit human-approved Restore is separate from daily Test/Lint/Coverage and F5.
   Missing prerequisites mean NOT RUN. All excludes legacy Java.
 - Money uses exact arithmetic, explicit half-up rounding, fixed two-decimal
