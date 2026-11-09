@@ -15,6 +15,53 @@ selection installs only its five approved missing targets. Full verification's
 12-extension profile remains strict and separate; Native PASS is not full
 readiness, marketplace/profile acceptance or live F5 success.
 
+### Copy/paste prompts for the Local Workstation setup agent
+
+In the reviewed Windows checkout, open **VS Code Copilot Chat**, choose **Local**
+(not cloud/remote), then select **Workstation setup**. Keep a human-accessible
+integrated terminal available for native confirmations. If the agent or terminal
+is unavailable, stop and use the [selection troubleshooting](docs/SETUP.md#select-workstation-setup-in-vs-code).
+Existing tool permissions are **not blanket installation, Restore or launch
+approval**. Leave human-owned approval settings unchanged; only the human answers
+native prompts, never automated Y/A responses. Retain installed SDKs, source
+routing and settings. The default Native project scope remains **Python EMI,
+current Java IFSC and Go FX**.
+
+**Installed-first inventory and Native readiness / Extensions preview:**
+
+```text
+Use the Local Workstation setup workflow in this reviewed checkout. Read-only scope: check checkout/installer/reboot safety and locally inventory installed targets FIRST, retaining compatible versions/settings and stopping unknown or incompatible state before network/provider/download work. Use installed PowerShell 7; do not install it. Run the existing Extensions SetupPreview with -NativeDemo and -HttpsTimeoutSeconds 30, then Native Preflight with -NativeDemo -Json -HttpsTimeoutSeconds 30 and Verify with -NativeDemo -Json. Run commands individually and report actual command, first error, exit code and Native status in ordinary text. Require positive Native runtime/policy/profile/source acceptance; keep full-workstation status separate. No installations, Restore, app launch or optional WSL/Azure/container scope. Ask for separate approval before any missing-extension installation.
+```
+
+**First-time dependency preparation, then separately approved offline checks:**
+
+```text
+For the named Native samples that still need packages, inspect existing dependency/runtime evidence and show the exact existing developer.ps1 -Action Restore -RestoreTarget Dependencies command and download scope. Ask for my explicit Restore approval before running each sample sequentially with -Confirm. Stop on failure/unknown; do not silently retry. Only after successful Restore, ask separately for Test, Lint and Coverage using the existing no-restore/offline actions. Missing prerequisites are NOT RUN, never downloaded by checks. Do not rerun already passed stages or launch apps. Use installed PowerShell 7 and retain the approved 30-second HTTPS timeout wherever supported.
+```
+
+**Read-only failed-Restore diagnosis, including when tool cards are missing:**
+
+```text
+Diagnose the failed Restore read-only. Inspect existing logs/reports and dependency paths; do not rerun Restore, install, repair, change settings or launch anything. Do not depend on rendered tool cards: give the exact attempted command, first relevant error and exit code as ordinary plain text, masking sensitive values. If output is unavailable, say so and keep the cause unknown; do not invent success. For a Python Restore exit 1 with no .venv, label Python Test/Lint/Coverage and launch NOT RUN. Request a new scoped approval before any later retry.
+```
+
+**Current user-selected Java-then-Go rehearsal, not a new default:** use this
+continuation only when your session has the recorded **9 November 2026** outcomes:
+Python Restore failed exit 1, `.venv` absent and cause unknown; Python checks
+**NOT RUN**. Java/Go Restore, Test, Lint and Coverage already passed and must not
+be repeated. These are session conditions, **not a claim that a fresh checkout
+or HTTP endpoint has passed**.
+
+```text
+Continue ONLY my approved sequential Java-then-Go Native rehearsal using installed PowerShell 7. Do not retry or launch Python; do not repeat the already passed Java/Go Restore/Test/Lint/Coverage. Before each active phase give a fresh clock-time ETA and next-update time; stop and report actual failures/unknowns.
+
+Check port 8081 freshly; if occupied, stop without killing unrelated processes. Use the existing developer.ps1 RunLocal surface for current Java IFSC on 8081, then direct HTTP requests: /health must return HTTP 200 with status ok; /ifsc/ABCD0123456 must return valid true, bankCode ABCD and branchCode 123456. Keep the format-only/not verified disclaimer; report actual status/body, never assumed readiness.
+
+Cleanly stop ONLY the Java app created for this rehearsal. Wait for BOTH server and RunLocal wrapper exit and checkout-lock handle release before Go. RunLocal holds the exclusive checkout lock for the server lifetime: do not delete/bypass the lock, promise concurrent RunLocal, or change locking code. If release is uncertain, stop.
+
+Check port 8082 freshly; if occupied, stop without killing unrelated processes. Start Go FX through the existing RunLocal surface on 8082 and make direct HTTP requests: /health must return HTTP 200 with status ok; /convert?from=USD&to=INR&amount=100 must return converted_amount "8800.00". Keep the synthetic fixed-rates/not market-data disclaimer. Leave Go available only if startup and requests actually succeed. No downloads, Restore, retests, new helpers/gopls/F5, containers, WSL, Azure/cloud, source or settings changes. Preserve human-owned terminal confirmations and existing permissions.
+```
+
 **Prefer a guided companion?** [Open the offline demo companion instructions](demo-companion/README.md). Keep the complete `demo-companion` folder and double-click `index.html` for quick steps, detailed activities and slide navigation. Commands are copy-only and progress is manual; the companion never runs setup or verifies your laptop.
 
 **Start with [Phase 0 prerequisites](docs/SETUP.md#phase-0-prerequisites-before-repository-scripts), before executing any script.** IT/humans supply supported Windows, virtualization/disk, elevation/licensing, App Installer/WinGet, network/proxy, repository access, approved Git/VS Code to clone, script execution and extension-source approvals. Python/Java/Go/WSL and extensions are automated setup outputs, not a manual shopping list.
